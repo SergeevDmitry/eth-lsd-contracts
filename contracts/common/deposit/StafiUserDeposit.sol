@@ -40,7 +40,7 @@ contract StafiUserDeposit is StafiBase, IStafiUserDeposit {
     {
         uint256 pId = getProjectId(msg.sender);
         require(
-            pId > 0 && getContractAddress(pId, "projUserDeposit") == msg.sender,
+            pId > 1 && getContractAddress(pId, "projUserDeposit") == msg.sender,
             "Invalid caller"
         );
         require(

@@ -12,11 +12,4 @@ interface IProjBalances {
     function getTotalRETHSupply() external view returns (uint256);
 
     function getETHStakingRate() external view returns (uint256);
-
-    function submitBalances(
-        uint256 _block,
-        uint256 _total,
-        uint256 _staking,
-        uint256 _rethSupply
-    ) external;
 }

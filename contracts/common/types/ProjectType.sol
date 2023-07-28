@@ -8,6 +8,7 @@ struct Project {
     address etherKeeper;
     address userDeposit;
     address balances;
+    address settings;
     address lightNode;
     address superNode;
     address withdraw;

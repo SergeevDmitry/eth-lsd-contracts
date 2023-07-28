@@ -4,6 +4,7 @@ pragma solidity 0.8.19;
 
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "../common/StafiBase.sol";
+import "../common/interfaces/network/IStafiNetworkBalances.sol";
 import "../common/interfaces/node/IStafiNodeManager.sol";
 import "./interfaces/IProjBalances.sol";
 import "./interfaces/IProjSettings.sol";
@@ -108,7 +109,27 @@ contract ProjBalances is StafiBase, IProjBalances {
         override
         onlyLatestContract(pId, "projBalances", address(this))
         onlyTrustedNode(msg.sender)
-    {}
+    {
+        IStafiNetworkBalances stafiNetworkBalances = IStafiNetworkBalances(
+            getContractAddress(1, "stafiNetworkBalances")
+        );
+        address _voter = msg.sender;
+        bool agreed = stafiNetworkBalances.submitBalances(
+            _voter,
+            _block,
+            _totalEth,
+            _stakingEth,
+            _rethSupply
+        );
+        emit BalancesSubmitted(
+            _voter,
+            _block,
+            _totalEth,
+            _stakingEth,
+            _rethSupply
+        );
+        if (agreed) updateBalances(_block, _totalEth, _stakingEth, _rethSupply);
+    }
 
     // Update network balances
     function updateBalances(

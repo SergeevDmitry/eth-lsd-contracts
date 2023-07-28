@@ -6,9 +6,10 @@ import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "./StafiBase.sol";
 import "./types/ProjectType.sol";
 import "../project/ProjEther.sol";
-import "../project/rToken.sol";
-import "../project/ProjUserDeposit.sol";
 import "../project/ProjBalances.sol";
+import "../project/ProjSettings.sol";
+import "../project/ProjUserDeposit.sol";
+import "../project/rToken.sol";
 
 contract ContractManager is StafiBase {
     using SafeMath for uint256;
@@ -61,14 +62,17 @@ contract ContractManager is StafiBase {
         setProjectContractAddress(proj.id, "projEther", proj.etherKeeper);
         setProjectContractAddress(proj.id, "projUserDeposit", proj.userDeposit);
         setProjectContractAddress(proj.id, "projBalances", proj.balances);
+        setProjectContractAddress(proj.id, "projSettings", proj.settings);
         setProjectContractName(proj.id, proj.rToken, "projrToken");
         setProjectContractName(proj.id, proj.etherKeeper, "projEther");
         setProjectContractName(proj.id, proj.userDeposit, "projUserDeposit");
         setProjectContractName(proj.id, proj.balances, "projBalances")
+        setProjectContractName(proj.id, proj.settings, "projSettings")
         setProjectId(proj.rToken, proj.id);
         setProjectId(proj.etherKeeper, proj.id);
         setProjectId(proj.userDeposit, proj.id);
         setProjectId(proj.balances, proj.id);
+        setProjectId(proj.settings, proj.id);
     }
 
     function createProject(
@@ -76,15 +80,17 @@ contract ContractManager is StafiBase {
         string memory symbol
     ) external onlySuperUser(1) returns (uint256) {
         Project memory proj;
-        uint256 pId = useProjectId();
-        address  stafiStorageAddress = address(stafiStorage)
-        proj.id = pId
-        proj.rToken = address(new rToken(pId, stafiStorageAddress, name, symbol));
-        proj.etherKeeper = address(new EtherKeeper());
+        uint256 _pId = useProjectId();
+        address  _stafiStorageAddress = address(stafiStorage)
+        proj.id = _pId
+        proj.rToken = address(new rToken(_pId, _stafiStorageAddress, name, symbol));
+        proj.etherKeeper = address(new ProjEther(_pId, _stafiStorageAddress));
         proj.userDeposit = address(
-            new UserDeposit(proj.id, stafiStorageAddress)
+            new UserDeposit(_pId, _stafiStorageAddress)
         );
-        proj.balances = address(new ProjBalances(proj.id, stafiStorageAddress))
+        proj.balances = address(new ProjBalances(_pId, _stafiStorageAddress))
+        proj.settings = address(new ProjSettings(_pId, _stafiStorageAddress))
+        // projNodeManager
         emit ProjectCreated(proj.id, proj);
         return proj.id;
     }

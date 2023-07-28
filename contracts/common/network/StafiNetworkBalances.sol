@@ -5,30 +5,14 @@ pragma solidity 0.7.6;
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "../StafiBase.sol";
 import "../interfaces/network/IStafiNetworkBalances.sol";
-import "../interfaces/node/IStafiNodeManager.sol";
-import "../interfaces/settings/IStafiNetworkSettings.sol";
+import "../../project/interfaces/IProjBalances.sol";
+import "../../project/interfaces/IProjNodeManager.sol";
+import "../../project/interfaces/IProjSettings.sol";
 
 // Network balances
 contract StafiNetworkBalances is StafiBase, IStafiNetworkBalances {
     // Libs
     using SafeMath for uint256;
-
-    // Events
-    event BalancesSubmitted(
-        address indexed from,
-        uint256 block,
-        uint256 totalEth,
-        uint256 stakingEth,
-        uint256 rethSupply,
-        uint256 time
-    );
-    event BalancesUpdated(
-        uint256 block,
-        uint256 totalEth,
-        uint256 stakingEth,
-        uint256 rethSupply,
-        uint256 time
-    );
 
     // Construct
     constructor(
@@ -37,21 +21,10 @@ contract StafiNetworkBalances is StafiBase, IStafiNetworkBalances {
         version = 1;
     }
 
-    // Get the current network ETH staking rate as a fraction of 1 ETH
-    // Represents what % of the network's balance is actively earning rewards
-    function getETHStakingRate() public view override returns (uint256) {
-        uint256 calcBase = 1 ether;
-        uint256 totalEthBalance = getTotalETHBalance();
-        uint256 stakingEthBalance = getStakingETHBalance();
-        if (totalEthBalance == 0) {
-            return calcBase;
-        }
-        return calcBase.mul(stakingEthBalance).div(totalEthBalance);
-    }
-
     // Submit network balances for a block
     // Only accepts calls from trusted (oracle) nodes
     function submitBalances(
+        uint256 _voter,
         uint256 _block,
         uint256 _totalEth,
         uint256 _stakingEth,
@@ -60,18 +33,25 @@ contract StafiNetworkBalances is StafiBase, IStafiNetworkBalances {
         external
         override
         onlyLatestContract(1, "stafiNetworkBalances", address(this))
+        returns (bool)
     {
+        uint256 _pId = getProjectId(msg.sender);
+        require(
+            _pId > 1 && getContractAddress(_pId, "projBalances") == msg.sender,
+            "Invalid caller"
+        );
         // Check settings
-        IStafiNetworkSettings stafiNetworkSettings = IStafiNetworkSettings(
-            getContractAddress("stafiNetworkSettings")
+        IProjBalances projBalances = IProjBalances(msg.sender);
+        IProjSettings projSettings = IProjSettings(
+            getContractAddress(_pId, "stafiNetworkSettings")
         );
         require(
-            stafiNetworkSettings.getSubmitBalancesEnabled(),
+            projSettings.getSubmitBalancesEnabled(),
             "Submitting balances is currently disabled"
         );
         // Check block
         require(
-            _block > getBalancesBlock(),
+            _block > projBalances.getBalancesBlock(),
             "Network balances for an equal or higher block are set"
         );
         // Check balances
@@ -80,7 +60,8 @@ contract StafiNetworkBalances is StafiBase, IStafiNetworkBalances {
         bytes32 nodeSubmissionKey = keccak256(
             abi.encodePacked(
                 "network.balances.submitted.node",
-                msg.sender,
+                _pId,
+                _voter,
                 _block,
                 _totalEth,
                 _stakingEth,
@@ -90,6 +71,7 @@ contract StafiNetworkBalances is StafiBase, IStafiNetworkBalances {
         bytes32 submissionCountKey = keccak256(
             abi.encodePacked(
                 "network.balances.submitted.count",
+                _pId,
                 _block,
                 _totalEth,
                 _stakingEth,
@@ -103,7 +85,8 @@ contract StafiNetworkBalances is StafiBase, IStafiNetworkBalances {
             keccak256(
                 abi.encodePacked(
                     "network.balances.submitted.node",
-                    msg.sender,
+                    _pId,
+                    _voter,
                     _block
                 )
             ),
@@ -112,27 +95,15 @@ contract StafiNetworkBalances is StafiBase, IStafiNetworkBalances {
         // Increment submission count
         uint256 submissionCount = getUint(submissionCountKey).add(1);
         setUint(submissionCountKey, submissionCount);
-        // Emit balances submitted event
-        emit BalancesSubmitted(
-            msg.sender,
-            _block,
-            _totalEth,
-            _stakingEth,
-            _rethSupply,
-            block.timestamp
-        );
         // Check submission count & update network balances
         uint256 calcBase = 1 ether;
-        IStafiNodeManager stafiNodeManager = IStafiNodeManager(
-            getContractAddress("stafiNodeManager")
+        IProjNodeManager projNodeManager = IProjNodeManager(
+            getContractAddress(_pId, "projNodeManager")
         );
-        if (
+        return
             calcBase.mul(submissionCount) >=
-            stafiNodeManager.getTrustedNodeCount().mul(
-                stafiNetworkSettings.getNodeConsensusThreshold()
-            )
-        ) {
-            updateBalances(_block, _totalEth, _stakingEth, _rethSupply);
-        }
+            projNodeManager.getTrustedNodeCount().mul(
+                projSettings.getNodeConsensusThreshold()
+            );
     }
 }
