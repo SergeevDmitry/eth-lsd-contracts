@@ -10,4 +10,12 @@ interface IProjUserDeposit {
     function getDepositEnabled() external view returns (bool);
 
     function getMinimumDeposit() external view returns (uint256);
+
+    function withdrawExcessBalance(uint256 _amount) external;
+
+    function withdrawExcessBalanceForSuperNode(uint256 _amount) external;
+
+    function withdrawExcessBalanceForLightNode(uint256 _amount) external;
+
+    // function withdrawExcessBalanceForWithdraw(uint256 _amount) external;
 }

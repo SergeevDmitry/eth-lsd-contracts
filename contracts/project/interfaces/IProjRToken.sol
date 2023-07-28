@@ -4,4 +4,6 @@ pragma solidity 0.8.19;
 
 interface IProjRToken {
     function mint(address, uint256) external;
+    function depositRewards() external payable;
+    function depositExcess() external payable;
 }
