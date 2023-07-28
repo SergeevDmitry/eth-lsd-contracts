@@ -4,13 +4,12 @@ pragma solidity 0.7.6;
 
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "../common/StafiBase.sol";
-import "../common/interfaces/IProjEther.sol";
+import "./interfaces/IProjEther.sol";
 import "../common/interfaces/IStafiEtherWithdrawer.sol";
-import "./ProjContract.sol";
 
 // ETH are stored here to prevent contract upgrades from affecting balances
 // The contract must not be upgraded
-contract ProjEther is ProjContract, IProjEther {
+contract ProjEther is StafiBase, IProjEther {
     // Libs
     using SafeMath for uint256;
 
@@ -25,7 +24,7 @@ contract ProjEther is ProjContract, IProjEther {
     constructor(
         uint256 _pId,
         address _stafiStorageAddress
-    ) ProjContract(_pId, _stafiStorageAddress) {
+    ) StafiBase(_pId, _stafiStorageAddress) {
         version = 1;
     }
 

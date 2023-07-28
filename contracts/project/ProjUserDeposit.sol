@@ -2,18 +2,31 @@ pragma solidity 0.8.19;
 
 // SPDX-License-Identifier: GPL-3.0-only
 
+import "../common/StafiBase.sol";
 import "../common/interfaces/deposit/IStafiUserDeposit.sol";
-import "../common/interfaces/IProjEther.sol";
+import "./interfaces/IProjEther.sol";
 import "./interfaces/IProjUserDeposit.sol";
-import "./ProjContract.sol";
 
-contract UserDeposit is ProjContract, IProjUserDeposit {
+contract UserDeposit is StafiBase, IProjUserDeposit {
     event DepositReceived(address indexed from, uint256 amount, uint256 time);
 
     constructor(
         uint256 _pId,
         address _stafiStorageAddress
-    ) ProjContract(_pId, _stafiStorageAddress) {}
+    ) StafiBase(_pId, _stafiStorageAddress) {
+        if (
+            !getBool(keccak256(abi.encode("settings.user.deposit.init", _pId)))
+        ) {
+            // Apply settings
+            setDepositEnabled(true);
+            setMinimumDeposit(0.01 ether);
+            // Settings initialized
+            setBool(
+                keccak256(abi.encode("settings.user.deposit.init", _pId)),
+                true
+            );
+        }
+    }
 
     function getBalance() external view returns (uint256) {
         IProjEther projEther = IProjEther(getContractAddress(pId, "projEther"));
@@ -22,7 +35,7 @@ contract UserDeposit is ProjContract, IProjUserDeposit {
 
     function deposit() external payable {
         IStafiUserDeposit stafiUserDeposit = IStafiUserDeposit(
-            getContractAddress(0, "stafiUserDeposit")
+            getContractAddress(1, "stafiUserDeposit")
         );
         stafiUserDeposit.deposit(msg.sender, msg.value);
     }
@@ -32,6 +45,14 @@ contract UserDeposit is ProjContract, IProjUserDeposit {
     ) external onlyLatestContract(0, "stafiUserDeposit", msg.sender) {
         IProjEther projEther = IProjEther(getContractAddress(pId, "projEther"));
         projEther.depositEther{value: value}();
+    }
+
+    function getDepositEnabled() public view returns (bool) {
+        return getBool(keccak256(abi.encode("settings.deposit.enabled", pId)));
+    }
+
+    function getMinimumDeposit() public view returns (uint256) {
+        return getUint(keccak256(abi.encode("settings.deposit.minimum", pId)));
     }
 
     function setDepositEnabled(bool _value) public onlySuperUser(pId) {

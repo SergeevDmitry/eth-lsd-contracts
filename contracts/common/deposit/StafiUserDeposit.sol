@@ -23,7 +23,9 @@ contract StafiUserDeposit is StafiBase, IStafiUserDeposit {
     event ExcessWithdrawn(address indexed to, uint256 amount, uint256 time);
 
     // Construct
-    constructor(address _stafiStorageAddress) StafiBase(_stafiStorageAddress) {
+    constructor(
+        address _stafiStorageAddress
+    ) StafiBase(1, _stafiStorageAddress) {
         version = 1;
     }
 
@@ -34,49 +36,38 @@ contract StafiUserDeposit is StafiBase, IStafiUserDeposit {
     )
         external
         override
-        onlyLatestContract(0, "stafiUserDeposit", address(this))
+        onlyLatestContract(1, "stafiUserDeposit", address(this))
     {
         uint256 pId = getProjectId(msg.sender);
-        // Check called by project user deposit
-        require(pId > 0, "Invalid caller");
-        // Check deposit settings
         require(
-            getDepositEnabled(pId),
+            pId > 0 && getContractAddress(pId, "projUserDeposit") == msg.sender,
+            "Invalid caller"
+        );
+        require(
+            getDepositEnabled(),
             "Deposits into Stafi are currently disabled"
         );
         require(
-            _value >= getMinimumDeposit(pId),
+            _value >= getMinimumDeposit(),
             "The deposited amount is less than the minimum deposit size"
         );
-        // Load contracts
-        IRETHToken rETHToken = IRETHToken(getContractAddress(0, "rETHToken"));
-        // Mint rETH to user account
+        IRETHToken rETHToken = IRETHToken(getContractAddress(1, "rETHToken"));
         rETHToken.userMint(pId, _user, _value);
-        // Process deposit
         processDeposit(_value);
     }
 
-    // Process a deposit
     function processDeposit(uint256 _value) private {
         IProjUserDeposit projUserDeposit = IProjUserDeposit(msg.sender);
         projUserDeposit.depositEther(_value);
     }
 
-    // Deposits currently enabled
-    function getDepositEnabled(uint256 _projectId) public view returns (bool) {
-        return
-            getBool(
-                keccak256(abi.encode("settings.deposit.enabled", _projectId))
-            );
+    function getDepositEnabled() public view returns (bool) {
+        IProjUserDeposit projUserDeposit = IProjUserDeposit(msg.sender);
+        return projUserDeposit.getDepositEnabled();
     }
 
-    // Minimum deposit size
-    function getMinimumDeposit(
-        uint256 _projectId
-    ) public view returns (uint256) {
-        return
-            getUint(
-                keccak256(abi.encode("settings.deposit.minimum", _projectId))
-            );
+    function getMinimumDeposit() public view returns (uint256) {
+        IProjUserDeposit projUserDeposit = IProjUserDeposit(msg.sender);
+        return projUserDeposit.getMinimumDeposit();
     }
 }

@@ -8,6 +8,9 @@ abstract contract StafiBase {
     // Version of the contract
     uint8 public version;
 
+    // ProjectId of the contract
+    uint256 public pId;
+
     // The main storage contract where primary persistant storage is maintained
     IStafiStorage stafiStorage = IStafiStorage(address(0));
 
@@ -97,26 +100,26 @@ abstract contract StafiBase {
     /**
      * @dev Throws if called by any account other than the owner.
      */
-    modifier onlyOwner(uint256 pId) {
-        require(roleHas(pId, "owner", msg.sender), "Account is not the owner");
+    modifier onlyOwner(uint256 _pId) {
+        require(roleHas(_pId, "owner", msg.sender), "Account is not the owner");
         _;
     }
 
     /**
      * @dev Modifier to scope access to admins
      */
-    modifier onlyAdmin(uint256 pId) {
-        require(roleHas(pId, "admin", msg.sender), "Account is not an admin");
+    modifier onlyAdmin(uint256 _pId) {
+        require(roleHas(_pId, "admin", msg.sender), "Account is not an admin");
         _;
     }
 
     /**
      * @dev Modifier to scope access to admins
      */
-    modifier onlySuperUser(uint256 pId) {
+    modifier onlySuperUser(uint256 _pId) {
         require(
-            roleHas(pId, "owner", msg.sender) ||
-                roleHas(pId, "admin", msg.sender),
+            roleHas(_pId, "owner", msg.sender) ||
+                roleHas(_pId, "admin", msg.sender),
             "Account is not a super user"
         );
         _;
@@ -125,36 +128,40 @@ abstract contract StafiBase {
     /**
      * @dev Reverts if the address doesn't have this role
      */
-    modifier onlyRole(uint256 pId, string memory _role) {
+    modifier onlyRole(uint256 _pId, string memory _role) {
         require(
-            roleHas(pId, _role, msg.sender),
+            roleHas(_pId, _role, msg.sender),
             "Account does not match the specified role"
         );
         _;
     }
 
     /// @dev Set the main Storage address
-    constructor(address _stafiStorageAddress) {
+    constructor(uint256 _pId, address _stafiStorageAddress) {
+        // Update the project id
+        pId = _pId;
         // Update the contract address
         stafiStorage = IStafiStorage(_stafiStorageAddress);
     }
 
     function contractAddressKey(
-        uint256 pId,
+        uint256 _pId,
         string memory _contractName
     ) internal pure returns (bytes32) {
         return
-            keccak256(abi.encodePacked("contract.address", pId, _contractName));
+            keccak256(
+                abi.encodePacked("contract.address", _pId, _contractName)
+            );
     }
 
     /// @dev Get the address of a network contract by name
     function getContractAddress(
-        uint256 pId,
+        uint256 _pId,
         string memory _contractName
     ) internal view returns (address) {
         // Get the current contract address
         address contractAddress = getAddress(
-            contractAddressKey(pId, _contractName)
+            contractAddressKey(_pId, _contractName)
         );
         // Check it
         require(contractAddress != address(0x0), "System contract not found");
@@ -379,13 +386,15 @@ abstract contract StafiBase {
      * @dev Check if an address has this role
      */
     function roleHas(
-        uint256 pId,
+        uint256 _pId,
         string memory _role,
         address _address
     ) internal view returns (bool) {
         return
             getBool(
-                keccak256(abi.encodePacked("access.role", pId, _role, _address))
+                keccak256(
+                    abi.encodePacked("access.role", _pId, _role, _address)
+                )
             );
     }
 }

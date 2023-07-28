@@ -9,10 +9,9 @@ import "../common/interfaces/deposit/IStafiUserDeposit.sol";
 import "./interfaces/IProjBalances.sol";
 import "./interfaces/IProjRToken.sol";
 import "./interfaces/IProjUserDeposit.sol";
-import "./ProjContract.sol";
 
 // rETH is backed by ETH (subject to liquidity) at a variable exchange rate
-contract rToken is ProjContract, ERC20Burnable, IProjRToken {
+contract rToken is StafiBase, ERC20Burnable, IProjRToken {
     // Libs
     using SafeMath for uint256;
 
@@ -27,7 +26,7 @@ contract rToken is ProjContract, ERC20Burnable, IProjRToken {
         address _stafiStorageAddress,
         string memory name,
         string memory symbol
-    ) ProjContract(_pId, _stafiStorageAddress) ERC20(name, symbol) {
+    ) StafiBase(_pId, _stafiStorageAddress) ERC20(name, symbol) {
         version = 1;
     }
 
@@ -58,7 +57,7 @@ contract rToken is ProjContract, ERC20Burnable, IProjRToken {
     function mint(
         address _to,
         uint256 _rethAmount
-    ) external onlyLatestContract(0, "RETHToken", msg.sender) {
+    ) external onlyLatestContract(1, "RETHToken", msg.sender) {
         // Check rETH amount
         require(_rethAmount > 0, "Invalid token mint amount");
         // Update balance & supply

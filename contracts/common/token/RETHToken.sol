@@ -32,7 +32,9 @@ contract RETHToken is StafiBase, IRETHToken {
     );
 
     // Construct
-    constructor(address _stafiStorageAddress) StafiBase(_stafiStorageAddress) {
+    constructor(
+        address _stafiStorageAddress
+    ) StafiBase(1, _stafiStorageAddress) {
         version = 1;
     }
 
@@ -91,7 +93,7 @@ contract RETHToken is StafiBase, IRETHToken {
         uint256 _pId,
         address _to,
         uint256 _ethAmount
-    ) external override onlyLatestContract(0, "stafiUserDeposit", msg.sender) {
+    ) external override onlyLatestContract(1, "stafiUserDeposit", msg.sender) {
         // Get rETH amount
         uint256 rethAmount = getRethValue(_pId, _ethAmount);
         // Check rETH amount

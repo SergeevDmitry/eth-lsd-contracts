@@ -3,13 +3,13 @@ pragma solidity 0.8.19;
 // SPDX-License-Identifier: GPL-3.0-only
 
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "../common/StafiBase.sol";
 import "../common/interfaces/node/IStafiNodeManager.sol";
 import "./interfaces/IProjBalances.sol";
 import "./interfaces/IProjSettings.sol";
-import "./ProjContract.sol";
 
 // Network balances
-contract ProjBalances is ProjContract, IProjBalances {
+contract ProjBalances is StafiBase, IProjBalances {
     // Libs
     using SafeMath for uint256;
 
@@ -34,7 +34,7 @@ contract ProjBalances is ProjContract, IProjBalances {
     constructor(
         uint256 _pId,
         address _stafiStorageAddress
-    ) ProjContract(_pId, _stafiStorageAddress) {
+    ) StafiBase(_pId, _stafiStorageAddress) {
         version = 1;
     }
 

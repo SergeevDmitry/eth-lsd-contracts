@@ -31,7 +31,9 @@ contract StafiNetworkBalances is StafiBase, IStafiNetworkBalances {
     );
 
     // Construct
-    constructor(address _stafiStorageAddress) StafiBase(_stafiStorageAddress) {
+    constructor(
+        address _stafiStorageAddress
+    ) StafiBase(1, _stafiStorageAddress) {
         version = 1;
     }
 
@@ -57,8 +59,7 @@ contract StafiNetworkBalances is StafiBase, IStafiNetworkBalances {
     )
         external
         override
-        onlyLatestContract("stafiNetworkBalances", address(this))
-        onlyTrustedNode(msg.sender)
+        onlyLatestContract(1, "stafiNetworkBalances", address(this))
     {
         // Check settings
         IStafiNetworkSettings stafiNetworkSettings = IStafiNetworkSettings(
