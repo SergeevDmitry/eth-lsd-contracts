@@ -2,7 +2,7 @@ pragma solidity 0.8.19;
 
 // SPDX-License-Identifier: GPL-3.0-only
 
-import "../common/StafiBase.sol";
+import "../stafi/StafiBase.sol";
 import "./interfaces/IProjSettings.sol";
 
 contract ProjSettings is StafiBase, IProjSettings {

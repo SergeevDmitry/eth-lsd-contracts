@@ -3,9 +3,9 @@ pragma solidity 0.8.19;
 // SPDX-License-Identifier: GPL-3.0-only
 
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
-import "../common/StafiBase.sol";
-import "../common/interfaces/network/IStafiNetworkBalances.sol";
-import "../common/interfaces/node/IStafiNodeManager.sol";
+import "../stafi/StafiBase.sol";
+import "../stafi/interfaces/network/IStafiNetworkBalances.sol";
+import "../stafi/interfaces/node/IStafiNodeManager.sol";
 import "./interfaces/IProjBalances.sol";
 import "./interfaces/IProjSettings.sol";
 

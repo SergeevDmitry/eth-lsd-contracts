@@ -4,8 +4,8 @@ pragma solidity 0.8.19;
 
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
-import "../common/StafiBase.sol";
-import "../common/interfaces/deposit/IStafiUserDeposit.sol";
+import "../stafi/StafiBase.sol";
+import "../stafi/interfaces/deposit/IStafiUserDeposit.sol";
 import "./interfaces/IProjBalances.sol";
 import "./interfaces/IProjRToken.sol";
 import "./interfaces/IProjUserDeposit.sol";

@@ -2,8 +2,8 @@ pragma solidity 0.8.19;
 
 // SPDX-License-Identifier: GPL-3.0-only
 
-import "../common/StafiBase.sol";
-import "../common/interfaces/deposit/IStafiUserDeposit.sol";
+import "../stafi/StafiBase.sol";
+import "../stafi/interfaces/deposit/IStafiUserDeposit.sol";
 import "./interfaces/IProjEther.sol";
 import "./interfaces/IProjUserDeposit.sol";
 

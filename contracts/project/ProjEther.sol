@@ -3,9 +3,9 @@ pragma solidity 0.7.6;
 // SPDX-License-Identifier: GPL-3.0-only
 
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
-import "../common/StafiBase.sol";
+import "../stafi/StafiBase.sol";
+import "../stafi/interfaces/IStafiEtherWithdrawer.sol";
 import "./interfaces/IProjEther.sol";
-import "../common/interfaces/IStafiEtherWithdrawer.sol";
 
 // ETH are stored here to prevent contract upgrades from affecting balances
 // The contract must not be upgraded
