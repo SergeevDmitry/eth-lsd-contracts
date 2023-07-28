@@ -9,6 +9,7 @@ struct Project {
     address userDeposit;
     address balances;
     address settings;
+    address nodeManager;
     address lightNode;
     address superNode;
     address withdraw;

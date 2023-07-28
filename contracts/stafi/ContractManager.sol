@@ -7,6 +7,7 @@ import "./StafiBase.sol";
 import "./types/ProjectType.sol";
 import "../project/ProjEther.sol";
 import "../project/ProjBalances.sol";
+import "../project/ProjNodeManager.sol";
 import "../project/ProjSettings.sol";
 import "../project/ProjUserDeposit.sol";
 import "../project/rToken.sol";
@@ -30,7 +31,7 @@ contract ContractManager is StafiBase {
         setUintS("contractManager.project.nonce", _nonce);
     }
 
-    function useProjectId() internal returns (uint256) {
+    function generateProjectId() internal returns (uint256) {
         uint256 id = getProjectNonce();
         if (id == 0) id = 2;
         setProjectNonce(id.add(1));
@@ -48,49 +49,53 @@ contract ContractManager is StafiBase {
     function setProjectContractName(
         uint256 _pId,
         address _value,
-        string memory name
+        string memory _name
     ) internal {
-        setString(contractNameKey(_pId, _value), name);
+        setString(contractNameKey(_pId, _value), _name);
     }
 
-    function setProjectId(address _contractAddress, uint256 id) internal {
-        setUint(projectIdKey(_contractAddress), id);
+    function setProjectId(address _contractAddress, uint256 _pId) internal {
+        setUint(projectIdKey(_contractAddress), _pId);
     }
 
-    function saveProject(Project memory proj) internal {
-        setProjectContractAddress(proj.id, "projrToken", proj.rToken);
-        setProjectContractAddress(proj.id, "projEther", proj.etherKeeper);
-        setProjectContractAddress(proj.id, "projUserDeposit", proj.userDeposit);
-        setProjectContractAddress(proj.id, "projBalances", proj.balances);
-        setProjectContractAddress(proj.id, "projSettings", proj.settings);
-        setProjectContractName(proj.id, proj.rToken, "projrToken");
-        setProjectContractName(proj.id, proj.etherKeeper, "projEther");
-        setProjectContractName(proj.id, proj.userDeposit, "projUserDeposit");
-        setProjectContractName(proj.id, proj.balances, "projBalances")
-        setProjectContractName(proj.id, proj.settings, "projSettings")
-        setProjectId(proj.rToken, proj.id);
-        setProjectId(proj.etherKeeper, proj.id);
-        setProjectId(proj.userDeposit, proj.id);
-        setProjectId(proj.balances, proj.id);
-        setProjectId(proj.settings, proj.id);
+    function saveProject(Project memory _proj) internal {
+        setProjectContractAddress(_proj.id, "projrToken", _proj.rToken);
+        setProjectContractAddress(_proj.id, "projEther", _proj.etherKeeper);
+        setProjectContractAddress(_proj.id, "projUserDeposit", _proj.userDeposit);
+        setProjectContractAddress(_proj.id, "projBalances", _proj.balances);
+        setProjectContractAddress(_proj.id, "projSettings", _proj.settings);
+        setProjectContractAddress(_proj.id, "projNodeManager", _proj.nodeManager);
+        setProjectContractName(_proj.id, _proj.rToken, "projrToken");
+        setProjectContractName(_proj.id, _proj.etherKeeper, "projEther");
+        setProjectContractName(_proj.id, _proj.userDeposit, "projUserDeposit");
+        setProjectContractName(_proj.id, _proj.balances, "projBalances")
+        setProjectContractName(_proj.id, _proj.settings, "projSettings")
+        setProjectContractName(_proj.id, _proj.nodeManager, "projNodeManager")
+        setProjectId(_proj.rToken, _proj.id);
+        setProjectId(_proj.etherKeeper, _proj.id);
+        setProjectId(_proj.userDeposit, _proj.id);
+        setProjectId(_proj.balances, _proj.id);
+        setProjectId(_proj.settings, _proj.id);
+        setProjectId(_proj.nodeManager, _proj.id);
     }
 
     function createProject(
-        string memory name,
-        string memory symbol
+        string memory _name,
+        string memory _symbol,
+        address _superUser
     ) external onlySuperUser(1) returns (uint256) {
         Project memory proj;
-        uint256 _pId = useProjectId();
+        uint256 _pId = generateProjectId();
         address  _stafiStorageAddress = address(stafiStorage)
         proj.id = _pId
-        proj.rToken = address(new rToken(_pId, _stafiStorageAddress, name, symbol));
+        proj.rToken = address(new rToken(_pId, _stafiStorageAddress, _name, _symbol));
         proj.etherKeeper = address(new ProjEther(_pId, _stafiStorageAddress));
         proj.userDeposit = address(
             new UserDeposit(_pId, _stafiStorageAddress)
         );
         proj.balances = address(new ProjBalances(_pId, _stafiStorageAddress))
         proj.settings = address(new ProjSettings(_pId, _stafiStorageAddress))
-        // projNodeManager
+        proj.nodeManager = address(new ProjNodeManager(_pId, _stafiStorageAddress));
         emit ProjectCreated(proj.id, proj);
         return proj.id;
     }

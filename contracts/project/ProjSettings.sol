@@ -15,10 +15,6 @@ contract ProjSettings is StafiBase, IProjSettings {
             // Apply settings
             setNodeConsensusThreshold(0.5 ether); // 50%
             setSubmitBalancesEnabled(true);
-            setProcessWithdrawalsEnabled(true);
-            setNodeFee(0.1 ether); // 10%
-            setNodeRefundRatio(0.25 ether); // 25%
-            setNodeTrustedRefundRatio(0.5 ether); // 50%
             setSuperNodePubkeyLimit(50);
             // Settings initialized
             setBool(keccak256(abi.encode("settings.network.init", _pId)), true);
@@ -63,94 +59,6 @@ contract ProjSettings is StafiBase, IProjSettings {
         setBool(
             keccak256(
                 abi.encode("settings.network.submit.balances.enabled", pId)
-            ),
-            _value
-        );
-    }
-
-    // Process withdrawals currently enabled (trusted nodes only)
-    function getProcessWithdrawalsEnabled()
-        public
-        view
-        override
-        returns (bool)
-    {
-        return
-            getBool(
-                keccak256(
-                    abi.encode(
-                        "settings.network.process.withdrawals.enabled",
-                        pId
-                    )
-                )
-            );
-    }
-
-    function setProcessWithdrawalsEnabled(
-        bool _value
-    ) public onlySuperUser(pId) {
-        setBool(
-            keccak256(
-                abi.encode("settings.network.process.withdrawals.enabled", pId)
-            ),
-            _value
-        );
-    }
-
-    // The node commission rate as a fraction of 1 ether
-    function getNodeFee() public view override returns (uint256) {
-        return getUint(keccak256(abi.encode("settings.network.node.fee", pId)));
-    }
-
-    function setNodeFee(uint256 _value) public onlySuperUser(pId) {
-        require(_value <= 1 ether, "Invalid value");
-        setUint(
-            keccak256(abi.encode("settings.network.node.fee", pId)),
-            _value
-        );
-    }
-
-    // The node refund commission rate as a fraction of 1 ether
-    function getNodeRefundRatio() public view override returns (uint256) {
-        return
-            getUint(
-                keccak256(abi.encode("settings.network.node.refund.ratio", pId))
-            );
-    }
-
-    function setNodeRefundRatio(uint256 _value) public onlySuperUser(pId) {
-        require(_value <= 1 ether, "Invalid value");
-        setUint(
-            keccak256(abi.encode("settings.network.node.refund.ratio", pId)),
-            _value
-        );
-    }
-
-    // The trusted node refund commission rate as a fraction of 1 ether
-    function getNodeTrustedRefundRatio()
-        public
-        view
-        override
-        returns (uint256)
-    {
-        return
-            getUint(
-                keccak256(
-                    abi.encode(
-                        "settings.network.node.trusted.refund.ratio",
-                        pId
-                    )
-                )
-            );
-    }
-
-    function setNodeTrustedRefundRatio(
-        uint256 _value
-    ) public onlySuperUser(pId) {
-        require(_value <= 1 ether, "Invalid value");
-        setUint(
-            keccak256(
-                abi.encode("settings.network.node.trusted.refund.ratio", pId)
             ),
             _value
         );
