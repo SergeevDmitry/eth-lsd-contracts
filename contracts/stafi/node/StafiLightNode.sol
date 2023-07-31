@@ -268,6 +268,7 @@ contract StafiLightNode is StafiBase, IStafiLightNode {
     }
 
     function offBoard(
+        address _user,
         bytes calldata _validatorPubkey
     ) external override onlyLatestContract(1, "stafiLightNode", address(this)) {
         uint256 _pId = getProjectId(msg.sender);
@@ -275,7 +276,7 @@ contract StafiLightNode is StafiBase, IStafiLightNode {
             _pId > 1 && getContractAddress(_pId, "projLightNode") == msg.sender,
             "Invalid caller"
         );
-        setAndCheckNodePubkeyInOffBoard(_pId, _validatorPubkey);
+        setAndCheckNodePubkeyInOffBoard(_pId, _user, _validatorPubkey);
 
         emit OffBoarded(msg.sender, _validatorPubkey);
     }
@@ -283,7 +284,12 @@ contract StafiLightNode is StafiBase, IStafiLightNode {
     function provideNodeDepositToken(
         uint256 _value,
         bytes calldata _validatorPubkey
-    ) external payable onlyLatestContract(1, "stafiLightNode", address(this)) {
+    )
+        external
+        payable
+        override
+        onlyLatestContract(1, "stafiLightNode", address(this))
+    {
         uint256 _pId = getProjectId(msg.sender);
         require(
             _pId > 1 && getContractAddress(_pId, "projLightNode") == msg.sender,
@@ -314,7 +320,7 @@ contract StafiLightNode is StafiBase, IStafiLightNode {
     function withdrawNodeDepositToken(
         address _user,
         bytes calldata _validatorPubkey
-    ) external onlyLatestContract(1, "stafiLightNode", address(this)) {
+    ) external override onlyLatestContract(1, "stafiLightNode", address(this)) {
         uint256 _pId = getProjectId(msg.sender);
         require(
             _pId > 1 && getContractAddress(_pId, "projLightNode") == msg.sender,
@@ -412,9 +418,6 @@ contract StafiLightNode is StafiBase, IStafiLightNode {
         address _user,
         bytes calldata _pubkey
     ) private {
-        IProjLightNode projLightNode = IProjLightNode(
-            getContractAddress(_pId, "projLightNode")
-        );
         // check status
         require(
             getLightNodePubkeyStatus(_pId, _pubkey) == PUBKEY_STATUS_MATCH,
@@ -430,6 +433,7 @@ contract StafiLightNode is StafiBase, IStafiLightNode {
     // Set and check a node's validator pubkey
     function setAndCheckNodePubkeyInOffBoard(
         uint256 _pId,
+        address _user,
         bytes calldata _pubkey
     ) private {
         // check status
@@ -441,7 +445,7 @@ contract StafiLightNode is StafiBase, IStafiLightNode {
         require(
             PubkeySetStorage().getIndexOf(
                 keccak256(
-                    abi.encodePacked("lightNode.pubkeys.index", msg.sender)
+                    abi.encodePacked("lightNode.pubkeys.index", _pId, _user)
                 ),
                 _pubkey
             ) >= 0,
@@ -454,6 +458,7 @@ contract StafiLightNode is StafiBase, IStafiLightNode {
 
     // Only accepts calls from trusted (oracle) nodes
     function voteWithdrawCredentials(
+        address _voter,
         bytes[] calldata _pubkeys,
         bool[] calldata _matchs
     )
@@ -469,11 +474,12 @@ contract StafiLightNode is StafiBase, IStafiLightNode {
         );
         require(_pubkeys.length == _matchs.length, "params len err");
         for (uint256 i = 0; i < _pubkeys.length; i++) {
-            _voteWithdrawCredentials(_pId, _pubkeys[i], _matchs[i]);
+            _voteWithdrawCredentials(_voter, _pId, _pubkeys[i], _matchs[i]);
         }
     }
 
     function _voteWithdrawCredentials(
+        address _voter,
         uint256 _pId,
         bytes calldata _pubkey,
         bool _match
@@ -484,8 +490,9 @@ contract StafiLightNode is StafiBase, IStafiLightNode {
                 keccak256(
                     abi.encodePacked(
                         "lightNode.memberVotes.",
+                        _pId,
                         _pubkey,
-                        msg.sender
+                        _voter
                     )
                 )
             ),
@@ -493,19 +500,26 @@ contract StafiLightNode is StafiBase, IStafiLightNode {
         );
         setBool(
             keccak256(
-                abi.encodePacked("lightNode.memberVotes.", _pubkey, msg.sender)
+                abi.encodePacked(
+                    "lightNode.memberVotes.",
+                    _pId,
+                    _pubkey,
+                    _voter
+                )
             ),
             true
         );
 
         // Increment votes count
         uint256 totalVotes = getUint(
-            keccak256(abi.encodePacked("lightNode.totalVotes", _pubkey, _match))
+            keccak256(
+                abi.encodePacked("lightNode.totalVotes", _pId, _pubkey, _match)
+            )
         );
         totalVotes = totalVotes.add(1);
         setUint(
             keccak256(
-                abi.encodePacked("lightNode.totalVotes", _pubkey, _match)
+                abi.encodePacked("lightNode.totalVotes", _pId, _pubkey, _match)
             ),
             totalVotes
         );

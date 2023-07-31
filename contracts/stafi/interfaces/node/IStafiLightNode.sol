@@ -21,10 +21,21 @@ interface IStafiLightNode {
         bytes32[] calldata _depositDataRoots
     ) external;
 
-    function offBoard(bytes calldata _validatorPubkey) external;
+    function offBoard(address _user, bytes calldata _validatorPubkey) external;
+
+    function provideNodeDepositToken(
+        uint256 _value,
+        bytes calldata _validatorPubkey
+    ) external payable;
+
+    function withdrawNodeDepositToken(
+        address _user,
+        bytes calldata _validatorPubkey
+    ) external;
 
     function voteWithdrawCredentials(
-        bytes[] calldata _pubkey,
-        bool[] calldata _match
+        address _voter,
+        bytes[] calldata _pubkeys,
+        bool[] calldata _matchs
     ) external;
 }

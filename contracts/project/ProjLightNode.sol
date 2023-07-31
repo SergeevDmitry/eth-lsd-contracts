@@ -77,6 +77,7 @@ contract ProjLightNode is StafiBase, IProjLightNode {
         );
         stafiLightNode.deposit(
             msg.sender,
+            msg.value,
             _validatorPubkeys,
             _validatorSignatures,
             _depositDataRoots
@@ -109,6 +110,22 @@ contract ProjLightNode is StafiBase, IProjLightNode {
         );
     }
 
+    function stake(
+        bytes[] calldata _validatorPubkeys,
+        bytes[] calldata _validatorSignatures,
+        bytes32[] calldata _depositDataRoots
+    ) external payable onlyLatestContract(pId, "projLightNode", address(this)) {
+        IStafiLightNode stafiLightNode = IStafiLightNode(
+            getContractAddress(1, "stafiLightNode")
+        );
+        stafiLightNode.stake(
+            msg.sender,
+            _validatorPubkeys,
+            _validatorSignatures,
+            _depositDataRoots
+        );
+    }
+
     function ethStake(
         address _user,
         bytes calldata _validatorPubkey,
@@ -130,6 +147,43 @@ contract ProjLightNode is StafiBase, IProjLightNode {
             _depositDataRoot
         );
         emit Staked(_user, _validatorPubkey);
+    }
+
+    function offBoard(
+        bytes calldata _validatorPubkey
+    ) external onlyLatestContract(pId, "projLightNode", address(this)) {
+        IStafiLightNode stafiLightNode = IStafiLightNode(
+            getContractAddress(1, "stafiLightNode")
+        );
+        stafiLightNode.offBoard(msg.sender, _validatorPubkey);
+    }
+
+    function provideNodeDepositToken(
+        bytes calldata _validatorPubkey
+    ) external payable onlyLatestContract(pId, "projLightNode", address(this)) {
+        IStafiLightNode stafiLightNode = IStafiLightNode(
+            getContractAddress(1, "stafiLightNode")
+        );
+        stafiLightNode.provideNodeDepositToken(msg.value, _validatorPubkey);
+    }
+
+    function withdrawNodeDepositToken(
+        bytes calldata _validatorPubkey
+    ) external onlyLatestContract(pId, "projLightNode", address(this)) {
+        IStafiLightNode stafiLightNode = IStafiLightNode(
+            getContractAddress(1, "stafiLightNode")
+        );
+        stafiLightNode.withdrawNodeDepositToken(msg.sender, _validatorPubkey);
+    }
+
+    function voteWithdrawCredentials(
+        bytes[] calldata _pubkeys,
+        bool[] calldata _matchs
+    ) external onlyLatestContract(pId, "projLightNode", address(this)) {
+        IStafiLightNode stafiLightNode = IStafiLightNode(
+            getContractAddress(1, "stafiLightNode")
+        );
+        stafiLightNode.voteWithdrawCredentials(_pubkeys, _matchs);
     }
 
     function provideEther(
