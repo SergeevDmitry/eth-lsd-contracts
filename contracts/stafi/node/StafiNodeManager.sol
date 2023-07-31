@@ -17,7 +17,6 @@ contract StafiNodeManager is StafiBase, IStafiNodeManager {
     // Set a node's trusted status
     // Only accepts calls from super users
     function setNodeTrusted(
-        uint256 _pId,
         address _nodeAddress,
         bool _trusted
     )
@@ -55,6 +54,52 @@ contract StafiNodeManager is StafiBase, IStafiNodeManager {
         } else {
             addressSetStorage.removeItem(
                 keccak256(abi.encodePacked("nodes.trusted.index", _pId)),
+                _nodeAddress
+            );
+        }
+    }
+
+    // Set a node's super status
+    // Only accepts calls from super users
+    function setNodeSuper(
+        address _nodeAddress,
+        bool _super
+    )
+        external
+        override
+        onlyLatestContract("stafiNodeManager", address(this))
+        onlySuperUser
+    {
+        uint256 _pId = getProjectId(msg.sender);
+        require(
+            _pId > 1 &&
+                getContractAddress(_pId, "projNodeManager") == msg.sender,
+            "Invalid caller"
+        );
+        IProjNodeManager projNodeManager = IProjNodeManager(msg.sender);
+        // Check current node status
+        require(
+            !projNodeManager.getSuperNodeExists(_nodeAddress),
+            "The node's super status is already set"
+        );
+        // Load contracts
+        IAddressSetStorage addressSetStorage = IAddressSetStorage(
+            getContractAddress(1, "addressSetStorage")
+        );
+        // Set status
+        setBool(
+            keccak256(abi.encodePacked("node.super", _pId, _nodeAddress)),
+            _super
+        );
+        // Add node to / remove node from trusted index
+        if (_super) {
+            addressSetStorage.addItem(
+                keccak256(abi.encodePacked("nodes.super.index", _pId)),
+                _nodeAddress
+            );
+        } else {
+            addressSetStorage.removeItem(
+                keccak256(abi.encodePacked("nodes.super.index", _pId)),
                 _nodeAddress
             );
         }

@@ -183,7 +183,7 @@ contract ProjLightNode is StafiBase, IProjLightNode {
         IStafiLightNode stafiLightNode = IStafiLightNode(
             getContractAddress(1, "stafiLightNode")
         );
-        stafiLightNode.voteWithdrawCredentials(_pubkeys, _matchs);
+        stafiLightNode.voteWithdrawCredentials(msg.sender, _pubkeys, _matchs);
     }
 
     function provideEther(

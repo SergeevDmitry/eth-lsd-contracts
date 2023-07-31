@@ -6,11 +6,11 @@ pragma abicoder v2;
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "../StafiBase.sol";
 import "../interfaces/node/IStafiSuperNode.sol";
-import "../interfaces/node/IStafiNodeManager.sol";
-import "../interfaces/deposit/IStafiUserDeposit.sol";
-import "../interfaces/eth/IDepositContract.sol";
-import "../interfaces/settings/IStafiNetworkSettings.sol";
 import "../interfaces/storage/IPubkeySetStorage.sol";
+import "../../project/interfaces/IProjSuperNode.sol";
+import "../../project/interfaces/IProjNodeManager.sol";
+import "../../project/interfaces/IProjSettings.sol";
+import "../../project/interfaces/IProjUserDeposit.sol";
 
 contract StafiSuperNode is StafiBase, IStafiSuperNode {
     // Libs
@@ -28,74 +28,65 @@ contract StafiSuperNode is StafiBase, IStafiSuperNode {
     uint256 public constant PUBKEY_STATUS_UNMATCH = 4;
 
     // Construct
-    constructor(address _stafiStorageAddress) StafiBase(_stafiStorageAddress) {
+    constructor(
+        address _stafiStorageAddress
+    ) StafiBase(1, _stafiStorageAddress) {
         version = 1;
     }
 
-    // Deposit ETH from deposit pool
-    // Only accepts calls from the StafiUserDeposit contract
-    function depositEth()
-        external
-        payable
-        override
-        onlyLatestContract("stafiUserDeposit", msg.sender)
-    {
-        // Emit ether deposited event
-        emit EtherDeposited(msg.sender, msg.value, block.timestamp);
-    }
-
-    function EthDeposit() private view returns (IDepositContract) {
-        return IDepositContract(getContractAddress("ethDeposit"));
-    }
-
-    function StafiNetworkSettings()
-        private
-        view
-        returns (IStafiNetworkSettings)
-    {
-        return
-            IStafiNetworkSettings(getContractAddress("stafiNetworkSettings"));
+    function ProjSettings(uint256 _pId) private view returns (IProjSettings) {
+        return IProjSettings(getContractAddress(_pId, "projSettings"));
     }
 
     function PubkeySetStorage() public view returns (IPubkeySetStorage) {
-        return IPubkeySetStorage(getContractAddress("pubkeySetStorage"));
+        return IPubkeySetStorage(getContractAddress(1, "pubkeySetStorage"));
     }
 
     // Get the number of pubkeys owned by a super node
     function getSuperNodePubkeyCount(
+        uint256 _pId,
         address _nodeAddress
     ) public view override returns (uint256) {
         return
             PubkeySetStorage().getCount(
                 keccak256(
-                    abi.encodePacked("superNode.pubkeys.index", _nodeAddress)
+                    abi.encodePacked(
+                        "superNode.pubkeys.index",
+                        _pId,
+                        _nodeAddress
+                    )
                 )
             );
     }
 
-    // Get a super node pubkey by index
-    function getSuperNodePubkeyAt(
-        address _nodeAddress,
-        uint256 _index
-    ) public view override returns (bytes memory) {
+    // Get a light node pubkey status
+    function getLightNodePubkeyStatus(
+        uint256 _pId,
+        bytes calldata _validatorPubkey
+    ) private view returns (uint256) {
         return
-            PubkeySetStorage().getItem(
+            getUint(
                 keccak256(
-                    abi.encodePacked("superNode.pubkeys.index", _nodeAddress)
-                ),
-                _index
+                    abi.encodePacked(
+                        "lightNode.pubkey.status",
+                        _pId,
+                        _validatorPubkey
+                    )
+                )
             );
     }
 
     // Get a super node pubkey status
     function getSuperNodePubkeyStatus(
+        uint256 _pId,
         bytes calldata _validatorPubkey
-    ) public view override returns (uint256) {
+    ) public view returns (uint256) {
         return
             getUint(
                 keccak256(
                     abi.encodePacked(
                         "superNode.pubkey.status",
+                        _pId,
                         _validatorPubkey
                     )
                 )
@@ -104,12 +95,17 @@ contract StafiSuperNode is StafiBase, IStafiSuperNode {
 
     // Set a super node pubkey status
     function _setSuperNodePubkeyStatus(
+        uint256 _pId,
         bytes calldata _validatorPubkey,
         uint256 _status
     ) private {
         setUint(
             keccak256(
-                abi.encodePacked("superNode.pubkey.status", _validatorPubkey)
+                abi.encodePacked(
+                    "superNode.pubkey.status",
+                    _pId,
+                    _validatorPubkey
+                )
             ),
             _status
         );
@@ -117,49 +113,27 @@ contract StafiSuperNode is StafiBase, IStafiSuperNode {
         emit SetPubkeyStatus(_validatorPubkey, _status);
     }
 
-    function setSuperNodePubkeyStatus(
-        bytes calldata _validatorPubkey,
-        uint256 _status
-    ) public onlySuperUser {
-        _setSuperNodePubkeyStatus(_validatorPubkey, _status);
-    }
-
-    function getSuperNodeDepositEnabled() public view returns (bool) {
-        return getBoolS("settings.superNode.deposit.enabled");
-    }
-
-    function getPubkeyVoted(
-        bytes calldata _validatorPubkey,
-        address user
-    ) public view returns (bool) {
-        return
-            getBool(
-                keccak256(
-                    abi.encodePacked(
-                        "superNode.memberVotes.",
-                        _validatorPubkey,
-                        user
-                    )
-                )
-            );
-    }
-
-    function setSuperNodeDepositEnabled(bool _value) public onlySuperUser {
-        setBoolS("settings.superNode.deposit.enabled", _value);
-    }
-
     function deposit(
+        address _user,
         bytes[] calldata _validatorPubkeys,
         bytes[] calldata _validatorSignatures,
         bytes32[] calldata _depositDataRoots
-    )
-        external
-        override
-        onlyLatestContract("stafiSuperNode", address(this))
-        onlySuperNode(msg.sender)
-    {
+    ) external override onlyLatestContract(1, "stafiSuperNode", address(this)) {
+        uint256 _pId = getProjectId(msg.sender);
         require(
-            getSuperNodeDepositEnabled(),
+            _pId > 1 && getContractAddress(_pId, "projSuperNode") == msg.sender,
+            "Invalid caller"
+        );
+        IProjNodeManager projNodeManager = IProjNodeManager(
+            getContractAddress(_pId, "projNodeManager")
+        );
+        require(
+            projNodeManager.getSuperNodeExists(_user),
+            "Invalid super node"
+        );
+        IProjSuperNode projSuperNode = IProjSuperNode(msg.sender);
+        require(
+            projSuperNode.getSuperNodeDepositEnabled(),
             "super node deposits are currently disabled"
         );
         uint256 len = _validatorPubkeys.length;
@@ -169,18 +143,20 @@ contract StafiSuperNode is StafiBase, IStafiSuperNode {
             "params len err"
         );
         require(
-            getSuperNodePubkeyCount(msg.sender).add(len) <=
-                StafiNetworkSettings().getSuperNodePubkeyLimit(),
+            getSuperNodePubkeyCount(_pId, _user).add(len) <=
+                ProjSettings(_pId).getSuperNodePubkeyLimit(),
             "pubkey amount over limit"
         );
         // Load contracts
-        IStafiUserDeposit stafiUserDeposit = IStafiUserDeposit(
-            getContractAddress("stafiUserDeposit")
+        IProjUserDeposit projUserDeposit = IProjUserDeposit(
+            getContractAddress(_pId, "projUserDeposit")
         );
-        stafiUserDeposit.withdrawExcessBalanceForSuperNode(len.mul(1 ether));
+        projUserDeposit.withdrawExcessBalanceForSuperNode(len.mul(1 ether));
 
         for (uint256 i = 0; i < len; i++) {
             _deposit(
+                _pId,
+                _user,
                 _validatorPubkeys[i],
                 _validatorSignatures[i],
                 _depositDataRoots[i]
@@ -189,15 +165,24 @@ contract StafiSuperNode is StafiBase, IStafiSuperNode {
     }
 
     function stake(
+        address _user,
         bytes[] calldata _validatorPubkeys,
         bytes[] calldata _validatorSignatures,
         bytes32[] calldata _depositDataRoots
-    )
-        external
-        override
-        onlyLatestContract("stafiSuperNode", address(this))
-        onlySuperNode(msg.sender)
-    {
+    ) external override onlyLatestContract(1, "stafiSuperNode", address(this)) {
+        uint256 _pId = getProjectId(msg.sender);
+        require(
+            _pId > 1 && getContractAddress(_pId, "projSuperNode") == msg.sender,
+            "Invalid caller"
+        );
+        IProjNodeManager projNodeManager = IProjNodeManager(
+            getContractAddress(_pId, "projNodeManager")
+        );
+        require(
+            projNodeManager.getSuperNodeExists(_user),
+            "Invalid super node"
+        );
+        IProjSuperNode projSuperNode = IProjSuperNode(msg.sender);
         uint256 len = _validatorPubkeys.length;
         require(
             len == _validatorSignatures.length &&
@@ -205,13 +190,15 @@ contract StafiSuperNode is StafiBase, IStafiSuperNode {
             "params len err"
         );
         // Load contracts
-        IStafiUserDeposit stafiUserDeposit = IStafiUserDeposit(
-            getContractAddress("stafiUserDeposit")
+        IProjUserDeposit projUserDeposit = IProjUserDeposit(
+            getContractAddress(_pId, "projUserDeposit")
         );
-        stafiUserDeposit.withdrawExcessBalanceForSuperNode(len.mul(31 ether));
+        projUserDeposit.withdrawExcessBalanceForSuperNode(len.mul(31 ether));
 
         for (uint256 i = 0; i < len; i++) {
             _stake(
+                _pId,
+                _user,
                 _validatorPubkeys[i],
                 _validatorSignatures[i],
                 _depositDataRoots[i]
@@ -220,98 +207,101 @@ contract StafiSuperNode is StafiBase, IStafiSuperNode {
     }
 
     function _deposit(
+        uint256 _pId,
+        address _user,
         bytes calldata _validatorPubkey,
         bytes calldata _validatorSignature,
         bytes32 _depositDataRoot
     ) private {
-        setAndCheckNodePubkeyInDeposit(_validatorPubkey);
+        setAndCheckNodePubkeyInDeposit(_pId, _user, _validatorPubkey);
         // Send staking deposit to casper
-        EthDeposit().deposit{value: 1 ether}(
+        IProjSuperNode projSuperNode = IProjSuperNode(msg.sender);
+        projSuperNode.ethDeposit(
+            _user,
             _validatorPubkey,
-            StafiNetworkSettings().getWithdrawalCredentials(),
             _validatorSignature,
             _depositDataRoot
         );
-
-        emit Deposited(msg.sender, _validatorPubkey, _validatorSignature);
     }
 
     function _stake(
+        uint256 _pId,
+        address _user,
         bytes calldata _validatorPubkey,
         bytes calldata _validatorSignature,
         bytes32 _depositDataRoot
     ) private {
-        setAndCheckNodePubkeyInStake(_validatorPubkey);
+        setAndCheckNodePubkeyInStake(_pId, _validatorPubkey);
         // Send staking deposit to casper
-        EthDeposit().deposit{value: 31 ether}(
+        IProjSuperNode projSuperNode = IProjSuperNode(msg.sender);
+        projSuperNode.ethStake(
+            _user,
             _validatorPubkey,
-            StafiNetworkSettings().getWithdrawalCredentials(),
             _validatorSignature,
             _depositDataRoot
         );
-
-        emit Staked(msg.sender, _validatorPubkey);
     }
 
     // Set and check a node's validator pubkey
-    function setAndCheckNodePubkeyInDeposit(bytes calldata _pubkey) private {
-        // check pubkey of stakingpools
-        require(
-            getAddress(
-                keccak256(abi.encodePacked("validator.stakingpool", _pubkey))
-            ) == address(0x0),
-            "stakingpool pubkey exists"
-        );
+    function setAndCheckNodePubkeyInDeposit(
+        uint256 _pId,
+        address _user,
+        bytes calldata _pubkey
+    ) private {
         // check pubkey of lightNodes
         require(
-            getUint(
-                keccak256(abi.encodePacked("lightNode.pubkey.status", _pubkey))
-            ) == PUBKEY_STATUS_UNINITIAL,
+            getLightNodePubkeyStatus(_pId, _pubkey) == PUBKEY_STATUS_UNINITIAL,
             "light Node pubkey exists"
         );
 
         // check status
         require(
-            getSuperNodePubkeyStatus(_pubkey) == PUBKEY_STATUS_UNINITIAL,
+            getSuperNodePubkeyStatus(_pId, _pubkey) == PUBKEY_STATUS_UNINITIAL,
             "pubkey status unmatch"
         );
         // set pubkey status
-        _setSuperNodePubkeyStatus(_pubkey, PUBKEY_STATUS_INITIAL);
+        _setSuperNodePubkeyStatus(_pId, _pubkey, PUBKEY_STATUS_INITIAL);
         // add pubkey to set
         PubkeySetStorage().addItem(
-            keccak256(abi.encodePacked("superNode.pubkeys.index", msg.sender)),
+            keccak256(abi.encodePacked("superNode.pubkeys.index", _pId, _user)),
             _pubkey
         );
     }
 
     // Set and check a node's validator pubkey
-    function setAndCheckNodePubkeyInStake(bytes calldata _pubkey) private {
+    function setAndCheckNodePubkeyInStake(
+        uint256 _pId,
+        bytes calldata _pubkey
+    ) private {
         // check status
         require(
-            getSuperNodePubkeyStatus(_pubkey) == PUBKEY_STATUS_MATCH,
+            getSuperNodePubkeyStatus(_pId, _pubkey) == PUBKEY_STATUS_MATCH,
             "pubkey status unmatch"
         );
         // set pubkey status
-        _setSuperNodePubkeyStatus(_pubkey, PUBKEY_STATUS_STAKING);
+        _setSuperNodePubkeyStatus(_pId, _pubkey, PUBKEY_STATUS_STAKING);
     }
 
     function voteWithdrawCredentials(
+        address _voter,
         bytes[] calldata _pubkeys,
         bool[] calldata _matchs
-    )
-        external
-        override
-        onlyLatestContract("stafiSuperNode", address(this))
-        onlyTrustedNode(msg.sender)
-    {
+    ) external override onlyLatestContract(1, "stafiSuperNode", address(this)) {
+        uint256 _pId = getProjectId(msg.sender);
+        require(
+            _pId > 1 && getContractAddress(_pId, "projSuperNode") == msg.sender,
+            "Invalid caller"
+        );
         require(_pubkeys.length == _matchs.length, "params len err");
         for (uint256 i = 0; i < _pubkeys.length; i++) {
-            _voteWithdrawCredentials(_pubkeys[i], _matchs[i]);
+            _voteWithdrawCredentials(_pId, _voter, _pubkeys[i], _matchs[i]);
         }
     }
 
     // Only accepts calls from trusted (oracle) nodes
     function _voteWithdrawCredentials(
+        uint256 _pId,
+        address _voter,
         bytes calldata _pubkey,
         bool _match
     ) private {
@@ -321,8 +311,9 @@ contract StafiSuperNode is StafiBase, IStafiSuperNode {
                 keccak256(
                     abi.encodePacked(
                         "superNode.memberVotes.",
+                        _pId,
                         _pubkey,
-                        msg.sender
+                        _voter
                     )
                 )
             ),
@@ -330,36 +321,44 @@ contract StafiSuperNode is StafiBase, IStafiSuperNode {
         );
         setBool(
             keccak256(
-                abi.encodePacked("superNode.memberVotes.", _pubkey, msg.sender)
+                abi.encodePacked(
+                    "superNode.memberVotes.",
+                    _pId,
+                    _pubkey,
+                    _voter
+                )
             ),
             true
         );
 
         // Increment votes count
         uint256 totalVotes = getUint(
-            keccak256(abi.encodePacked("superNode.totalVotes", _pubkey, _match))
+            keccak256(
+                abi.encodePacked("superNode.totalVotes", _pId, _pubkey, _match)
+            )
         );
         totalVotes = totalVotes.add(1);
         setUint(
             keccak256(
-                abi.encodePacked("superNode.totalVotes", _pubkey, _match)
+                abi.encodePacked("superNode.totalVotes", _pId, _pubkey, _match)
             ),
             totalVotes
         );
 
         // Check count and set status
         uint256 calcBase = 1 ether;
-        IStafiNodeManager stafiNodeManager = IStafiNodeManager(
-            getContractAddress("stafiNodeManager")
+        IProjNodeManager projNodeManager = IProjNodeManager(
+            getContractAddress(_pId, "stafiNodeManager")
         );
         if (
-            getSuperNodePubkeyStatus(_pubkey) == PUBKEY_STATUS_INITIAL &&
+            getSuperNodePubkeyStatus(_pId, _pubkey) == PUBKEY_STATUS_INITIAL &&
             calcBase.mul(totalVotes) >=
-            stafiNodeManager.getTrustedNodeCount().mul(
-                StafiNetworkSettings().getNodeConsensusThreshold()
+            projNodeManager.getTrustedNodeCount().mul(
+                ProjSettings(_pId).getNodeConsensusThreshold()
             )
         ) {
             _setSuperNodePubkeyStatus(
+                _pId,
                 _pubkey,
                 _match ? PUBKEY_STATUS_MATCH : PUBKEY_STATUS_UNMATCH
             );

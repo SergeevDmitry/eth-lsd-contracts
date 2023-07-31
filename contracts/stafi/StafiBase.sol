@@ -19,7 +19,7 @@ abstract contract StafiBase {
      */
     modifier onlyLatestSystemContract() {
         require(
-            getProjectId(msg.sender) == 0,
+            getProjectId(msg.sender) == 1,
             "Invalid or outdated network contract"
         );
         _;
@@ -59,13 +59,14 @@ abstract contract StafiBase {
         );
         _;
     }
-
     /**
      * @dev Throws if called by any sender that isn't a trusted node
      */
-    modifier onlyTrustedNode(address _nodeAddress) {
+    modifier onlyTrustedNode(uint256 _pId, address _nodeAddress) {
         require(
-            getBool(keccak256(abi.encodePacked("node.trusted", _nodeAddress))),
+            getBool(
+                keccak256(abi.encodePacked("node.trusted", _pId, _nodeAddress))
+            ),
             "Invalid trusted node"
         );
         _;
@@ -74,25 +75,12 @@ abstract contract StafiBase {
     /**
      * @dev Throws if called by any sender that isn't a super node
      */
-    modifier onlySuperNode(address _nodeAddress) {
-        require(
-            getBool(keccak256(abi.encodePacked("node.super", _nodeAddress))),
-            "Invalid super node"
-        );
-        _;
-    }
-
-    /**
-     * @dev Throws if called by any sender that isn't a registered staking pool
-     */
-    modifier onlyRegisteredStakingPool(address _stakingPoolAddress) {
+    modifier onlySuperNode(uint256 _pId, address _nodeAddress) {
         require(
             getBool(
-                keccak256(
-                    abi.encodePacked("stakingpool.exists", _stakingPoolAddress)
-                )
+                keccak256(abi.encodePacked("node.super", _pId, _nodeAddress))
             ),
-            "Invalid staking pool"
+            "Invalid super node"
         );
         _;
     }

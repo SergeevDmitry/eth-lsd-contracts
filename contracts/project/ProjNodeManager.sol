@@ -6,7 +6,6 @@ import "../stafi/StafiBase.sol";
 import "../stafi/interfaces/node/IStafiNodeManager.sol";
 import "./interfaces/IProjNodeManager.sol";
 
-
 // Node registration and management
 contract StafiNodeManager is StafiBase, IProjNodeManager {
     // Events
@@ -23,7 +22,7 @@ contract StafiNodeManager is StafiBase, IProjNodeManager {
     // Get the number of trusted nodes in the network
     function getTrustedNodeCount() public view override returns (uint256) {
         IAddressSetStorage addressSetStorage = IAddressSetStorage(
-            getContractAddress("addressSetStorage")
+            getContractAddress(1, "addressSetStorage")
         );
         return
             addressSetStorage.getCount(
@@ -36,7 +35,7 @@ contract StafiNodeManager is StafiBase, IProjNodeManager {
         uint256 _index
     ) public view override returns (address) {
         IAddressSetStorage addressSetStorage = IAddressSetStorage(
-            getContractAddress("addressSetStorage")
+            getContractAddress(1, "addressSetStorage")
         );
         return
             addressSetStorage.getItem(
@@ -66,8 +65,63 @@ contract StafiNodeManager is StafiBase, IProjNodeManager {
         onlyLatestContract(pId, "projNodeManger", address(this))
         onlySuperUser(_pId)
     {
-        IStafiNodeManager stafiNodeManager = IStafiNodeManager(getContractAddress(1, "stafiNodeManager"));
+        IStafiNodeManager stafiNodeManager = IStafiNodeManager(
+            getContractAddress(1, "stafiNodeManager")
+        );
         stafiNodeManager.setNodeTrusted();
         emit NodeTrustedSet(_nodeAddress, _trusted, block.timestamp);
+    }
+
+    // Get the number of super nodes in the network
+    function getSuperNodeCount() public view override returns (uint256) {
+        IAddressSetStorage addressSetStorage = IAddressSetStorage(
+            getContractAddress(1, "addressSetStorage")
+        );
+        return
+            addressSetStorage.getCount(
+                keccak256(abi.encodePacked("nodes.super.index", pId))
+            );
+    }
+
+    // Get a trusted node address by index
+    function getSuperNodeAt(
+        uint256 _index
+    ) public view override returns (address) {
+        IAddressSetStorage addressSetStorage = IAddressSetStorage(
+            getContractAddress(1, "addressSetStorage")
+        );
+        return
+            addressSetStorage.getItem(
+                keccak256(abi.encodePacked("nodes.super.index", pId)),
+                _index
+            );
+    }
+
+    // Check whether a node is trusted
+    function getSuperNodeExists(
+        address _nodeAddress
+    ) public view override returns (bool) {
+        return
+            getBool(
+                keccak256(abi.encodePacked("node.super", pId, _nodeAddress))
+            );
+    }
+
+    // Set a node's super status
+    // Only accepts calls from super users
+    function setNodeSuper(
+        address _nodeAddress,
+        bool _super
+    )
+        external
+        override
+        onlyLatestContract(pId, "projNodeManger", address(this))
+        onlySuperUser(_pId)
+    {
+        IStafiNodeManager stafiNodeManager = IStafiNodeManager(
+            getContractAddress(1, "stafiNodeManager")
+        );
+        stafiNodeManager.setNodeSuper(_nodeAddress, _super);
+        emit NodeSuperSet(_nodeAddress, _super, block.timestamp);
     }
 }

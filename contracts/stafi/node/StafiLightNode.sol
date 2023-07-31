@@ -13,7 +13,6 @@ import "../interfaces/storage/IPubkeySetStorage.sol";
 import "../../project/interfaces/IProjLightNode.sol";
 import "../../project/interfaces/IProjNodeManager.sol";
 import "../../project/interfaces/IProjSettings.sol";
-import "../../project/interfaces/IProjSuperNode.sol";
 import "../../project/interfaces/IProjUserDeposit.sol";
 
 contract StafiLightNode is StafiBase, IStafiLightNode {
@@ -165,7 +164,7 @@ contract StafiLightNode is StafiBase, IStafiLightNode {
     function getSuperNodePublicKeyStatus(
         uint256 _pId,
         bytes calldata _pubkey
-    ) public view returns (uint256) {
+    ) private view returns (uint256) {
         return
             getUint(
                 keccak256(
@@ -461,12 +460,7 @@ contract StafiLightNode is StafiBase, IStafiLightNode {
         address _voter,
         bytes[] calldata _pubkeys,
         bool[] calldata _matchs
-    )
-        external
-        override
-        onlyLatestContract(1, "stafiLightNode", address(this))
-        onlyTrustedNode(msg.sender)
-    {
+    ) external override onlyLatestContract(1, "stafiLightNode", address(this)) {
         uint256 _pId = getProjectId(msg.sender);
         require(
             _pId > 1 && getContractAddress(_pId, "projLightNode") == msg.sender,
@@ -474,13 +468,13 @@ contract StafiLightNode is StafiBase, IStafiLightNode {
         );
         require(_pubkeys.length == _matchs.length, "params len err");
         for (uint256 i = 0; i < _pubkeys.length; i++) {
-            _voteWithdrawCredentials(_voter, _pId, _pubkeys[i], _matchs[i]);
+            _voteWithdrawCredentials(_pId, _voter, _pubkeys[i], _matchs[i]);
         }
     }
 
     function _voteWithdrawCredentials(
-        address _voter,
         uint256 _pId,
+        address _voter,
         bytes calldata _pubkey,
         bool _match
     ) private {
