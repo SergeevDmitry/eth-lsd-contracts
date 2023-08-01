@@ -10,6 +10,7 @@ import "./interfaces/IProjLightNode.sol";
 import "./interfaces/IProjRToken.sol";
 import "./interfaces/IProjSuperNode.sol";
 import "./interfaces/IProjUserDeposit.sol";
+import "./interfaces/IProjWithdraw.sol";
 
 contract UserDeposit is StafiBase, IProjUserDeposit, IProjEtherWithdrawer {
     event DepositReceived(address indexed from, uint256 amount, uint256 time);
@@ -67,28 +68,6 @@ contract UserDeposit is StafiBase, IProjUserDeposit, IProjEtherWithdrawer {
         projEther.depositEther{value: _value}();
     }
 
-    // Withdraw excess deposit pool balance for rETH collateral
-    function withdrawExcessBalance(
-        uint256 _amount
-    )
-        external
-        override
-        onlyLatestContract(pId, "projUserDeposit", address(this))
-        onlyLatestContract(1, "rETHToken", msg.sender)
-    {
-        // Load contracts
-        IProjRToken rToken = IProjRToken(getContractAddress(pId, "projrToken"));
-        IProjEther projEther = IProjEther(getContractAddress(pId, "projEther"));
-        // Check amount
-        require(_amount <= getBalance(), "Insufficient balance for withdrawal");
-        // Withdraw ETH from vault
-        projEther.withdrawEther(_amount);
-        // Transfer to rETH contract
-        rToken.depositExcess{value: _amount}();
-        // Emit excess withdrawn event
-        emit ExcessWithdrawn(msg.sender, _amount, block.timestamp);
-    }
-
     // Withdraw excess deposit pool balance for super node
     function withdrawExcessBalanceForSuperNode(
         uint256 _amount
@@ -137,29 +116,29 @@ contract UserDeposit is StafiBase, IProjUserDeposit, IProjEtherWithdrawer {
         emit ExcessWithdrawn(msg.sender, _amount, block.timestamp);
     }
 
-    // Withdraw excess deposit pool balance for light node
-    // function withdrawExcessBalanceForWithdraw(
-    //     uint256 _amount
-    // )
-    //     external
-    //     override
-    //     onlyLatestContract("stafiUserDeposit", address(this))
-    //     onlyLatestContract("stafiWithdraw", msg.sender)
-    // {
-    //     // Load contracts
-    //     IStafiWithdraw stafiWithdraw = IStafiWithdraw(
-    //         getContractAddress("stafiWithdraw")
-    //     );
-    //     IStafiEther stafiEther = IStafiEther(getContractAddress("stafiEther"));
-    //     // Check amount
-    //     require(_amount <= getBalance(), "Insufficient balance for withdrawal");
-    //     // Withdraw ETH from vault
-    //     stafiEther.withdrawEther(_amount);
-    //     // Transfer to superNode contract
-    //     stafiWithdraw.depositEth{value: _amount}();
-    //     // Emit excess withdrawn event
-    //     emit ExcessWithdrawn(msg.sender, _amount, block.timestamp);
-    // }
+    // Withdraw excess deposit pool balance for withdraw
+    function withdrawExcessBalanceForWithdraw(
+        uint256 _amount
+    )
+        external
+        override
+        onlyLatestContract(pId, "projUserDeposit", address(this))
+        onlyLatestContract(1, "stafiWithdraw", msg.sender)
+    {
+        // Load contracts
+        IProjWithdraw projWithdraw = IProjWithdraw(
+            getContractAddress(pId, "projWithdraw")
+        );
+        IProjEther projEther = IProjEther(getContractAddress(pId, "projEther"));
+        // Check amount
+        require(_amount <= getBalance(), "Insufficient balance for withdrawal");
+        // Withdraw ETH from vault
+        projEther.withdrawEther(_amount);
+        // Transfer to superNode contract
+        projWithdraw.depositEth{value: _amount}();
+        // Emit excess withdrawn event
+        emit ExcessWithdrawn(msg.sender, _amount, block.timestamp);
+    }
 
     function getDepositEnabled() public view returns (bool) {
         return getBool(keccak256(abi.encode("settings.deposit.enabled", pId)));
@@ -180,6 +159,21 @@ contract UserDeposit is StafiBase, IProjUserDeposit, IProjEtherWithdrawer {
     // Recycle a deposit from fee collector
     // Only accepts calls from registered stafiDistributor
     function recycleDistributorDeposit()
+        external
+        payable
+        override
+        onlyLatestContract(pId, "projUserDeposit", address(this))
+        onlyLatestContract(pId, "projFeePool", msg.sender)
+    {
+        // Emit deposit recycled event
+        emit DepositRecycled(msg.sender, msg.value, block.timestamp);
+        // Process deposit
+        depositEther(msg.value);
+    }
+
+    // Recycle a deposit from withdraw
+    // Only accepts calls from registered stafiWithdraw
+    function recycleWithdrawDeposit()
         external
         payable
         override

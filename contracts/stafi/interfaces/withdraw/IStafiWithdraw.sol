@@ -5,12 +5,16 @@ pragma solidity 0.8.19;
 interface IStafiWithdraw {
     // user
 
-    function unstake(uint256 _rEthAmount) external;
+    function unstake(address _user, uint256 _rEthAmount) external;
 
-    function withdraw(uint256[] calldata _withdrawIndexList) external;
+    function withdraw(
+        address _user,
+        uint256[] calldata _withdrawIndexList
+    ) external;
 
     // ejector
     function notifyValidatorExit(
+        address _voter,
         uint256 _withdrawCycle,
         uint256 _ejectedStartWithdrawCycle,
         uint256[] calldata _validatorIndex
@@ -18,6 +22,7 @@ interface IStafiWithdraw {
 
     // voter
     function distributeWithdrawals(
+        address _voter,
         uint256 _dealedHeight,
         uint256 _userAmount,
         uint256 _nodeAmount,
@@ -25,11 +30,24 @@ interface IStafiWithdraw {
         uint256 _maxClaimableWithdrawIndex
     ) external;
 
-    function reserveEthForWithdraw(uint256 _withdrawCycle) external;
+    function reserveEthForWithdraw(
+        address _voter,
+        uint256 _withdrawCycle
+    ) external;
 
-    function depositEth() external payable;
+    function getUnclaimedWithdrawalsOfUser(
+        uint256 _pId,
+        address user
+    ) external view returns (uint256[] memory);
 
-    function getUnclaimedWithdrawalsOfUser(address user) external view returns (uint256[] memory);
+    function getEjectedValidatorsAtCycle(
+        uint256 _pId,
+        uint256 cycle
+    ) external view returns (uint256[] memory);
 
-    function getEjectedValidatorsAtCycle(uint256 cycle) external view returns (uint256[] memory);
+    function setWithdrawLimitPerCycle(uint256 _withdrawLimitPerCycle) external;
+
+    function setUserWithdrawLimitPerCycle(
+        uint256 _userWithdrawLimitPerCycle
+    ) external;
 }

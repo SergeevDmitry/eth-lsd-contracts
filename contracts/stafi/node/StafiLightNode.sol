@@ -203,7 +203,6 @@ contract StafiLightNode is StafiBase, IStafiLightNode {
             _pId > 1 && getContractAddress(_pId, "projLightNode") == msg.sender,
             "Invalid caller"
         );
-        IProjLightNode projLightNode = IProjLightNode(msg.sender);
         require(
             ProjSettings(_pId).getLightNodeDepositEnabled(),
             "light node deposits are currently disabled"
@@ -246,7 +245,6 @@ contract StafiLightNode is StafiBase, IStafiLightNode {
                 _validatorPubkeys.length == _depositDataRoots.length,
             "params len err"
         );
-        IProjLightNode projLightNode = IProjLightNode(msg.sender);
         // Load contracts
         IProjUserDeposit projUserDeposit = IProjUserDeposit(
             getContractAddress(_pId, "projUserDeposit")

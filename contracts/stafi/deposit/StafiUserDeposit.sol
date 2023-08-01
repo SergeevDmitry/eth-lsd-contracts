@@ -4,13 +4,12 @@ pragma solidity 0.8.19;
 
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "../StafiBase.sol";
-import "../interfaces/IStafiEtherWithdrawer.sol";
 import "../interfaces/deposit/IStafiUserDeposit.sol";
-import "../interfaces/token/IRETHToken.sol";
 import "../interfaces/node/IStafiSuperNode.sol";
 import "../interfaces/node/IStafiLightNode.sol";
 import "../interfaces/withdraw/IStafiWithdraw.sol";
 import "../../project/interfaces/IProjUserDeposit.sol";
+import "../../project/interfaces/IProjRToken.sol";
 
 // Accepts user deposits and mints rETH; handles assignment of deposited ETH to pools
 contract StafiUserDeposit is StafiBase, IStafiUserDeposit {
@@ -33,9 +32,10 @@ contract StafiUserDeposit is StafiBase, IStafiUserDeposit {
         override
         onlyLatestContract(1, "stafiUserDeposit", address(this))
     {
-        uint256 pId = getProjectId(msg.sender);
+        uint256 _pId = getProjectId(msg.sender);
         require(
-            pId > 1 && getContractAddress(pId, "projUserDeposit") == msg.sender,
+            _pId > 1 &&
+                getContractAddress(_pId, "projUserDeposit") == msg.sender,
             "Invalid caller"
         );
         IProjUserDeposit projUserDeposit = IProjUserDeposit(msg.sender);
@@ -47,8 +47,10 @@ contract StafiUserDeposit is StafiBase, IStafiUserDeposit {
             _value >= projUserDeposit.getMinimumDeposit(),
             "The deposited amount is less than the minimum deposit size"
         );
-        IRETHToken rETHToken = IRETHToken(getContractAddress(1, "rETHToken"));
-        rETHToken.userMint(pId, _user, _value);
+        IProjRToken rETHToken = IProjRToken(
+            getContractAddress(_pId, "rETHToken")
+        );
+        rETHToken.mint(_user, _value);
         projUserDeposit.depositEther(_value);
     }
 }

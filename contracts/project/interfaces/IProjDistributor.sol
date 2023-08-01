@@ -5,7 +5,7 @@ pragma solidity 0.8.19;
 interface IProjDistributor {
     function receiveEtherWithdrawal() external payable;
 
-    function distributeWithdrawals(uint256 _value) external;
+    function distributeWithdrawals() external payable;
 
     function claimToAccount(uint256 _value, address _account) external;
 }

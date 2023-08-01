@@ -47,18 +47,17 @@ contract ProjDistributor is StafiBase, IProjDistributor {
     {}
 
     // distribute withdrawals for node/platform, accept calls from stafiWithdraw
-    function distributeWithdrawals(
-        uint256 _value
-    )
+    function distributeWithdrawals()
         external
+        payable
         override
         onlyLatestContract(pId, "projDistributor", address(this))
-        onlyLatestContract(pId, "stafiDistributor", msg.sender)
+        onlyLatestContract(pId, "projWithdraw", msg.sender)
     {
-        require(_value > 0, "zero amount");
+        require(msg.value > 0, "zero amount");
 
         IProjEther projEther = IProjEther(getContractAddress(pId, "projEther"));
-        projEther.depositEther{value: _value}();
+        projEther.depositEther{value: msg.value}();
     }
 
     // ------------ settings ---------
