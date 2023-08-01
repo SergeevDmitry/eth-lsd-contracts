@@ -62,6 +62,10 @@ contract StafiLightNode is StafiBase, IStafiLightNode {
         return IPubkeySetStorage(getContractAddress(1, "pubkeySetStorage"));
     }
 
+    function ProjSettings(uint256 _pId) private view returns (IProjSettings) {
+        return IProjSettings(getContractAddress(_pId, "projSettings"));
+    }
+
     // Get the number of pubkeys owned by a light node
     function getLightNodePubkeyCount(
         uint256 _pId,
@@ -201,7 +205,7 @@ contract StafiLightNode is StafiBase, IStafiLightNode {
         );
         IProjLightNode projLightNode = IProjLightNode(msg.sender);
         require(
-            projLightNode.getLightNodeDepositEnabled(),
+            ProjSettings(_pId).getLightNodeDepositEnabled(),
             "light node deposits are currently disabled"
         );
         uint256 len = _validatorPubkeys.length;
@@ -211,7 +215,7 @@ contract StafiLightNode is StafiBase, IStafiLightNode {
             "params len err"
         );
         require(
-            _value == len.mul(projLightNode.getCurrentNodeDepositAmount()),
+            _value == len.mul(ProjSettings(_pId).getCurrentNodeDepositAmount()),
             "msg value not match"
         );
 
@@ -250,7 +254,7 @@ contract StafiLightNode is StafiBase, IStafiLightNode {
         projUserDeposit.withdrawExcessBalanceForLightNode(
             _validatorPubkeys.length.mul(
                 uint256(32 ether).sub(
-                    projLightNode.getCurrentNodeDepositAmount()
+                    ProjSettings(_pId).getCurrentNodeDepositAmount()
                 )
             )
         );
@@ -296,7 +300,7 @@ contract StafiLightNode is StafiBase, IStafiLightNode {
         );
         IProjLightNode projLightNode = IProjLightNode(msg.sender);
         require(
-            _value == projLightNode.getCurrentNodeDepositAmount(),
+            _value == ProjSettings(_pId).getCurrentNodeDepositAmount(),
             "msg value not match"
         );
         // check status

@@ -7,10 +7,11 @@ import "../stafi/StafiBase.sol";
 import "../stafi/interfaces/node/IStafiLightNode.sol";
 import "./interfaces/IDepositContract.sol";
 import "./interfaces/IProjEther.sol";
+import "./interfaces/IProjEtherWithdrawer.sol";
 import "./interfaces/IProjLightNode.sol";
 import "./interfaces/IProjSettings.sol";
 
-contract ProjLightNode is StafiBase, IProjLightNode {
+contract ProjLightNode is StafiBase, IProjLightNode, IProjEtherWithdrawer {
     // Libs
     using SafeMath for uint256;
 
@@ -31,6 +32,16 @@ contract ProjLightNode is StafiBase, IProjLightNode {
         version = 1;
     }
 
+    // Receive a ether withdrawal
+    // Only accepts calls from the StafiEther contract
+    function receiveEtherWithdrawal()
+        external
+        payable
+        override
+        onlyLatestContract(pId, "projDistributor", address(this))
+        onlyLatestContract(pId, "projEther", msg.sender)
+    {}
+
     // Deposit ETH from deposit pool
     // Only accepts calls from the StafiUserDeposit contract
     function depositEth()
@@ -49,22 +60,6 @@ contract ProjLightNode is StafiBase, IProjLightNode {
 
     function ProjSettings() private view returns (IProjSettings) {
         return IProjSettings(getContractAddress(pId, "projSettings"));
-    }
-
-    function getLightNodeDepositEnabled() external view returns (bool) {
-        return
-            getBool(
-                keccak256(abi.encode("settings.lightNode.deposit.enabled", pId))
-            );
-    }
-
-    function getCurrentNodeDepositAmount() public view returns (uint256) {
-        return
-            getUint(keccak256(abi.encode("settings.node.deposit.amount", pId)));
-    }
-
-    function setLightNodeDepositEnabled(bool _value) public onlySuperUser(pId) {
-        setBoolS("settings.lightNode.deposit.enabled", _value);
     }
 
     function deposit(
@@ -94,7 +89,7 @@ contract ProjLightNode is StafiBase, IProjLightNode {
         onlyLatestContract(pId, "projLightNode", address(this))
         onlyLatestContract(1, "stafiLightNode", msg.sender)
     {
-        uint256 depositAmount = getCurrentNodeDepositAmount();
+        uint256 depositAmount = ProjSettings().getCurrentNodeDepositAmount();
         // Send staking deposit to casper
         EthDeposit().deposit{value: depositAmount}(
             _validatorPubkey,
@@ -137,7 +132,7 @@ contract ProjLightNode is StafiBase, IProjLightNode {
         onlyLatestContract(1, "stafiLightNode", msg.sender)
     {
         uint256 stakeAmount = uint256(32 ether).sub(
-            getCurrentNodeDepositAmount()
+            ProjSettings().getCurrentNodeDepositAmount()
         );
         // Send staking deposit to casper
         EthDeposit().deposit{value: stakeAmount}(
@@ -204,7 +199,7 @@ contract ProjLightNode is StafiBase, IProjLightNode {
         onlyLatestContract(pId, "projLightNode", address(this))
         onlyLatestContract(1, "stafiLightNode", msg.sender)
     {
-        uint256 withdarwAmount = getCurrentNodeDepositAmount();
+        uint256 withdarwAmount = ProjSettings().getCurrentNodeDepositAmount();
         IProjEther projEther = IProjEther(getContractAddress(pId, "projEther"));
         projEther.withdrawEther(withdarwAmount);
         (bool success, ) = (_user).call{value: withdarwAmount}("");

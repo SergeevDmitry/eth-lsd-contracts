@@ -182,7 +182,6 @@ contract StafiSuperNode is StafiBase, IStafiSuperNode {
             projNodeManager.getSuperNodeExists(_user),
             "Invalid super node"
         );
-        IProjSuperNode projSuperNode = IProjSuperNode(msg.sender);
         uint256 len = _validatorPubkeys.length;
         require(
             len == _validatorSignatures.length &&

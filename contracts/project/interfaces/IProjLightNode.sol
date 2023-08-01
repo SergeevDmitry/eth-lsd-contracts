@@ -6,10 +6,6 @@ pragma abicoder v2;
 interface IProjLightNode {
     function depositEth() external payable;
 
-    function getLightNodeDepositEnabled() external view returns (bool);
-
-    function getCurrentNodeDepositAmount() external view returns (uint256);
-
     function ethDeposit(
         address _user,
         bytes calldata _validatorPubkey,

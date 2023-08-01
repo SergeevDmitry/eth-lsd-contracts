@@ -16,6 +16,11 @@ contract ProjSettings is StafiBase, IProjSettings {
             setNodeConsensusThreshold(0.5 ether); // 50%
             setSubmitBalancesEnabled(true);
             setSuperNodePubkeyLimit(50);
+            setCurrentNodeDepositAmount(4 ether);
+            setDistributeFeeUserPercent(900);
+            setDistributeFeeNodePercent(100);
+            setDistributeSuperNodeFeeUserPercent(950);
+            setDistributeSuperNodeFeeNodePercent(50);
             // Settings initialized
             setBool(keccak256(abi.encode("settings.network.init", _pId)), true);
         }
@@ -110,4 +115,116 @@ contract ProjSettings is StafiBase, IProjSettings {
             _value
         );
     }
+
+    /***** light node start *****/
+
+    function getLightNodeDepositEnabled() external view returns (bool) {
+        return
+            getBool(
+                keccak256(abi.encode("settings.lightNode.deposit.enabled", pId))
+            );
+    }
+
+    function setLightNodeDepositEnabled(bool _value) public onlySuperUser(pId) {
+        setBool(
+            keccak256(abi.encode("settings.lightNode.deposit.enabled", pId)),
+            _value
+        );
+    }
+
+    function getCurrentNodeDepositAmount() public view returns (uint256) {
+        return
+            getUint(keccak256(abi.encode("settings.node.deposit.amount", pId)));
+    }
+
+    function setCurrentNodeDepositAmount(
+        uint256 _value
+    ) public onlySuperUser(pId) {
+        setUint(
+            keccak256(abi.encode("settings.node.deposit.amount", pId)),
+            _value
+        );
+    }
+
+    /***** light node end *****/
+
+    /***** distribute start *****/
+
+    function getDistributeFeeUserPercent() external view returns (uint256) {
+        return
+            getUint(keccak256(abi.encode("settings.distribute.fee.user", pId)));
+    }
+
+    function setDistributeFeeUserPercent(
+        uint256 _value
+    ) public onlySuperUser(pId) {
+        require(_value <= 1000 && _value > 0, "Invalid percent");
+        setUint(
+            keccak256(abi.encode("settings.distribute.fee.user", pId)),
+            _value
+        );
+    }
+
+    function getDistributeFeeNodePercent() external view returns (uint256) {
+        return
+            getUint(keccak256(abi.encode("settings.distribute.fee.node", pId)));
+    }
+
+    function setDistributeFeeNodePercent(
+        uint256 _value
+    ) public onlySuperUser(pId) {
+        require(_value <= 1000 && _value > 0, "Invalid percent");
+        setUint(
+            keccak256(abi.encode("settings.distribute.fee.node", pId)),
+            _value
+        );
+    }
+
+    function getDistributeSuperNodeFeeUserPercent()
+        public
+        view
+        returns (uint256)
+    {
+        return
+            getUint(
+                keccak256(
+                    abi.encode("settings.distribute.supernodefee.user", pId)
+                )
+            );
+    }
+
+    function setDistributeSuperNodeFeeUserPercent(
+        uint256 _value
+    ) public onlySuperUser(pId) {
+        require(_value <= 1000 && _value > 0, "Invalid percent");
+        setUint(
+            keccak256(abi.encode("settings.distribute.supernodefee.user", pId)),
+            _value
+        );
+    }
+
+    function getDistributeSuperNodeFeeNodePercent()
+        public
+        view
+        returns (uint256)
+    {
+        return
+            getUint(
+                keccak256(
+                    abi.encode("settings.distribute.supernodefee.node", pId)
+                )
+            );
+    }
+
+    function setDistributeSuperNodeFeeNodePercent(
+        uint256 _value
+    ) public onlySuperUser(pId) {
+        require(_value <= 1000 && _value > 0, "Invalid percent");
+        setUint(
+            keccak256(abi.encode("settings.distribute.supernodefee.node", pId)),
+            _value
+        );
+    }
+
+    /***** distribute end *****/
 }

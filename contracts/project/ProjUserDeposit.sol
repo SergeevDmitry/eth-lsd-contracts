@@ -5,13 +5,15 @@ pragma solidity 0.8.19;
 import "../stafi/StafiBase.sol";
 import "../stafi/interfaces/deposit/IStafiUserDeposit.sol";
 import "./interfaces/IProjEther.sol";
+import "./interfaces/IProjEtherWithdrawer.sol";
 import "./interfaces/IProjLightNode.sol";
 import "./interfaces/IProjRToken.sol";
 import "./interfaces/IProjSuperNode.sol";
 import "./interfaces/IProjUserDeposit.sol";
 
-contract UserDeposit is StafiBase, IProjUserDeposit {
+contract UserDeposit is StafiBase, IProjUserDeposit, IProjEtherWithdrawer {
     event DepositReceived(address indexed from, uint256 amount, uint256 time);
+    event DepositRecycled(address indexed from, uint256 amount, uint256 time);
     event ExcessWithdrawn(address indexed to, uint256 amount, uint256 time);
 
     constructor(
@@ -32,6 +34,16 @@ contract UserDeposit is StafiBase, IProjUserDeposit {
         }
     }
 
+    // Receive a ether withdrawal
+    // Only accepts calls from the StafiEther contract
+    function receiveEtherWithdrawal()
+        external
+        payable
+        override
+        onlyLatestContract(pId, "projDistributor", address(this))
+        onlyLatestContract(pId, "projEther", msg.sender)
+    {}
+
     function getBalance() public view returns (uint256) {
         IProjEther projEther = IProjEther(getContractAddress(pId, "projEther"));
         return projEther.balanceOf(address(this));
@@ -45,10 +57,14 @@ contract UserDeposit is StafiBase, IProjUserDeposit {
     }
 
     function depositEther(
-        uint256 value
-    ) external onlyLatestContract(1, "stafiUserDeposit", msg.sender) {
+        uint256 _value
+    )
+        public
+        onlyLatestContract(pId, "projUserDeposit", address(this))
+        onlyLatestStackContract(pId)
+    {
         IProjEther projEther = IProjEther(getContractAddress(pId, "projEther"));
-        projEther.depositEther{value: value}();
+        projEther.depositEther{value: _value}();
     }
 
     // Withdraw excess deposit pool balance for rETH collateral
@@ -159,5 +175,20 @@ contract UserDeposit is StafiBase, IProjUserDeposit {
 
     function setMinimumDeposit(uint256 _value) public onlySuperUser(pId) {
         setUint(keccak256(abi.encode("settings.deposit.minimum", pId)), _value);
+    }
+
+    // Recycle a deposit from fee collector
+    // Only accepts calls from registered stafiDistributor
+    function recycleDistributorDeposit()
+        external
+        payable
+        override
+        onlyLatestContract(pId, "projUserDeposit", address(this))
+        onlyLatestContract(pId, "projFeePool", msg.sender)
+    {
+        // Emit deposit recycled event
+        emit DepositRecycled(msg.sender, msg.value, block.timestamp);
+        // Process deposit
+        depositEther(msg.value);
     }
 }

@@ -18,4 +18,6 @@ interface IProjUserDeposit {
     function withdrawExcessBalanceForLightNode(uint256 _amount) external;
 
     // function withdrawExcessBalanceForWithdraw(uint256 _amount) external;
+
+    function recycleDistributorDeposit() external payable;
 }

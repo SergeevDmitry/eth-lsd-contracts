@@ -4,8 +4,8 @@ pragma solidity 0.7.6;
 
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "../stafi/StafiBase.sol";
-import "../stafi/interfaces/IStafiEtherWithdrawer.sol";
 import "./interfaces/IProjEther.sol";
+import "./interfaces/IProjEtherWithdrawer.sol";
 
 // ETH are stored here to prevent contract upgrades from affecting balances
 // The contract must not be upgraded
@@ -70,7 +70,7 @@ contract ProjEther is StafiBase, IProjEther {
         );
         balances[contractKey] = balances[contractKey].sub(_amount);
         // Withdraw
-        IStafiEtherWithdrawer withdrawer = IStafiEtherWithdrawer(msg.sender);
+        IProjEtherWithdrawer withdrawer = IProjEtherWithdrawer(msg.sender);
         withdrawer.receiveEtherWithdrawal{value: _amount}();
         // Emit ether withdrawn event
         emit EtherWithdrawn(contractKey, _amount, block.timestamp);

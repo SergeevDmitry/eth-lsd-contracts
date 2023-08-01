@@ -36,6 +36,15 @@ abstract contract StafiBase {
         _;
     }
 
+    modifier onlyLatestStackContract(uint256 _pId) {
+        uint256 _callerPId = getProjectId(msg.sender);
+        require(
+            _callerPId == _pId || _callerPId == 1,
+            "Invalid or outdated stack contract"
+        );
+        _;
+    }
+
     /**
      * @dev Throws if called by any sender that doesn't match one of the supplied contract or is the latest version of that contract
      */
