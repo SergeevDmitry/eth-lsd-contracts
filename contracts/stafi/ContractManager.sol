@@ -26,11 +26,13 @@ contract ContractManager is StafiBase {
         bytes32 indexed name,
         address indexed oldAddress,
         address indexed newAddress,
+        uint256 pId,
         uint256 time
     );
     event ContractAdded(
         bytes32 indexed name,
         address indexed newAddress,
+        uint256 pId,
         uint256 time
     );
 
@@ -55,11 +57,11 @@ contract ContractManager is StafiBase {
         return getUintS("contractManager.project.nonce");
     }
 
-    function setProjectNonce(uint256 _nonce) internal {
+    function setProjectNonce(uint256 _nonce) private {
         setUintS("contractManager.project.nonce", _nonce);
     }
 
-    function generateProjectId() internal returns (uint256) {
+    function generateProjectId() private returns (uint256) {
         uint256 id = getProjectNonce();
         if (id == 0) id = 2;
         setProjectNonce(id.add(1));
@@ -70,7 +72,7 @@ contract ContractManager is StafiBase {
         uint256 _id,
         string memory _name,
         address _value
-    ) internal {
+    ) private {
         setAddress(contractAddressKey(_id, _name), _value);
     }
 
@@ -78,92 +80,351 @@ contract ContractManager is StafiBase {
         uint256 _pId,
         address _value,
         string memory _name
-    ) internal {
+    ) private {
         setString(contractNameKey(_pId, _value), _name);
     }
 
-    function setProjectId(address _contractAddress, uint256 _pId) internal {
+    function setProjectId(address _contractAddress, uint256 _pId) private {
         setUint(projectIdKey(_contractAddress), _pId);
     }
 
-    function saveProject(Project memory _proj) internal {
-        setProjectContractAddress(_proj.id, "projrToken", _proj.rToken);
-        setProjectContractAddress(_proj.id, "projEther", _proj.etherKeeper);
-        setProjectContractAddress(
-            _proj.id,
-            "projUserDeposit",
-            _proj.userDeposit
+    function createProjUserDeposit(
+        uint256 _pId,
+        address _stafiStorageAddress
+    ) private returns (address) {
+        address projUserDeposit = address(
+            new UserDeposit(_pId, _stafiStorageAddress)
         );
-        setProjectContractAddress(_proj.id, "projBalances", _proj.balances);
-        setProjectContractAddress(_proj.id, "projSettings", _proj.settings);
-        setProjectContractAddress(
-            _proj.id,
-            "projNodeManager",
-            _proj.nodeManager
+        setProjectContractAddress(_pId, "projUserDeposit", projUserDeposit);
+        setProjectContractName(_pId, projUserDeposit, "projUserDeposit");
+        setProjectId(projUserDeposit, _pId);
+        return projUserDeposit;
+    }
+
+    function createProjRToken(
+        uint256 _pId,
+        address _stafiStorageAddress,
+        string memory _name,
+        string memory _symbol
+    ) private returns (address) {
+        address rTokenAddress = address(
+            new rToken(_pId, _stafiStorageAddress, _name, _symbol)
         );
-        setProjectContractAddress(_proj.id, "projFeePool", _proj.feePool);
-        setProjectContractAddress(_proj.id, "projLightNode", _proj.lightNode);
-        setProjectContractAddress(_proj.id, "projSuperNode", _proj.superNode);
-        setProjectContractAddress(
-            _proj.id,
-            "projDistributor",
-            _proj.distributor
+        setProjectContractAddress(_pId, "projrToken", rTokenAddress);
+        setProjectContractName(_pId, rTokenAddress, "projrToken");
+        setProjectId(rTokenAddress, _pId);
+        return rTokenAddress;
+    }
+
+    function createProjEther(
+        uint256 _pId,
+        address _stafiStorageAddress
+    ) private returns (address) {
+        address projEther = address(new ProjEther(_pId, _stafiStorageAddress));
+        setProjectContractAddress(_pId, "projEther", projEther);
+        setProjectContractName(_pId, projEther, "projEther");
+        setProjectId(projEther, _pId);
+        return projEther;
+    }
+
+    function createProjBalances(
+        uint256 _pId,
+        address _stafiStorageAddress
+    ) private returns (address) {
+        address balances = address(
+            new ProjBalances(_pId, _stafiStorageAddress)
         );
-        setProjectContractAddress(_proj.id, "projWithdraw", _proj.withdraw);
-        setProjectContractName(_proj.id, _proj.rToken, "projrToken");
-        setProjectContractName(_proj.id, _proj.etherKeeper, "projEther");
-        setProjectContractName(_proj.id, _proj.userDeposit, "projUserDeposit");
-        setProjectContractName(_proj.id, _proj.balances, "projBalances");
-        setProjectContractName(_proj.id, _proj.settings, "projSettings");
-        setProjectContractName(_proj.id, _proj.nodeManager, "projNodeManager");
-        setProjectContractName(_proj.id, _proj.feePool, "projFeePool");
-        setProjectContractName(_proj.id, _proj.lightNode, "projLightNode");
-        setProjectContractName(_proj.id, _proj.superNode, "projSuperNode");
-        setProjectContractName(_proj.id, _proj.distributor, "projDistributor");
-        setProjectContractName(_proj.id, _proj.withdraw, "projWithdraw");
-        setProjectId(_proj.rToken, _proj.id);
-        setProjectId(_proj.etherKeeper, _proj.id);
-        setProjectId(_proj.userDeposit, _proj.id);
-        setProjectId(_proj.balances, _proj.id);
-        setProjectId(_proj.settings, _proj.id);
-        setProjectId(_proj.nodeManager, _proj.id);
-        setProjectId(_proj.feePool, _proj.id);
-        setProjectId(_proj.lightNode, _proj.id);
-        setProjectId(_proj.superNode, _proj.id);
-        setProjectId(_proj.distributor, _proj.id);
-        setProjectId(_proj.withdraw, _proj.id);
+        setProjectContractAddress(_pId, "projBalances", balances);
+        setProjectContractName(_pId, balances, "projBalances");
+        setProjectId(balances, _pId);
+        return balances;
+    }
+
+    function createProjSettings(
+        uint256 _pId,
+        address _stafiStorageAddress
+    ) private returns (address) {
+        address settings = address(
+            new ProjSettings(_pId, _stafiStorageAddress)
+        );
+        setProjectContractAddress(_pId, "projSettings", settings);
+        setProjectContractName(_pId, settings, "projSettings");
+        setProjectId(settings, _pId);
+        return settings;
+    }
+
+    function createProjNodeManager(
+        uint256 _pId,
+        address _stafiStorageAddress
+    ) private returns (address) {
+        address nodeManager = address(
+            new ProjNodeManager(_pId, _stafiStorageAddress)
+        );
+        setProjectContractAddress(_pId, "projNodeManager", nodeManager);
+        setProjectContractName(_pId, nodeManager, "projNodeManager");
+        setProjectId(nodeManager, _pId);
+        return nodeManager;
+    }
+
+    function createProjFeePool(
+        uint256 _pId,
+        address _stafiStorageAddress
+    ) private returns (address) {
+        address feePool = address(new ProjFeePool(_pId, _stafiStorageAddress));
+        setProjectContractAddress(_pId, "projFeePool", feePool);
+        setProjectContractName(_pId, feePool, "projFeePool");
+        setProjectId(feePool, _pId);
+        return feePool;
+    }
+
+    function createProjLightNode(
+        uint256 _pId,
+        address _stafiStorageAddress
+    ) private returns (address) {
+        address lightNode = address(
+            new ProjLightNode(_pId, _stafiStorageAddress)
+        );
+        setProjectContractAddress(_pId, "projLightNode", lightNode);
+        setProjectContractName(_pId, lightNode, "projLightNode");
+        setProjectId(lightNode, _pId);
+        return lightNode;
+    }
+
+    function createProjSuperNode(
+        uint256 _pId,
+        address _stafiStorageAddress
+    ) private returns (address) {
+        address superNode = address(
+            new ProjSuperNode(_pId, _stafiStorageAddress)
+        );
+        setProjectContractAddress(_pId, "projSuperNode", superNode);
+        setProjectContractName(_pId, superNode, "projSuperNode");
+        setProjectId(superNode, _pId);
+        return superNode;
+    }
+
+    function createProjDistributor(
+        uint256 _pId,
+        address _stafiStorageAddress
+    ) private returns (address) {
+        address distributor = address(
+            new ProjDistributor(_pId, _stafiStorageAddress)
+        );
+        setProjectContractAddress(_pId, "projDistributor", distributor);
+        setProjectContractName(_pId, distributor, "projDistributor");
+        setProjectId(distributor, _pId);
+        return distributor;
+    }
+
+    function createProjWithdraw(
+        uint256 _pId,
+        address _stafiStorageAddress
+    ) private returns (address) {
+        address withdraw = address(
+            new ProjWithdraw(_pId, _stafiStorageAddress)
+        );
+        setProjectContractAddress(_pId, "projWithdraw", withdraw);
+        setProjectContractName(_pId, withdraw, "projWithdraw");
+        setProjectId(withdraw, _pId);
+        return withdraw;
     }
 
     function createProject(
         string memory _name,
-        string memory _symbol,
-        address _superUser
+        string memory _symbol
     ) external onlySuperUser(1) returns (uint256) {
         Project memory proj;
         uint256 _pId = generateProjectId();
         address _stafiStorageAddress = address(stafiStorage);
-        proj.id = _pId;
-        proj.rToken = address(
-            new rToken(_pId, _stafiStorageAddress, _name, _symbol)
-        );
-        proj.etherKeeper = address(new ProjEther(_pId, _stafiStorageAddress));
-        proj.userDeposit = address(new UserDeposit(_pId, _stafiStorageAddress));
-        proj.balances = address(new ProjBalances(_pId, _stafiStorageAddress));
-        proj.settings = address(new ProjSettings(_pId, _stafiStorageAddress));
-        proj.nodeManager = address(
-            new ProjNodeManager(_pId, _stafiStorageAddress)
-        );
-        proj.feePool = address(new ProjFeePool(_pId, _stafiStorageAddress));
-        proj.lightNode = address(new ProjLightNode(_pId, _stafiStorageAddress));
-        proj.superNode = address(new ProjSuperNode(_pId, _stafiStorageAddress));
-        proj.distributor = address(
-            new ProjDistributor(_pId, _stafiStorageAddress)
-        );
-        proj.withdraw = address(new ProjWithdraw(_pId, _stafiStorageAddress));
 
-        StafiNetworkSettings().initializeStafiFeePercent(_pId, 300); // 30% 300/1000
+        proj.pId = _pId;
+        proj.balances = createProjBalances(_pId, _stafiStorageAddress);
+        proj.distributor = createProjDistributor(_pId, _stafiStorageAddress);
+        proj.feePool = createProjFeePool(_pId, _stafiStorageAddress);
+        proj.lightNode = createProjLightNode(_pId, _stafiStorageAddress);
+        proj.nodeManager = createProjNodeManager(_pId, _stafiStorageAddress);
+        proj.rToken = createProjRToken(
+            _pId,
+            _stafiStorageAddress,
+            _name,
+            _symbol
+        );
+        proj.settings = createProjSettings(_pId, _stafiStorageAddress);
+        proj.superNode = createProjSuperNode(_pId, _stafiStorageAddress);
+        proj.projEther = createProjEther(_pId, _stafiStorageAddress);
+        proj.userDeposit = createProjUserDeposit(_pId, _stafiStorageAddress);
+        proj.withdraw = createProjWithdraw(_pId, _stafiStorageAddress);
 
-        emit ProjectCreated(proj.id, proj);
-        return proj.id;
+        initializeStafiFeeRatio(_pId);
+        setSuperUser(_pId, msg.sender);
+
+        emit ProjectCreated(_pId, proj);
+
+        return _pId;
+    }
+
+    function setSuperUser(uint256 _pId, address _superUser) private {
+        setBool(
+            keccak256(
+                abi.encodePacked("access.role", _pId, "owner", _superUser)
+            ),
+            true
+        );
+    }
+
+    function initializeStafiFeeRatio(uint256 _pId) private {
+        IStafiNetworkSettings stafiSettings = StafiNetworkSettings();
+
+        stafiSettings.initializeStafiFeeRatio(
+            _pId,
+            stafiSettings.getDefaultStafiFeeRatio()
+        );
+    }
+
+    // Upgrade contract
+    function upgradeContract(
+        uint256 _pId,
+        string memory _name,
+        address _contractAddress
+    )
+        external
+        onlyLatestContract(1, "stafiUpgrade", address(this))
+        onlySuperUser(_pId)
+    {
+        // Check contract being upgraded
+        bytes32 nameHash = keccak256(abi.encodePacked(_name));
+        require(
+            nameHash != keccak256(abi.encodePacked("projEther")),
+            "Cannot upgrade the stafi ether contract"
+        );
+        require(
+            nameHash != keccak256(abi.encodePacked("projRToken")),
+            "Cannot upgrade token contracts"
+        );
+        require(
+            nameHash != keccak256(abi.encodePacked("ethDeposit")),
+            "Cannot upgrade the eth deposit contract"
+        );
+        // Get old contract address & check contract exists
+        address oldContractAddress = getContractAddress(_pId, _name);
+        require(oldContractAddress != address(0x0), "Contract does not exist");
+        // Check new contract address
+        require(_contractAddress != address(0x0), "Invalid contract address");
+        require(
+            _contractAddress != oldContractAddress,
+            "The contract address cannot be set to its current address"
+        );
+        // Register new contract
+        setBool(
+            keccak256(abi.encodePacked("contract.exists", _contractAddress)),
+            true
+        );
+        setProjectContractName(_pId, _contractAddress, _name);
+        setProjectContractAddress(_pId, _name, _contractAddress);
+        // Deregister old contract
+        deleteString(contractNameKey(_pId, oldContractAddress));
+        deleteBool(
+            keccak256(abi.encodePacked("contract.exists", oldContractAddress))
+        );
+        // Emit contract upgraded event
+        emit ContractUpgraded(
+            nameHash,
+            oldContractAddress,
+            _contractAddress,
+            _pId,
+            block.timestamp
+        );
+    }
+
+    // Add a new network contract
+    function addContract(
+        string memory _name,
+        address _contractAddress
+    )
+        external
+        onlyLatestContract(1, "stafiContractManager", address(this))
+        onlySuperUser(1)
+    {
+        // Check contract name
+        bytes32 nameHash = keccak256(abi.encodePacked(_name));
+        require(
+            nameHash != keccak256(abi.encodePacked("")),
+            "Invalid contract name"
+        );
+        require(
+            getContractAddress(1, _name) == address(0x0),
+            "Contract name is already in use"
+        );
+        // Check contract address
+        require(_contractAddress != address(0x0), "Invalid contract address");
+        require(
+            !getBool(
+                keccak256(abi.encodePacked("contract.exists", _contractAddress))
+            ),
+            "Contract address is already in use"
+        );
+        // Register contract
+        setBool(
+            keccak256(abi.encodePacked("contract.exists", _contractAddress)),
+            true
+        );
+        setProjectContractName(1, _contractAddress, _name);
+        setProjectContractAddress(1, _name, _contractAddress);
+
+        // Emit contract added event
+        emit ContractAdded(nameHash, _contractAddress, pId, block.timestamp);
+    }
+
+    // Init stafi storage contract
+    function initStorage(bool _value) external onlySuperUser(1) {
+        setBool(
+            keccak256(abi.encodePacked("contract.storage.initialised")),
+            _value
+        );
+    }
+
+    // Init stafi upgrade contract
+    function initThisContract() external onlySuperUser(1) {
+        addStafiContractManager(address(this));
+    }
+
+    // Upgrade stafi upgrade contract
+    function upgradeThisContract(
+        address _contractAddress
+    ) external onlySuperUser(1) {
+        addStafiContractManager(_contractAddress);
+    }
+
+    // Add stafi upgrade contract
+    function addStafiContractManager(address _contractAddress) private {
+        string memory name = "stafiContractManager";
+        bytes32 nameHash = keccak256(abi.encodePacked(name));
+        address oldContractAddress = getContractAddress(1, name);
+
+        setBool(
+            keccak256(abi.encodePacked("contract.exists", _contractAddress)),
+            true
+        );
+        setProjectContractName(1, _contractAddress, name);
+        setProjectContractAddress(1, name, _contractAddress);
+
+        if (oldContractAddress != address(0x0)) {
+            deleteString(
+                keccak256(
+                    abi.encodePacked(
+                        "contract.name",
+                        uint256(1),
+                        oldContractAddress
+                    )
+                )
+            );
+            deleteBool(
+                keccak256(
+                    abi.encodePacked("contract.exists", oldContractAddress)
+                )
+            );
+        }
+        // Emit contract added event
+        emit ContractAdded(nameHash, _contractAddress, 1, block.timestamp);
     }
 }

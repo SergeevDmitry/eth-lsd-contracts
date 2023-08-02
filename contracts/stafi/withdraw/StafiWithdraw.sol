@@ -340,7 +340,7 @@ contract StafiWithdraw is StafiBase, IStafiWithdraw {
             latestDistributeHeight[_pId] = _dealedHeight;
 
             uint256 stafiCommission = _platformAmount
-                .mul(StafiNetworkSettings().getStafiFeePercent(_pId))
+                .mul(StafiNetworkSettings().getStafiFeeRatio(_pId))
                 .div(1000);
             uint256 platformAmount = _platformAmount.sub(stafiCommission);
             uint256 mvAmount = _userAmount;
@@ -352,6 +352,10 @@ contract StafiWithdraw is StafiBase, IStafiWithdraw {
                 totalMissingAmountForWithdraw[
                     _pId
                 ] = totalMissingAmountForWithdraw[_pId].sub(_userAmount);
+            }
+
+            if (stafiCommission > 0) {
+                IProjWithdraw(msg.sender).withdrawCommission(stafiCommission);
             }
 
             if (mvAmount > 0) {

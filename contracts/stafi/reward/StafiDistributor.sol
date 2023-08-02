@@ -238,11 +238,16 @@ contract StafiDistributor is StafiBase, IStafiDistributor {
         // Finalize if Threshold has been reached
         if (needExe) {
             uint256 stafiCommission = _platformAmount
-                .mul(StafiNetworkSettings().getStafiFeePercent(_pId))
+                .mul(StafiNetworkSettings().getStafiFeeRatio(_pId))
                 .div(1000);
             uint256 platformAmount = _platformAmount.sub(stafiCommission);
             uint256 nodeAndPlatformAmount = _nodeAmount.add(platformAmount);
+
             IProjFeePool feePool = IProjFeePool(msg.sender);
+
+            if (stafiCommission > 0) {
+                feePool.withdrawCommission(stafiCommission);
+            }
 
             if (_userAmount > 0) {
                 feePool.recycleUserDeposit(_userAmount);
@@ -298,12 +303,17 @@ contract StafiDistributor is StafiBase, IStafiDistributor {
         // Finalize if Threshold has been reached
         if (needExe) {
             uint256 stafiCommission = _platformAmount
-                .mul(StafiNetworkSettings().getStafiFeePercent(_pId))
+                .mul(StafiNetworkSettings().getStafiFeeRatio(_pId))
                 .div(1000);
             uint256 platformAmount = _platformAmount.sub(stafiCommission);
             uint256 nodeAndPlatformAmount = _nodeAmount.add(platformAmount);
 
             IProjFeePool feePool = IProjFeePool(msg.sender);
+
+            if (stafiCommission > 0) {
+                feePool.withdrawCommission(stafiCommission);
+            }
+
             if (_userAmount > 0) {
                 feePool.recycleUserDeposit(_userAmount);
             }

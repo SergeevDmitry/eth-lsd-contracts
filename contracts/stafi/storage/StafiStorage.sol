@@ -37,7 +37,9 @@ contract StafiStorage is IStafiStorage {
     constructor() {
         // Set the main owner upon deployment
         boolStorage[
-            keccak256(abi.encodePacked("access.role", "owner", msg.sender))
+            keccak256(
+                abi.encodePacked("access.role", uint256(1), "owner", msg.sender)
+            )
         ] = true;
     }
 
