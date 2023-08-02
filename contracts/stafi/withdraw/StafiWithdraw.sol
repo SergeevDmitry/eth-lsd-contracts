@@ -340,7 +340,7 @@ contract StafiWithdraw is StafiBase, IStafiWithdraw {
             latestDistributeHeight[_pId] = _dealedHeight;
 
             uint256 stafiCommission = _platformAmount
-                .mul(StafiNetworkSettings().getStafiFeePercent())
+                .mul(StafiNetworkSettings().getStafiFeePercent(_pId))
                 .div(1000);
             uint256 platformAmount = _platformAmount.sub(stafiCommission);
             uint256 mvAmount = _userAmount;

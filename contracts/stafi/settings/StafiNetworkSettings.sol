@@ -14,26 +14,33 @@ contract StafiNetworkSettings is StafiBase, IStafiNetworkSettings {
         // Set version
         version = 1;
         // Initialize settings on deployment
-        if (!getBool(keccak256(abi.encode("settings.network.init", 1)))) {
-            // Apply settings
-            setStafiFeePercent(300); // 30% 300/1000
+        if (!getBool(keccak256(abi.encode("settings.init", 1)))) {
             // Settings initialized
-            setBool(keccak256(abi.encode("settings.network.init", 1)), true);
+            setBool(keccak256(abi.encode("settings.init", 1)), true);
         }
     }
 
     // The platform commission rate as a fraction of 1 ether
-    function getStafiFeePercent() public view override returns (uint256) {
-        return
-            getUint(keccak256(abi.encode("settings.network.platform.fee", 1)));
+    function getStafiFeePercent(
+        uint256 _pId
+    ) public view override returns (uint256) {
+        return getUint(keccak256(abi.encode("settings.platform.fee", _pId)));
     }
 
-    // TODO: platform super user + project super user
-    function setStafiFeePercent(uint256 _value) public onlySuperUser(1) {
+    // TODO: stafi proposal and project approve
+    function updateStafiFeePercent(
+        uint256 _pId,
+        uint256 _value
+    ) public onlySuperUser(1) {
         require(_value <= 1000, "Invalid value");
-        setUint(
-            keccak256(abi.encode("settings.network.platform.fee", 1)),
-            _value
-        );
+        setUint(keccak256(abi.encode("settings.platform.fee", _pId)), _value);
+    }
+
+    function initializeStafiFeePercent(
+        uint256 _pId,
+        uint256 _value
+    ) public onlyLatestContract(1, "stafiContractManager", msg.sender) {
+        require(_value <= 1000, "Invalid value");
+        setUint(keccak256(abi.encode("settings.platform.fee", _pId)), _value);
     }
 }

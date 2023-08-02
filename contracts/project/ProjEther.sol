@@ -1,4 +1,4 @@
-pragma solidity 0.7.6;
+pragma solidity 0.8.19;
 
 // SPDX-License-Identifier: GPL-3.0-only
 
@@ -48,7 +48,9 @@ contract ProjEther is StafiBase, IProjEther {
         onlyLatestProjectContract(pId)
     {
         // Get contract key
-        bytes32 contractKey = keccak256(contractNameKey(pId, msg.sender));
+        bytes32 contractKey = keccak256(
+            abi.encode(getContractName(pId, msg.sender))
+        );
         // Update contract balance
         balances[contractKey] = balances[contractKey].add(msg.value);
         // Emit ether deposited event
@@ -58,10 +60,10 @@ contract ProjEther is StafiBase, IProjEther {
     // Withdraw an amount of ETH to a network contract
     function withdrawEther(
         uint256 _amount
-    ) external override onlyLatestNetworkContract {
+    ) external override onlyLatestProjectContract(pId) {
         // Get contract key
         bytes32 contractKey = keccak256(
-            abi.encodePacked(getContractName(msg.sender))
+            abi.encode(getContractName(pId, msg.sender))
         );
         // Check and update contract balance
         require(

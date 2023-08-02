@@ -1,15 +1,17 @@
-pragma solidity 0.7.6;
+pragma solidity 0.8.19;
 
 // SPDX-License-Identifier: GPL-3.0-only
 
 import "../stafi/StafiBase.sol";
 import "../stafi/interfaces/node/IStafiNodeManager.sol";
+import "../stafi/interfaces/storage/IAddressSetStorage.sol";
 import "./interfaces/IProjNodeManager.sol";
 
 // Node registration and management
-contract StafiNodeManager is StafiBase, IProjNodeManager {
+contract ProjNodeManager is StafiBase, IProjNodeManager {
     // Events
     event NodeTrustedSet(address indexed node, bool trusted, uint256 time);
+    event NodeSuperSet(address indexed node, bool trusted, uint256 time);
 
     // Construct
     constructor(
@@ -63,12 +65,12 @@ contract StafiNodeManager is StafiBase, IProjNodeManager {
         external
         override
         onlyLatestContract(pId, "projNodeManger", address(this))
-        onlySuperUser(_pId)
+        onlySuperUser(pId)
     {
         IStafiNodeManager stafiNodeManager = IStafiNodeManager(
             getContractAddress(1, "stafiNodeManager")
         );
-        stafiNodeManager.setNodeTrusted();
+        stafiNodeManager.setNodeTrusted(_nodeAddress, _trusted);
         emit NodeTrustedSet(_nodeAddress, _trusted, block.timestamp);
     }
 
@@ -116,7 +118,7 @@ contract StafiNodeManager is StafiBase, IProjNodeManager {
         external
         override
         onlyLatestContract(pId, "projNodeManger", address(this))
-        onlySuperUser(_pId)
+        onlySuperUser(pId)
     {
         IStafiNodeManager stafiNodeManager = IStafiNodeManager(
             getContractAddress(1, "stafiNodeManager")

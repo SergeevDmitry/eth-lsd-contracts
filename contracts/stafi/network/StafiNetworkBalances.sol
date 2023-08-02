@@ -1,4 +1,4 @@
-pragma solidity 0.7.6;
+pragma solidity 0.8.19;
 
 // SPDX-License-Identifier: GPL-3.0-only
 
@@ -24,7 +24,7 @@ contract StafiNetworkBalances is StafiBase, IStafiNetworkBalances {
     // Submit network balances for a block
     // Only accepts calls from trusted (oracle) nodes
     function submitBalances(
-        uint256 _voter,
+        address _voter,
         uint256 _block,
         uint256 _totalEth,
         uint256 _stakingEth,

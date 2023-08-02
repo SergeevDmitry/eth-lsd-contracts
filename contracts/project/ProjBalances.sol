@@ -106,9 +106,8 @@ contract ProjBalances is StafiBase, IProjBalances {
         uint256 _rethSupply
     )
         external
-        override
         onlyLatestContract(pId, "projBalances", address(this))
-        onlyTrustedNode(msg.sender)
+        onlyTrustedNode(pId, msg.sender)
     {
         IStafiNetworkBalances stafiNetworkBalances = IStafiNetworkBalances(
             getContractAddress(1, "stafiNetworkBalances")
@@ -126,7 +125,8 @@ contract ProjBalances is StafiBase, IProjBalances {
             _block,
             _totalEth,
             _stakingEth,
-            _rethSupply
+            _rethSupply,
+            block.timestamp
         );
         if (agreed) updateBalances(_block, _totalEth, _stakingEth, _rethSupply);
     }

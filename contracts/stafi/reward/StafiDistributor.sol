@@ -238,7 +238,7 @@ contract StafiDistributor is StafiBase, IStafiDistributor {
         // Finalize if Threshold has been reached
         if (needExe) {
             uint256 stafiCommission = _platformAmount
-                .mul(StafiNetworkSettings().getStafiFeePercent())
+                .mul(StafiNetworkSettings().getStafiFeePercent(_pId))
                 .div(1000);
             uint256 platformAmount = _platformAmount.sub(stafiCommission);
             uint256 nodeAndPlatformAmount = _nodeAmount.add(platformAmount);
@@ -298,7 +298,7 @@ contract StafiDistributor is StafiBase, IStafiDistributor {
         // Finalize if Threshold has been reached
         if (needExe) {
             uint256 stafiCommission = _platformAmount
-                .mul(StafiNetworkSettings().getStafiFeePercent())
+                .mul(StafiNetworkSettings().getStafiFeePercent(_pId))
                 .div(1000);
             uint256 platformAmount = _platformAmount.sub(stafiCommission);
             uint256 nodeAndPlatformAmount = _nodeAmount.add(platformAmount);

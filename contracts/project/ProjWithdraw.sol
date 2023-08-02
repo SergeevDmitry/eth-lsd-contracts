@@ -8,7 +8,7 @@ import "./interfaces/IProjDistributor.sol";
 import "./interfaces/IProjUserDeposit.sol";
 import "./interfaces/IProjWithdraw.sol";
 
-contract ProjWithdarw is StafiBase, IProjWithdraw {
+contract ProjWithdraw is StafiBase, IProjWithdraw {
     event EtherDeposited(address indexed from, uint256 amount, uint256 time);
     event SetWithdrawLimitPerCycle(uint256 withdrawLimitPerCycle);
     event SetUserWithdrawLimitPerCycle(uint256 userWithdrawLimitPerCycle);

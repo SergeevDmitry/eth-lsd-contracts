@@ -20,8 +20,18 @@ contract ProjDistributor is StafiBase, IProjDistributor {
         uint256 claimableDeposit,
         ClaimType claimType
     );
-    event DistributeFee(uint256 dealedHeight, uint256 totalAmount);
-    event DistributeSuperNodeFee(uint256 dealedHeight, uint256 totalAmount);
+    event DistributeFee(
+        uint256 dealedHeight,
+        uint256 userAmount,
+        uint256 nodeAmount,
+        uint256 platformAmount
+    );
+    event DistributeSuperNodeFee(
+        uint256 dealedHeight,
+        uint256 userAmount,
+        uint256 nodeAmount,
+        uint256 platformAmount
+    );
     event DistributeSlash(uint256 dealedHeight, uint256 slashAmount);
     event SetMerkleRoot(uint256 dealedEpoch, bytes32 merkleRoot);
 
@@ -81,7 +91,9 @@ contract ProjDistributor is StafiBase, IProjDistributor {
     // distribute fee of feePool for user/node/platform
     function distributeFee(
         uint256 _dealedHeight,
-        uint256 _totalAmount
+        uint256 _userAmount,
+        uint256 _nodeAmount,
+        uint256 _platformAmount
     )
         external
         onlyLatestContract(pId, "projDistributor", address(this))
@@ -90,13 +102,26 @@ contract ProjDistributor is StafiBase, IProjDistributor {
         IStafiDistributor stafiDistributor = IStafiDistributor(
             getContractAddress(1, "stafiDistributor")
         );
-        stafiDistributor.distributeFee(msg.sender, _dealedHeight, _totalAmount);
-        emit DistributeFee(_dealedHeight, _totalAmount);
+        stafiDistributor.distributeFee(
+            msg.sender,
+            _dealedHeight,
+            _userAmount,
+            _nodeAmount,
+            _platformAmount
+        );
+        emit DistributeFee(
+            _dealedHeight,
+            _userAmount,
+            _nodeAmount,
+            _platformAmount
+        );
     }
 
     function distributeSuperNodeFee(
         uint256 _dealedHeight,
-        uint256 _totalAmount
+        uint256 _userAmount,
+        uint256 _nodeAmount,
+        uint256 _platformAmount
     )
         external
         onlyLatestContract(pId, "projDistributor", address(this))
@@ -108,9 +133,16 @@ contract ProjDistributor is StafiBase, IProjDistributor {
         stafiDistributor.distributeSuperNodeFee(
             msg.sender,
             _dealedHeight,
-            _totalAmount
+            _userAmount,
+            _nodeAmount,
+            _platformAmount
         );
-        emit DistributeSuperNodeFee(_dealedHeight, _totalAmount);
+        emit DistributeSuperNodeFee(
+            _dealedHeight,
+            _userAmount,
+            _nodeAmount,
+            _platformAmount
+        );
     }
 
     function distributeSlashAmount(

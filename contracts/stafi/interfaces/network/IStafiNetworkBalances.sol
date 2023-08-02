@@ -1,4 +1,4 @@
-pragma solidity 0.7.6;
+pragma solidity 0.8.19;
 
 // SPDX-License-Identifier: GPL-3.0-only
 
@@ -9,5 +9,5 @@ interface IStafiNetworkBalances {
         uint256 _total,
         uint256 _staking,
         uint256 _rethSupply
-    ) external;
+    ) external returns (bool);
 }
