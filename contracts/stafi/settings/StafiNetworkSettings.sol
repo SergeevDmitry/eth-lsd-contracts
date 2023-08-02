@@ -16,20 +16,20 @@ contract StafiNetworkSettings is StafiBase, IStafiNetworkSettings {
         // Initialize settings on deployment
         if (!getBool(keccak256(abi.encode("settings.network.init", 1)))) {
             // Apply settings
-            setPlatformFeePercent(50); // 10%
+            setStafiFeePercent(300); // 30% 300/1000
             // Settings initialized
             setBool(keccak256(abi.encode("settings.network.init", 1)), true);
         }
     }
 
     // The platform commission rate as a fraction of 1 ether
-    function getPlatformFeePercent() public view override returns (uint256) {
+    function getStafiFeePercent() public view override returns (uint256) {
         return
             getUint(keccak256(abi.encode("settings.network.platform.fee", 1)));
     }
 
     // TODO: platform super user + project super user
-    function setPlatformFeePercent(uint256 _value) public onlySuperUser(1) {
+    function setStafiFeePercent(uint256 _value) public onlySuperUser(1) {
         require(_value <= 1000, "Invalid value");
         setUint(
             keccak256(abi.encode("settings.network.platform.fee", 1)),

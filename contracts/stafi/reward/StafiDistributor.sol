@@ -38,12 +38,22 @@ contract StafiDistributor is StafiBase, IStafiDistributor {
         uint256 slashAmount
     );
     event SetMerkleRoot(uint256 pId, uint256 dealedEpoch, bytes32 merkleRoot);
+    event DepositCommission(uint256 pId, uint256 amount);
 
     // Construct
     constructor(
         address _stafiStorageAddress
     ) StafiBase(1, _stafiStorageAddress) {
         version = 1;
+    }
+
+    function depositCommission() external payable override {
+        uint256 _pId = getProjectId(msg.sender);
+        require(
+            _pId > 1 && getContractAddress(_pId, "projFeePool") == msg.sender,
+            "Invalid caller"
+        );
+        emit DepositCommission(_pId, msg.value);
     }
 
     function StafiNetworkSettings()
@@ -191,15 +201,22 @@ contract StafiDistributor is StafiBase, IStafiDistributor {
     function distributeFee(
         address _voter,
         uint256 _dealedHeight,
-        uint256 _totalAmount
-    ) external onlyLatestContract(1, "stafiDistributor", address(this)) {
+        uint256 _userAmount,
+        uint256 _nodeAmount,
+        uint256 _platformAmount
+    )
+        external
+        override
+        onlyLatestContract(1, "stafiDistributor", address(this))
+    {
         uint256 _pId = getProjectId(msg.sender);
         require(
             _pId > 1 &&
                 getContractAddress(_pId, "projDistributor") == msg.sender,
             "Invalid caller"
         );
-        require(_totalAmount > 0, "zero amount");
+        uint256 totalAmount = _userAmount.add(_nodeAmount).add(_platformAmount);
+        require(totalAmount > 0, "zero amount");
 
         require(
             _dealedHeight > getDistributeFeeDealedHeight(_pId),
@@ -207,25 +224,28 @@ contract StafiDistributor is StafiBase, IStafiDistributor {
         );
 
         bytes32 proposalId = keccak256(
-            abi.encodePacked("distributeFee", _pId, _dealedHeight, _totalAmount)
+            abi.encodePacked(
+                "distributeFee",
+                _pId,
+                _dealedHeight,
+                _userAmount,
+                _nodeAmount,
+                _platformAmount
+            )
         );
         bool needExe = _voteProposal(_pId, _voter, proposalId);
 
         // Finalize if Threshold has been reached
         if (needExe) {
-            uint256 protocolCommission = _totalAmount
-                .mul(StafiNetworkSettings().getPlatformFeePercent())
+            uint256 stafiCommission = _platformAmount
+                .mul(StafiNetworkSettings().getStafiFeePercent())
                 .div(1000);
-            uint256 projTotalAmount = _totalAmount.sub(protocolCommission);
-            uint256 userAmount = projTotalAmount
-                .mul(ProjectSettings(_pId).getDistributeFeeUserPercent())
-                .mul(32 - ProjectSettings(_pId).getCurrentNodeDepositAmount())
-                .div(32000);
-            uint256 nodeAndPlatformAmount = projTotalAmount.sub(userAmount);
+            uint256 platformAmount = _platformAmount.sub(stafiCommission);
+            uint256 nodeAndPlatformAmount = _nodeAmount.add(platformAmount);
             IProjFeePool feePool = IProjFeePool(msg.sender);
 
-            if (userAmount > 0) {
-                feePool.recycleUserDeposit(userAmount);
+            if (_userAmount > 0) {
+                feePool.recycleUserDeposit(_userAmount);
             }
             if (nodeAndPlatformAmount > 0) {
                 feePool.depositEther(nodeAndPlatformAmount);
@@ -242,16 +262,22 @@ contract StafiDistributor is StafiBase, IStafiDistributor {
     function distributeSuperNodeFee(
         address _voter,
         uint256 _dealedHeight,
-        uint256 _totalAmount
-    ) external onlyLatestContract(1, "stafiDistributor", address(this)) {
+        uint256 _userAmount,
+        uint256 _nodeAmount,
+        uint256 _platformAmount
+    )
+        external
+        override
+        onlyLatestContract(1, "stafiDistributor", address(this))
+    {
         uint256 _pId = getProjectId(msg.sender);
         require(
             _pId > 1 &&
                 getContractAddress(_pId, "projDistributor") == msg.sender,
             "Invalid caller"
         );
-
-        require(_totalAmount > 0, "zero amount");
+        uint256 totalAmount = _userAmount.add(_nodeAmount).add(_platformAmount);
+        require(totalAmount > 0, "zero amount");
 
         require(
             _dealedHeight > getDistributeSuperNodeFeeDealedHeight(_pId),
@@ -262,27 +288,24 @@ contract StafiDistributor is StafiBase, IStafiDistributor {
             abi.encodePacked(
                 "distributeSuperNodeFee",
                 _dealedHeight,
-                _totalAmount
+                _userAmount,
+                _nodeAmount,
+                _platformAmount
             )
         );
         bool needExe = _voteProposal(_pId, _voter, proposalId);
 
         // Finalize if Threshold has been reached
         if (needExe) {
-            uint256 protocolCommission = _totalAmount
-                .mul(StafiNetworkSettings().getPlatformFeePercent())
+            uint256 stafiCommission = _platformAmount
+                .mul(StafiNetworkSettings().getStafiFeePercent())
                 .div(1000);
-            uint256 projTotalAmount = _totalAmount.sub(protocolCommission);
-            uint256 userAmount = projTotalAmount
-                .mul(
-                    ProjectSettings(_pId).getDistributeSuperNodeFeeUserPercent()
-                )
-                .div(1000);
-            uint256 nodeAndPlatformAmount = projTotalAmount.sub(userAmount);
+            uint256 platformAmount = _platformAmount.sub(stafiCommission);
+            uint256 nodeAndPlatformAmount = _nodeAmount.add(platformAmount);
 
             IProjFeePool feePool = IProjFeePool(msg.sender);
-            if (userAmount > 0) {
-                feePool.recycleUserDeposit(userAmount);
+            if (_userAmount > 0) {
+                feePool.recycleUserDeposit(_userAmount);
             }
             if (nodeAndPlatformAmount > 0) {
                 feePool.depositEther(nodeAndPlatformAmount);
@@ -299,7 +322,11 @@ contract StafiDistributor is StafiBase, IStafiDistributor {
         address _voter,
         uint256 _dealedHeight,
         uint256 _amount
-    ) external onlyLatestContract(1, "stafiDistributor", address(this)) {
+    )
+        external
+        override
+        onlyLatestContract(1, "stafiDistributor", address(this))
+    {
         uint256 _pId = getProjectId(msg.sender);
         require(
             _pId > 1 &&
@@ -341,7 +368,11 @@ contract StafiDistributor is StafiBase, IStafiDistributor {
         address _voter,
         uint256 _dealedEpoch,
         bytes32 _merkleRoot
-    ) external onlyLatestContract(1, "stafiDistributor", address(this)) {
+    )
+        external
+        override
+        onlyLatestContract(1, "stafiDistributor", address(this))
+    {
         uint256 _pId = getProjectId(msg.sender);
         require(
             _pId > 1 &&
@@ -377,7 +408,11 @@ contract StafiDistributor is StafiBase, IStafiDistributor {
         uint256 _totalExitDepositAmount,
         bytes32[] calldata _merkleProof,
         ClaimType _claimType
-    ) external onlyLatestContract(1, "stafiDistributor", address(this)) {
+    )
+        external
+        override
+        onlyLatestContract(1, "stafiDistributor", address(this))
+    {
         uint256 _pId = getProjectId(msg.sender);
         require(
             _pId > 1 &&

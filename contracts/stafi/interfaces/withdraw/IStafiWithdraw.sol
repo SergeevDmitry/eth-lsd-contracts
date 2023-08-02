@@ -50,4 +50,7 @@ interface IStafiWithdraw {
     function setUserWithdrawLimitPerCycle(
         uint256 _userWithdrawLimitPerCycle
     ) external;
+
+    // project withdraw
+    function depositCommission() external payable;
 }

@@ -100,6 +100,12 @@ contract ProjWithdarw is StafiBase, IProjWithdraw {
         );
     }
 
+    function withdrawCommission(
+        uint256 _value
+    ) external override onlyLatestContract(1, "stafiWithdraw", msg.sender) {
+        IStafiWithdraw(msg.sender).depositCommission{value: _value}();
+    }
+
     function reserveEthForWithdraw(
         uint256 _withdrawCycle
     )

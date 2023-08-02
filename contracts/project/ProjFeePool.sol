@@ -4,6 +4,7 @@ pragma solidity 0.8.19;
 
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "../stafi/StafiBase.sol";
+import "../stafi/interfaces/reward/IStafiDistributor.sol";
 import "./interfaces/IProjEther.sol";
 import "./interfaces/IProjFeePool.sol";
 import "./interfaces/IProjUserDeposit.sol";
@@ -57,5 +58,11 @@ contract ProjFeePool is StafiBase, IProjFeePool {
         onlyLatestContract(1, "stafiDistributor", msg.sender)
     {
         ProjUserDeposit().recycleDistributorDeposit{value: _value}();
+    }
+
+    function withdrawCommission(
+        uint256 _value
+    ) external override onlyLatestContract(1, "stafiDistributor", msg.sender) {
+        IStafiDistributor(msg.sender).depositCommission{value: _value}();
     }
 }

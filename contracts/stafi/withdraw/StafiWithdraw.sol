@@ -6,8 +6,9 @@ import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
 import "../StafiBase.sol";
-import "../interfaces/withdraw/IStafiWithdraw.sol";
+import "../interfaces/settings/IStafiNetworkSettings.sol";
 import "../interfaces/storage/IStafiStorage.sol";
+import "../interfaces/withdraw/IStafiWithdraw.sol";
 import "../../project/interfaces/IProjDistributor.sol";
 import "../../project/interfaces/IProjNodeManager.sol";
 import "../../project/interfaces/IProjRToken.sol";
@@ -68,7 +69,7 @@ contract StafiWithdraw is StafiBase, IStafiWithdraw {
         uint256 dealedHeight,
         uint256 userAmount,
         uint256 nodeAmount,
-        uint256 platformAmount,
+        uint256 commission,
         uint256 maxClaimableWithdrawIndex,
         uint256 mvAmount
     );
@@ -79,6 +80,7 @@ contract StafiWithdraw is StafiBase, IStafiWithdraw {
     );
     event SetWithdrawLimitPerCycle(uint256 withdrawLimitPerCycle);
     event SetUserWithdrawLimitPerCycle(uint256 userWithdrawLimitPerCycle);
+    event DepositCommission(uint256 pId, uint256 amount);
 
     constructor() StafiBase(1, address(0)) {
         // By setting the version it is not possible to call setup anymore,
@@ -93,6 +95,26 @@ contract StafiWithdraw is StafiBase, IStafiWithdraw {
         version = 1;
         pId = 1;
         stafiStorage = IStafiStorage(_stafiStorageAddress);
+    }
+
+    function depositCommission() external payable override {
+        uint256 _pId = getProjectId(msg.sender);
+        require(
+            _pId > 1 && getContractAddress(_pId, "projWithdraw") == msg.sender,
+            "Invalid caller"
+        );
+        emit DepositCommission(_pId, msg.value);
+    }
+
+    function StafiNetworkSettings()
+        private
+        view
+        returns (IStafiNetworkSettings)
+    {
+        return
+            IStafiNetworkSettings(
+                getContractAddress(1, "stafiNetworkSettings")
+            );
     }
 
     function ProjectSettings(
@@ -317,6 +339,10 @@ contract StafiWithdraw is StafiBase, IStafiWithdraw {
 
             latestDistributeHeight[_pId] = _dealedHeight;
 
+            uint256 stafiCommission = _platformAmount
+                .mul(StafiNetworkSettings().getStafiFeePercent())
+                .div(1000);
+            uint256 platformAmount = _platformAmount.sub(stafiCommission);
             uint256 mvAmount = _userAmount;
             if (totalMissingAmountForWithdraw[_pId] < _userAmount) {
                 mvAmount = _userAmount.sub(totalMissingAmountForWithdraw[_pId]);
@@ -333,7 +359,7 @@ contract StafiWithdraw is StafiBase, IStafiWithdraw {
             }
 
             // distribute withdrawals
-            uint256 nodeAndPlatformAmount = _nodeAmount.add(_platformAmount);
+            uint256 nodeAndPlatformAmount = _nodeAmount.add(platformAmount);
             if (nodeAndPlatformAmount > 0) {
                 IProjWithdraw(msg.sender).doDistributeWithdrawals(
                     nodeAndPlatformAmount

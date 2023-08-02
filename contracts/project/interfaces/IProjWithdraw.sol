@@ -10,4 +10,6 @@ interface IProjWithdraw {
     function recycleUserDeposit(uint256 _value) external;
 
     function doDistributeWithdrawals(uint256 _value) external;
+
+    function withdrawCommission(uint256 _value) external;
 }

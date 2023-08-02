@@ -10,13 +10,17 @@ interface IStafiDistributor {
     function distributeFee(
         address _voter,
         uint256 _dealedHeight,
-        uint256 _totalAmount
+        uint256 _userAmount,
+        uint256 _nodeAmount,
+        uint256 _platformAmount
     ) external;
 
     function distributeSuperNodeFee(
         address _voter,
         uint256 _dealedHeight,
-        uint256 _totalAmount
+        uint256 _userAmount,
+        uint256 _nodeAmount,
+        uint256 _platformAmount
     ) external;
 
     function distributeSlashAmount(
@@ -39,4 +43,7 @@ interface IStafiDistributor {
         bytes32[] calldata _merkleProof,
         ClaimType _claimType
     ) external;
+
+    // project fee pool
+    function depositCommission() external payable;
 }

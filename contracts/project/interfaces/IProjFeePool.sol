@@ -6,4 +6,6 @@ interface IProjFeePool {
     function recycleUserDeposit(uint256 _value) external;
 
     function depositEther(uint256) external;
+
+    function withdrawCommission(uint256 _value) external;
 }

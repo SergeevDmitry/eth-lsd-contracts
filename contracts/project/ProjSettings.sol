@@ -11,7 +11,7 @@ contract ProjSettings is StafiBase, IProjSettings {
         address _stafiStorageAddress
     ) StafiBase(_pId, _stafiStorageAddress) {
         version = 1;
-        if (!getBool(keccak256(abi.encode("settings.network.init", _pId)))) {
+        if (!getBool(keccak256(abi.encode("settings.init", _pId)))) {
             // Apply settings
             setNodeConsensusThreshold(0.5 ether); // 50%
             setSubmitBalancesEnabled(true);
@@ -22,7 +22,7 @@ contract ProjSettings is StafiBase, IProjSettings {
             setDistributeSuperNodeFeeUserPercent(950);
             setDistributeSuperNodeFeeNodePercent(50);
             // Settings initialized
-            setBool(keccak256(abi.encode("settings.network.init", _pId)), true);
+            setBool(keccak256(abi.encode("settings.init", _pId)), true);
         }
     }
 
@@ -34,18 +34,14 @@ contract ProjSettings is StafiBase, IProjSettings {
         returns (uint256)
     {
         return
-            getUint(
-                keccak256(
-                    abi.encode("settings.network.consensus.threshold", pId)
-                )
-            );
+            getUint(keccak256(abi.encode("settings.consensus.threshold", pId)));
     }
 
     function setNodeConsensusThreshold(
         uint256 _value
     ) public onlySuperUser(pId) {
         setUint(
-            keccak256(abi.encode("settings.network.consensus.threshold", pId)),
+            keccak256(abi.encode("settings.consensus.threshold", pId)),
             _value
         );
     }
@@ -54,17 +50,13 @@ contract ProjSettings is StafiBase, IProjSettings {
     function getSubmitBalancesEnabled() public view override returns (bool) {
         return
             getBool(
-                keccak256(
-                    abi.encode("settings.network.submit.balances.enabled", pId)
-                )
+                keccak256(abi.encode("settings.submit.balances.enabled", pId))
             );
     }
 
     function setSubmitBalancesEnabled(bool _value) public onlySuperUser(pId) {
         setBool(
-            keccak256(
-                abi.encode("settings.network.submit.balances.enabled", pId)
-            ),
+            keccak256(abi.encode("settings.submit.balances.enabled", pId)),
             _value
         );
     }
@@ -78,9 +70,7 @@ contract ProjSettings is StafiBase, IProjSettings {
     {
         return
             getBytes(
-                keccak256(
-                    abi.encode("settings.network.withdrawal.credentials", pId)
-                )
+                keccak256(abi.encode("settings.withdrawal.credentials", pId))
             );
     }
 
@@ -89,9 +79,7 @@ contract ProjSettings is StafiBase, IProjSettings {
         bytes memory _value
     ) public onlySuperUser(pId) {
         setBytes(
-            keccak256(
-                abi.encode("settings.network.withdrawal.credentials", pId)
-            ),
+            keccak256(abi.encode("settings.withdrawal.credentials", pId)),
             _value
         );
     }
@@ -100,20 +88,25 @@ contract ProjSettings is StafiBase, IProjSettings {
     function getSuperNodePubkeyLimit() public view override returns (uint256) {
         return
             getUint(
-                keccak256(
-                    abi.encode("settings.network.superNode.pubkeyLimit", pId)
-                )
+                keccak256(abi.encode("settings.superNode.pubkeyLimit", pId))
             );
     }
 
     // Set super node pubkey limit
     function setSuperNodePubkeyLimit(uint256 _value) public onlySuperUser(pId) {
         setUint(
-            keccak256(
-                abi.encode("settings.network.superNode.pubkeyLimit", pId)
-            ),
+            keccak256(abi.encode("settings.superNode.pubkeyLimit", pId)),
             _value
         );
+    }
+
+    function getProjectFeePercent() external view returns (uint256) {
+        return getUint(keccak256(abi.encode("settings.fee.percent", pId)));
+    }
+
+    function setProjectFeePercent(uint256 _value) external onlySuperUser(pId) {
+        require(_value >= 0 && _value <= 1000, "Invalid project fee percent");
+        setUint(keccak256(abi.encode("settings.fee.percent", pId)), _value);
     }
 
     /***** light node start *****/

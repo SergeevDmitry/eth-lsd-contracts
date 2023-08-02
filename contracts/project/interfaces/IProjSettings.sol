@@ -11,6 +11,8 @@ interface IProjSettings {
 
     function getSuperNodePubkeyLimit() external view returns (uint256);
 
+    function getProjectFeePercent() external view returns (uint256);
+
     /***** light node start ******/
     function getLightNodeDepositEnabled() external view returns (bool);
 
