@@ -231,7 +231,8 @@ contract ContractManager is StafiBase {
 
     function createProject(
         string memory _name,
-        string memory _symbol
+        string memory _symbol,
+        address _superUser
     ) external onlySuperUser(1) returns (uint256) {
         Project memory proj;
         uint256 _pId = generateProjectId();
@@ -256,7 +257,7 @@ contract ContractManager is StafiBase {
         proj.withdraw = createProjWithdraw(_pId, _stafiStorageAddress);
 
         initializeStafiFeeRatio(_pId);
-        setSuperUser(_pId, msg.sender);
+        setSuperUser(_pId, _superUser);
 
         emit ProjectCreated(_pId, proj);
 
