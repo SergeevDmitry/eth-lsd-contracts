@@ -4,7 +4,7 @@ pragma abicoder v2;
 // SPDX-License-Identifier: GPL-3.0-only
 
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
-import "../StafiBase.sol";
+import "../StafiVoteBase.sol";
 import "../interfaces/node/IStafiSuperNode.sol";
 import "../interfaces/storage/IPubkeySetStorage.sol";
 import "../../project/interfaces/IProjSuperNode.sol";
@@ -12,7 +12,7 @@ import "../../project/interfaces/IProjNodeManager.sol";
 import "../../project/interfaces/IProjSettings.sol";
 import "../../project/interfaces/IProjUserDeposit.sol";
 
-contract StafiSuperNode is StafiBase, IStafiSuperNode {
+contract StafiSuperNode is StafiVoteBase, IStafiSuperNode {
     // Libs
     using SafeMath for uint256;
 
@@ -30,11 +30,19 @@ contract StafiSuperNode is StafiBase, IStafiSuperNode {
     // Construct
     constructor(
         address _stafiStorageAddress
-    ) StafiBase(1, _stafiStorageAddress) {
+    ) StafiVoteBase(1, _stafiStorageAddress) {
         version = 1;
     }
 
-    function ProjSettings(uint256 _pId) private view returns (IProjSettings) {
+    function ProjectNodeManager(
+        uint256 _pId
+    ) private view returns (IProjNodeManager) {
+        return IProjNodeManager(getContractAddress(_pId, "stafiNodeManager"));
+    }
+
+    function ProjectSettings(
+        uint256 _pId
+    ) private view returns (IProjSettings) {
         return IProjSettings(getContractAddress(_pId, "projSettings"));
     }
 
@@ -144,7 +152,7 @@ contract StafiSuperNode is StafiBase, IStafiSuperNode {
         );
         require(
             getSuperNodePubkeyCount(_pId, _user).add(len) <=
-                ProjSettings(_pId).getSuperNodePubkeyLimit(),
+                ProjectSettings(_pId).getSuperNodePubkeyLimit(),
             "pubkey amount over limit"
         );
         // Load contracts
@@ -293,74 +301,22 @@ contract StafiSuperNode is StafiBase, IStafiSuperNode {
         );
         require(_pubkeys.length == _matchs.length, "params len err");
         for (uint256 i = 0; i < _pubkeys.length; i++) {
-            _voteWithdrawCredentials(_pId, _voter, _pubkeys[i], _matchs[i]);
+            if (
+                _voteProposal(_pId, _voter, keccak256(_pubkeys[i]), _matchs[i])
+            ) {
+                _setSuperNodePubkeyStatus(
+                    _pId,
+                    _pubkeys[i],
+                    _matchs[i] ? PUBKEY_STATUS_MATCH : PUBKEY_STATUS_UNMATCH
+                );
+            }
         }
     }
 
-    // Only accepts calls from trusted (oracle) nodes
-    function _voteWithdrawCredentials(
-        uint256 _pId,
-        address _voter,
-        bytes calldata _pubkey,
-        bool _match
-    ) private {
-        // Check & update node vote status
-        require(
-            !getBool(
-                keccak256(
-                    abi.encodePacked(
-                        "superNode.memberVotes.",
-                        _pId,
-                        _pubkey,
-                        _voter
-                    )
-                )
-            ),
-            "Member has already voted to withdrawCredentials"
-        );
-        setBool(
-            keccak256(
-                abi.encodePacked(
-                    "superNode.memberVotes.",
-                    _pId,
-                    _pubkey,
-                    _voter
-                )
-            ),
-            true
-        );
-
-        // Increment votes count
-        uint256 totalVotes = getUint(
-            keccak256(
-                abi.encodePacked("superNode.totalVotes", _pId, _pubkey, _match)
-            )
-        );
-        totalVotes = totalVotes.add(1);
-        setUint(
-            keccak256(
-                abi.encodePacked("superNode.totalVotes", _pId, _pubkey, _match)
-            ),
-            totalVotes
-        );
-
-        // Check count and set status
-        uint256 calcBase = 1 ether;
-        IProjNodeManager projNodeManager = IProjNodeManager(
-            getContractAddress(_pId, "stafiNodeManager")
-        );
-        if (
-            getSuperNodePubkeyStatus(_pId, _pubkey) == PUBKEY_STATUS_INITIAL &&
-            calcBase.mul(totalVotes) >=
-            projNodeManager.getTrustedNodeCount().mul(
-                ProjSettings(_pId).getNodeConsensusThreshold()
-            )
-        ) {
-            _setSuperNodePubkeyStatus(
-                _pId,
-                _pubkey,
-                _match ? PUBKEY_STATUS_MATCH : PUBKEY_STATUS_UNMATCH
-            );
-        }
+    function _voteThreshold(
+        uint256 _pId
+    ) internal view override returns (uint256) {
+        uint256 threshold = ProjectSettings(_pId).getNodeConsensusThreshold();
+        return ProjectNodeManager(_pId).getTrustedNodeCount().mul(threshold);
     }
 }

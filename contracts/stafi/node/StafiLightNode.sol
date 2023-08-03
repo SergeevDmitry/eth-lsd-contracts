@@ -4,7 +4,7 @@ pragma abicoder v2;
 // SPDX-License-Identifier: GPL-3.0-only
 
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
-import "../StafiBase.sol";
+import "../StafiVoteBase.sol";
 import "../interfaces/node/IStafiLightNode.sol";
 import "../interfaces/node/IStafiNodeManager.sol";
 import "../interfaces/deposit/IStafiUserDeposit.sol";
@@ -15,7 +15,7 @@ import "../../project/interfaces/IProjNodeManager.sol";
 import "../../project/interfaces/IProjSettings.sol";
 import "../../project/interfaces/IProjUserDeposit.sol";
 
-contract StafiLightNode is StafiBase, IStafiLightNode {
+contract StafiLightNode is StafiVoteBase, IStafiLightNode {
     // Libs
     using SafeMath for uint256;
 
@@ -42,7 +42,7 @@ contract StafiLightNode is StafiBase, IStafiLightNode {
     // Construct
     constructor(
         address _stafiStorageAddress
-    ) StafiBase(1, _stafiStorageAddress) {
+    ) StafiVoteBase(1, _stafiStorageAddress) {
         version = 1;
     }
 
@@ -62,7 +62,15 @@ contract StafiLightNode is StafiBase, IStafiLightNode {
         return IPubkeySetStorage(getContractAddress(1, "pubkeySetStorage"));
     }
 
-    function ProjSettings(uint256 _pId) private view returns (IProjSettings) {
+    function ProjectNodeManager(
+        uint256 _pId
+    ) private view returns (IProjNodeManager) {
+        return IProjNodeManager(getContractAddress(_pId, "stafiNodeManager"));
+    }
+
+    function ProjectSettings(
+        uint256 _pId
+    ) private view returns (IProjSettings) {
         return IProjSettings(getContractAddress(_pId, "projSettings"));
     }
 
@@ -204,7 +212,7 @@ contract StafiLightNode is StafiBase, IStafiLightNode {
             "Invalid caller"
         );
         require(
-            ProjSettings(_pId).getLightNodeDepositEnabled(),
+            ProjectSettings(_pId).getLightNodeDepositEnabled(),
             "light node deposits are currently disabled"
         );
         uint256 len = _validatorPubkeys.length;
@@ -214,7 +222,8 @@ contract StafiLightNode is StafiBase, IStafiLightNode {
             "params len err"
         );
         require(
-            _value == len.mul(ProjSettings(_pId).getCurrentNodeDepositAmount()),
+            _value ==
+                len.mul(ProjectSettings(_pId).getCurrentNodeDepositAmount()),
             "msg value not match"
         );
 
@@ -252,7 +261,7 @@ contract StafiLightNode is StafiBase, IStafiLightNode {
         projUserDeposit.withdrawExcessBalanceForLightNode(
             _validatorPubkeys.length.mul(
                 uint256(32 ether).sub(
-                    ProjSettings(_pId).getCurrentNodeDepositAmount()
+                    ProjectSettings(_pId).getCurrentNodeDepositAmount()
                 )
             )
         );
@@ -298,7 +307,7 @@ contract StafiLightNode is StafiBase, IStafiLightNode {
         );
         IProjLightNode projLightNode = IProjLightNode(msg.sender);
         require(
-            _value == ProjSettings(_pId).getCurrentNodeDepositAmount(),
+            _value == ProjectSettings(_pId).getCurrentNodeDepositAmount(),
             "msg value not match"
         );
         // check status
@@ -470,76 +479,22 @@ contract StafiLightNode is StafiBase, IStafiLightNode {
         );
         require(_pubkeys.length == _matchs.length, "params len err");
         for (uint256 i = 0; i < _pubkeys.length; i++) {
-            _voteWithdrawCredentials(_pId, _voter, _pubkeys[i], _matchs[i]);
+            if (
+                _voteProposal(_pId, _voter, keccak256(_pubkeys[i]), _matchs[i])
+            ) {
+                _setLightNodePubkeyStatus(
+                    _pId,
+                    _pubkeys[i],
+                    _matchs[i] ? PUBKEY_STATUS_MATCH : PUBKEY_STATUS_UNMATCH
+                );
+            }
         }
     }
 
-    function _voteWithdrawCredentials(
-        uint256 _pId,
-        address _voter,
-        bytes calldata _pubkey,
-        bool _match
-    ) private {
-        // Check & update node vote status
-        require(
-            !getBool(
-                keccak256(
-                    abi.encodePacked(
-                        "lightNode.memberVotes.",
-                        _pId,
-                        _pubkey,
-                        _voter
-                    )
-                )
-            ),
-            "Member has already voted to withdrawCredentials"
-        );
-        setBool(
-            keccak256(
-                abi.encodePacked(
-                    "lightNode.memberVotes.",
-                    _pId,
-                    _pubkey,
-                    _voter
-                )
-            ),
-            true
-        );
-
-        // Increment votes count
-        uint256 totalVotes = getUint(
-            keccak256(
-                abi.encodePacked("lightNode.totalVotes", _pId, _pubkey, _match)
-            )
-        );
-        totalVotes = totalVotes.add(1);
-        setUint(
-            keccak256(
-                abi.encodePacked("lightNode.totalVotes", _pId, _pubkey, _match)
-            ),
-            totalVotes
-        );
-
-        // Check count and set status
-        uint256 calcBase = 1 ether;
-        IProjNodeManager projNodeManager = IProjNodeManager(
-            getContractAddress(_pId, "stafiNodeManager")
-        );
-        IProjSettings projSettings = IProjSettings(
-            getContractAddress(_pId, "projSettings")
-        );
-        if (
-            getLightNodePubkeyStatus(_pId, _pubkey) == PUBKEY_STATUS_INITIAL &&
-            calcBase.mul(totalVotes) >=
-            projNodeManager.getTrustedNodeCount().mul(
-                projSettings.getNodeConsensusThreshold()
-            )
-        ) {
-            _setLightNodePubkeyStatus(
-                _pId,
-                _pubkey,
-                _match ? PUBKEY_STATUS_MATCH : PUBKEY_STATUS_UNMATCH
-            );
-        }
+    function _voteThreshold(
+        uint256 _pId
+    ) internal view override returns (uint256) {
+        uint256 threshold = ProjectSettings(_pId).getNodeConsensusThreshold();
+        return ProjectNodeManager(_pId).getTrustedNodeCount().mul(threshold);
     }
 }

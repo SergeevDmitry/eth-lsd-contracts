@@ -5,7 +5,7 @@ pragma solidity 0.8.19;
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
-import "../StafiBase.sol";
+import "../StafiVoteBase.sol";
 import "../interfaces/settings/IStafiNetworkSettings.sol";
 import "../interfaces/storage/IStafiStorage.sol";
 import "../interfaces/withdraw/IStafiWithdraw.sol";
@@ -19,7 +19,7 @@ import "../../project/interfaces/IProjWithdraw.sol";
 // Notice:
 // 1 proxy admin must be different from owner
 // 2 the new storage needs to be appended to the old storage if this contract is upgraded,
-contract StafiWithdraw is StafiBase, IStafiWithdraw {
+contract StafiWithdraw is StafiVoteBase, IStafiWithdraw {
     using SafeMath for uint256;
     using EnumerableSet for EnumerableSet.UintSet;
 
@@ -82,7 +82,7 @@ contract StafiWithdraw is StafiBase, IStafiWithdraw {
     event SetUserWithdrawLimitPerCycle(uint256 userWithdrawLimitPerCycle);
     event DepositCommission(uint256 pId, uint256 amount);
 
-    constructor() StafiBase(1, address(0)) {
+    constructor() StafiVoteBase(1, address(0)) {
         // By setting the version it is not possible to call setup anymore,
         // so we create a Safe with version 1.
         // This is an unusable Safe, perfect for the singleton
@@ -329,7 +329,7 @@ contract StafiWithdraw is StafiBase, IStafiWithdraw {
                 _maxClaimableWithdrawIndex
             )
         );
-        bool needExe = _voteProposal(_pId, _voter, proposalId);
+        bool needExe = _voteProposal(_pId, _voter, proposalId, true);
 
         // Finalize if Threshold has been reached
         if (needExe) {
@@ -370,8 +370,6 @@ contract StafiWithdraw is StafiBase, IStafiWithdraw {
                 );
             }
 
-            _afterExecProposal(_pId, proposalId);
-
             emit DistributeWithdrawals(
                 _pId,
                 _dealedHeight,
@@ -381,6 +379,8 @@ contract StafiWithdraw is StafiBase, IStafiWithdraw {
                 _maxClaimableWithdrawIndex,
                 mvAmount
             );
+
+            emit ProposalExecuted(proposalId, _pId);
         }
     }
 
@@ -397,7 +397,7 @@ contract StafiWithdraw is StafiBase, IStafiWithdraw {
         bytes32 proposalId = keccak256(
             abi.encodePacked("reserveEthForWithdraw", _pId, _withdrawCycle)
         );
-        bool needExe = _voteProposal(_pId, _voter, proposalId);
+        bool needExe = _voteProposal(_pId, _voter, proposalId, true);
 
         // Finalize if Threshold has been reached
         if (needExe) {
@@ -420,7 +420,7 @@ contract StafiWithdraw is StafiBase, IStafiWithdraw {
 
                 emit ReserveEthForWithdraw(_pId, _withdrawCycle, mvAmount);
             }
-            _afterExecProposal(_pId, proposalId);
+            emit ProposalExecuted(proposalId, _pId);
         }
     }
 
@@ -460,7 +460,7 @@ contract StafiWithdraw is StafiBase, IStafiWithdraw {
                 _validatorIndexList
             )
         );
-        bool needExe = _voteProposal(_pId, _voter, proposalId);
+        bool needExe = _voteProposal(_pId, _voter, proposalId, true);
 
         // Finalize if Threshold has been reached
         if (needExe) {
@@ -476,7 +476,7 @@ contract StafiWithdraw is StafiBase, IStafiWithdraw {
                 _validatorIndexList
             );
 
-            _afterExecProposal(_pId, proposalId);
+            emit ProposalExecuted(proposalId, _pId);
         }
     }
 
@@ -522,54 +522,11 @@ contract StafiWithdraw is StafiBase, IStafiWithdraw {
         return ethAmount;
     }
 
-    function _voteProposal(
-        uint256 _pId,
-        address _voter,
-        bytes32 _proposalId
-    ) internal returns (bool) {
-        // Get submission keys
-        bytes32 proposalNodeKey = keccak256(
-            abi.encodePacked(
-                "stafiWithdraw.proposal.node.key",
-                _pId,
-                _proposalId,
-                _voter
-            )
-        );
-        bytes32 proposalKey = keccak256(
-            abi.encodePacked("stafiWithdraw.proposal.key", _pId, _proposalId)
-        );
-
-        require(!getBool(proposalKey), "proposal already executed");
-
-        // Check & update node submission status
-        require(!getBool(proposalNodeKey), "duplicate vote");
-        setBool(proposalNodeKey, true);
-
-        // Increment submission count
-        uint256 voteCount = getUint(proposalKey).add(1);
-        setUint(proposalKey, voteCount);
-
-        emit VoteProposal(_proposalId, _voter, _pId);
-
-        // Check submission count & update network balances
-        uint256 calcBase = 1 ether;
+    // override StafiBase._voteThreshold to decide proposal consensus
+    function _voteThreshold(
+        uint256 _pId
+    ) internal view override returns (uint256) {
         uint256 threshold = ProjectSettings(_pId).getNodeConsensusThreshold();
-        if (
-            calcBase.mul(voteCount) >=
-            ProjectNodeManager(_pId).getTrustedNodeCount().mul(threshold)
-        ) {
-            return true;
-        }
-        return false;
-    }
-
-    function _afterExecProposal(uint256 _pId, bytes32 _proposalId) internal {
-        bytes32 proposalKey = keccak256(
-            abi.encodePacked("stafiWithdraw.proposal.key", _pId, _proposalId)
-        );
-        setBool(proposalKey, true);
-
-        emit ProposalExecuted(_proposalId, _pId);
+        return ProjectNodeManager(_pId).getTrustedNodeCount().mul(threshold);
     }
 }

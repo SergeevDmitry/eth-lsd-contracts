@@ -3,7 +3,7 @@ pragma solidity 0.8.19;
 // SPDX-License-Identifier: GPL-3.0-only
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
-import "../StafiBase.sol";
+import "../StafiVoteBase.sol";
 import "../interfaces/reward/IStafiDistributor.sol";
 import "../interfaces/settings/IStafiNetworkSettings.sol";
 import "../types/ClaimType.sol";
@@ -13,7 +13,7 @@ import "../../project/interfaces/IProjNodeManager.sol";
 import "../../project/interfaces/IProjSettings.sol";
 
 // Distribute network validator priorityFees/withdrawals/slashs
-contract StafiDistributor is StafiBase, IStafiDistributor {
+contract StafiDistributor is StafiVoteBase, IStafiDistributor {
     // Libs
     using SafeMath for uint256;
 
@@ -43,7 +43,7 @@ contract StafiDistributor is StafiBase, IStafiDistributor {
     // Construct
     constructor(
         address _stafiStorageAddress
-    ) StafiBase(1, _stafiStorageAddress) {
+    ) StafiVoteBase(1, _stafiStorageAddress) {
         version = 1;
     }
 
@@ -233,7 +233,7 @@ contract StafiDistributor is StafiBase, IStafiDistributor {
                 _platformAmount
             )
         );
-        bool needExe = _voteProposal(_pId, _voter, proposalId);
+        bool needExe = _voteProposal(_pId, _voter, proposalId, true);
 
         // Finalize if Threshold has been reached
         if (needExe) {
@@ -258,7 +258,7 @@ contract StafiDistributor is StafiBase, IStafiDistributor {
 
             setDistributeFeeDealedHeight(_pId, _dealedHeight);
 
-            _afterExecProposal(_pId, proposalId);
+            emit ProposalExecuted(proposalId, _pId);
         }
     }
 
@@ -298,7 +298,7 @@ contract StafiDistributor is StafiBase, IStafiDistributor {
                 _platformAmount
             )
         );
-        bool needExe = _voteProposal(_pId, _voter, proposalId);
+        bool needExe = _voteProposal(_pId, _voter, proposalId, true);
 
         // Finalize if Threshold has been reached
         if (needExe) {
@@ -323,7 +323,7 @@ contract StafiDistributor is StafiBase, IStafiDistributor {
 
             setDistributeSuperNodeFeeDealedHeight(_pId, _dealedHeight);
 
-            _afterExecProposal(_pId, proposalId);
+            emit ProposalExecuted(proposalId, _pId);
         }
     }
 
@@ -359,7 +359,7 @@ contract StafiDistributor is StafiBase, IStafiDistributor {
                 _amount
             )
         );
-        bool needExe = _voteProposal(_pId, _voter, proposalId);
+        bool needExe = _voteProposal(_pId, _voter, proposalId, true);
 
         // Finalize if Threshold has been reached
         if (needExe) {
@@ -368,7 +368,7 @@ contract StafiDistributor is StafiBase, IStafiDistributor {
 
             setDistributeSlashDealedHeight(_pId, _dealedHeight);
 
-            _afterExecProposal(_pId, proposalId);
+            emit ProposalExecuted(proposalId, _pId);
 
             emit DistributeSlash(_pId, _dealedHeight, _amount);
         }
@@ -396,14 +396,14 @@ contract StafiDistributor is StafiBase, IStafiDistributor {
         bytes32 proposalId = keccak256(
             abi.encodePacked("setMerkleRoot", _pId, _dealedEpoch, _merkleRoot)
         );
-        bool needExe = _voteProposal(_pId, _voter, proposalId);
+        bool needExe = _voteProposal(_pId, _voter, proposalId, true);
 
         // Finalize if Threshold has been reached
         if (needExe) {
             setMerkleRoot(_pId, _merkleRoot);
             setMerkleDealedEpoch(_pId, _dealedEpoch);
 
-            _afterExecProposal(_pId, proposalId);
+            emit ProposalExecuted(proposalId, _pId);
 
             emit SetMerkleRoot(_pId, _dealedEpoch, _merkleRoot);
         }
@@ -583,55 +583,11 @@ contract StafiDistributor is StafiBase, IStafiDistributor {
         );
     }
 
-    function _voteProposal(
-        uint256 _pId,
-        address _voter,
-        bytes32 _proposalId
-    ) internal returns (bool) {
-        // Get submission keys
-        bytes32 proposalNodeKey = keccak256(
-            abi.encodePacked(
-                "stafiDistributor.proposal.node.key",
-                _pId,
-                _proposalId,
-                _voter
-            )
-        );
-        bytes32 proposalKey = keccak256(
-            abi.encodePacked("stafiDistributor.proposal.key", _pId, _proposalId)
-        );
-
-        require(!getBool(proposalKey), "proposal already executed");
-
-        // Check & update node submission status
-        require(!getBool(proposalNodeKey), "duplicate vote");
-        setBool(proposalNodeKey, true);
-
-        // Increment submission count
-        uint256 voteCount = getUint(proposalKey).add(1);
-        setUint(proposalKey, voteCount);
-
-        emit VoteProposal(_proposalId, _pId, _voter);
-
-        // Check submission count & update network balances
-        uint256 calcBase = 1 ether;
-
+    // override StafiBase._voteThreshold to decide proposal consensus
+    function _voteThreshold(
+        uint256 _pId
+    ) internal view override returns (uint256) {
         uint256 threshold = ProjectSettings(_pId).getNodeConsensusThreshold();
-        if (
-            calcBase.mul(voteCount) >=
-            ProjectNodeManager(_pId).getTrustedNodeCount().mul(threshold)
-        ) {
-            return true;
-        }
-        return false;
-    }
-
-    function _afterExecProposal(uint256 _pId, bytes32 _proposalId) internal {
-        bytes32 proposalKey = keccak256(
-            abi.encodePacked("stafiDistributor.proposal.key", _pId, _proposalId)
-        );
-        setBool(proposalKey, true);
-
-        emit ProposalExecuted(_proposalId, _pId);
+        return ProjectNodeManager(_pId).getTrustedNodeCount().mul(threshold);
     }
 }
