@@ -46,6 +46,12 @@ contract StafiSuperNode is StafiVoteBase, IStafiSuperNode {
         return IProjSettings(getContractAddress(_pId, "projSettings"));
     }
 
+    function ProjectUserDeposit(
+        uint256 _pId
+    ) private view returns (IProjUserDeposit) {
+        return IProjUserDeposit(getContractAddress(_pId, "projUserDeposit"));
+    }
+
     function PubkeySetStorage() public view returns (IPubkeySetStorage) {
         return IPubkeySetStorage(getContractAddress(1, "pubkeySetStorage"));
     }
@@ -132,36 +138,47 @@ contract StafiSuperNode is StafiVoteBase, IStafiSuperNode {
             _pId > 1 && getContractAddress(_pId, "projSuperNode") == msg.sender,
             "Invalid caller"
         );
-        IProjNodeManager projNodeManager = IProjNodeManager(
-            getContractAddress(_pId, "projNodeManager")
-        );
         require(
-            projNodeManager.getSuperNodeExists(_user),
+            ProjectNodeManager(_pId).getSuperNodeExists(_user),
             "Invalid super node"
         );
-        IProjSuperNode projSuperNode = IProjSuperNode(msg.sender);
         require(
-            projSuperNode.getSuperNodeDepositEnabled(),
+            IProjSuperNode(msg.sender).getSuperNodeDepositEnabled(),
             "super node deposits are currently disabled"
         );
-        uint256 len = _validatorPubkeys.length;
         require(
-            len == _validatorSignatures.length &&
-                len == _depositDataRoots.length,
+            _validatorPubkeys.length == _validatorSignatures.length &&
+                _validatorPubkeys.length == _depositDataRoots.length,
             "params len err"
         );
         require(
-            getSuperNodePubkeyCount(_pId, _user).add(len) <=
-                ProjectSettings(_pId).getSuperNodePubkeyLimit(),
+            getSuperNodePubkeyCount(_pId, _user).add(
+                _validatorPubkeys.length
+            ) <= ProjectSettings(_pId).getSuperNodePubkeyLimit(),
             "pubkey amount over limit"
         );
         // Load contracts
-        IProjUserDeposit projUserDeposit = IProjUserDeposit(
-            getContractAddress(_pId, "projUserDeposit")
+        ProjectUserDeposit(_pId).withdrawExcessBalanceForSuperNode(
+            _validatorPubkeys.length.mul(1 ether)
         );
-        projUserDeposit.withdrawExcessBalanceForSuperNode(len.mul(1 ether));
 
-        for (uint256 i = 0; i < len; i++) {
+        _deposits(
+            _pId,
+            _user,
+            _validatorPubkeys,
+            _validatorSignatures,
+            _depositDataRoots
+        );
+    }
+
+    function _deposits(
+        uint256 _pId,
+        address _user,
+        bytes[] calldata _validatorPubkeys,
+        bytes[] calldata _validatorSignatures,
+        bytes32[] calldata _depositDataRoots
+    ) internal {
+        for (uint256 i = 0; i < _validatorPubkeys.length; i++) {
             _deposit(
                 _pId,
                 _user,
@@ -183,11 +200,8 @@ contract StafiSuperNode is StafiVoteBase, IStafiSuperNode {
             _pId > 1 && getContractAddress(_pId, "projSuperNode") == msg.sender,
             "Invalid caller"
         );
-        IProjNodeManager projNodeManager = IProjNodeManager(
-            getContractAddress(_pId, "projNodeManager")
-        );
         require(
-            projNodeManager.getSuperNodeExists(_user),
+            ProjectNodeManager(_pId).getSuperNodeExists(_user),
             "Invalid super node"
         );
         uint256 len = _validatorPubkeys.length;
@@ -197,10 +211,9 @@ contract StafiSuperNode is StafiVoteBase, IStafiSuperNode {
             "params len err"
         );
         // Load contracts
-        IProjUserDeposit projUserDeposit = IProjUserDeposit(
-            getContractAddress(_pId, "projUserDeposit")
+        ProjectUserDeposit(_pId).withdrawExcessBalanceForSuperNode(
+            len.mul(31 ether)
         );
-        projUserDeposit.withdrawExcessBalanceForSuperNode(len.mul(31 ether));
 
         for (uint256 i = 0; i < len; i++) {
             _stake(

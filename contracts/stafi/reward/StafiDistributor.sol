@@ -233,27 +233,24 @@ contract StafiDistributor is StafiVoteBase, IStafiDistributor {
                 _platformAmount
             )
         );
-        bool needExe = _voteProposal(_pId, _voter, proposalId, true);
 
         // Finalize if Threshold has been reached
-        if (needExe) {
+        if (_voteProposal(_pId, _voter, proposalId, true)) {
             uint256 stafiCommission = _platformAmount
                 .mul(StafiNetworkSettings().getStafiFeeRatio(_pId))
                 .div(1000);
             uint256 platformAmount = _platformAmount.sub(stafiCommission);
             uint256 nodeAndPlatformAmount = _nodeAmount.add(platformAmount);
 
-            IProjFeePool feePool = IProjFeePool(msg.sender);
-
             if (stafiCommission > 0) {
-                feePool.withdrawCommission(stafiCommission);
+                IProjFeePool(msg.sender).withdrawCommission(stafiCommission);
             }
 
             if (_userAmount > 0) {
-                feePool.recycleUserDeposit(_userAmount);
+                IProjFeePool(msg.sender).recycleUserDeposit(_userAmount);
             }
             if (nodeAndPlatformAmount > 0) {
-                feePool.depositEther(nodeAndPlatformAmount);
+                IProjFeePool(msg.sender).depositEther(nodeAndPlatformAmount);
             }
 
             setDistributeFeeDealedHeight(_pId, _dealedHeight);
@@ -298,27 +295,24 @@ contract StafiDistributor is StafiVoteBase, IStafiDistributor {
                 _platformAmount
             )
         );
-        bool needExe = _voteProposal(_pId, _voter, proposalId, true);
 
         // Finalize if Threshold has been reached
-        if (needExe) {
+        if (_voteProposal(_pId, _voter, proposalId, true)) {
             uint256 stafiCommission = _platformAmount
                 .mul(StafiNetworkSettings().getStafiFeeRatio(_pId))
                 .div(1000);
             uint256 platformAmount = _platformAmount.sub(stafiCommission);
             uint256 nodeAndPlatformAmount = _nodeAmount.add(platformAmount);
 
-            IProjFeePool feePool = IProjFeePool(msg.sender);
-
             if (stafiCommission > 0) {
-                feePool.withdrawCommission(stafiCommission);
+                IProjFeePool(msg.sender).withdrawCommission(stafiCommission);
             }
 
             if (_userAmount > 0) {
-                feePool.recycleUserDeposit(_userAmount);
+                IProjFeePool(msg.sender).recycleUserDeposit(_userAmount);
             }
             if (nodeAndPlatformAmount > 0) {
-                feePool.depositEther(nodeAndPlatformAmount);
+                IProjFeePool(msg.sender).depositEther(nodeAndPlatformAmount);
             }
 
             setDistributeSuperNodeFeeDealedHeight(_pId, _dealedHeight);
@@ -435,21 +429,14 @@ contract StafiDistributor is StafiVoteBase, IStafiDistributor {
         uint256 claimableDeposit = _totalExitDepositAmount.sub(
             getTotalClaimedDeposit(_pId, _account)
         );
-
-        // Verify the merkle proof.
-        bytes32 node = keccak256(
-            abi.encodePacked(
-                _index,
-                _account,
-                _totalRewardAmount,
-                _totalExitDepositAmount
-            )
+        verifyMerkleProof(
+            _pId,
+            _index,
+            _account,
+            _totalRewardAmount,
+            _totalExitDepositAmount,
+            _merkleProof
         );
-        require(
-            MerkleProof.verify(_merkleProof, getMerkleRoot(_pId), node),
-            "invalid proof"
-        );
-
         uint256 willClaimAmount;
         if (_claimType == ClaimType.CLAIMREWARD) {
             require(claimableReward > 0, "no claimable reward");
@@ -471,8 +458,7 @@ contract StafiDistributor is StafiVoteBase, IStafiDistributor {
             revert("unknown claimType");
         }
 
-        IProjDistributor projDistributor = IProjDistributor(msg.sender);
-        projDistributor.claimToAccount(willClaimAmount, _account);
+        IProjDistributor(msg.sender).claimToAccount(willClaimAmount, _account);
 
         emit Claimed(
             _index,
@@ -484,6 +470,29 @@ contract StafiDistributor is StafiVoteBase, IStafiDistributor {
     }
 
     // --- helper ----
+
+    function verifyMerkleProof(
+        uint256 _pId,
+        uint256 _index,
+        address _account,
+        uint256 _totalRewardAmount,
+        uint256 _totalExitDepositAmount,
+        bytes32[] calldata _merkleProof
+    ) internal view {
+        // Verify the merkle proof.
+        bytes32 node = keccak256(
+            abi.encodePacked(
+                _index,
+                _account,
+                _totalRewardAmount,
+                _totalExitDepositAmount
+            )
+        );
+        require(
+            MerkleProof.verify(_merkleProof, getMerkleRoot(_pId), node),
+            "invalid proof"
+        );
+    }
 
     function setTotalClaimedReward(
         uint256 _pId,

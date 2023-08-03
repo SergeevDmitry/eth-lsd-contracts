@@ -1,4 +1,4 @@
-pragma solidity 0.7.6;
+pragma solidity 0.8.19;
 
 // SPDX-License-Identifier: GPL-3.0-only
 
@@ -10,7 +10,7 @@ import "../../project/interfaces/IProjNodeManager.sol";
 // Node registration and management
 contract StafiNodeManager is StafiBase, IStafiNodeManager {
     // Construct
-    constructor(address _stafiStorageAddress) StafiBase(_stafiStorageAddress) {
+    constructor(address _stafiStorageAddress) StafiBase(1, _stafiStorageAddress) {
         version = 1;
     }
 
@@ -67,8 +67,7 @@ contract StafiNodeManager is StafiBase, IStafiNodeManager {
     )
         external
         override
-        onlyLatestContract("stafiNodeManager", address(this))
-        onlySuperUser
+        onlyLatestContract(1, "stafiNodeManager", address(this))
     {
         uint256 _pId = getProjectId(msg.sender);
         require(

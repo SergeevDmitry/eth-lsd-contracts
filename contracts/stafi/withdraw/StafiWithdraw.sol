@@ -329,10 +329,9 @@ contract StafiWithdraw is StafiVoteBase, IStafiWithdraw {
                 _maxClaimableWithdrawIndex
             )
         );
-        bool needExe = _voteProposal(_pId, _voter, proposalId, true);
 
         // Finalize if Threshold has been reached
-        if (needExe) {
+        if (_voteProposal(_pId, _voter, proposalId, true)) {
             if (_maxClaimableWithdrawIndex > maxClaimableWithdrawIndex[_pId]) {
                 maxClaimableWithdrawIndex[_pId] = _maxClaimableWithdrawIndex;
             }
