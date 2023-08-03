@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
 import "../StafiVoteBase.sol";
+import "../interfaces/IStafiEther.sol";
 import "../interfaces/settings/IStafiNetworkSettings.sol";
 import "../interfaces/storage/IStafiStorage.sol";
 import "../interfaces/withdraw/IStafiWithdraw.sol";
@@ -104,6 +105,10 @@ contract StafiWithdraw is StafiVoteBase, IStafiWithdraw {
             "Invalid caller"
         );
         emit DepositCommission(_pId, msg.value);
+    }
+
+    function StafiEther() private view returns (IStafiEther) {
+        return IStafiEther(getContractAddress(1, "stafiEther"));
     }
 
     function StafiNetworkSettings()
@@ -355,6 +360,7 @@ contract StafiWithdraw is StafiVoteBase, IStafiWithdraw {
 
             if (stafiCommission > 0) {
                 IProjWithdraw(msg.sender).withdrawCommission(stafiCommission);
+                StafiEther().depositCommission{value: stafiCommission}(_pId);
             }
 
             if (mvAmount > 0) {

@@ -4,6 +4,7 @@ pragma solidity 0.8.19;
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import "../StafiVoteBase.sol";
+import "../interfaces/IStafiEther.sol";
 import "../interfaces/reward/IStafiDistributor.sol";
 import "../interfaces/settings/IStafiNetworkSettings.sol";
 import "../types/ClaimType.sol";
@@ -54,6 +55,10 @@ contract StafiDistributor is StafiVoteBase, IStafiDistributor {
             "Invalid caller"
         );
         emit DepositCommission(_pId, msg.value);
+    }
+
+    function StafiEther() private view returns (IStafiEther) {
+        return IStafiEther(getContractAddress(1, "stafiEther"));
     }
 
     function StafiNetworkSettings()
@@ -244,6 +249,7 @@ contract StafiDistributor is StafiVoteBase, IStafiDistributor {
 
             if (stafiCommission > 0) {
                 IProjFeePool(msg.sender).withdrawCommission(stafiCommission);
+                StafiEther().depositCommission{value: stafiCommission}(_pId);
             }
 
             if (_userAmount > 0) {
@@ -306,6 +312,7 @@ contract StafiDistributor is StafiVoteBase, IStafiDistributor {
 
             if (stafiCommission > 0) {
                 IProjFeePool(msg.sender).withdrawCommission(stafiCommission);
+                StafiEther().depositCommission{value: stafiCommission}(_pId);
             }
 
             if (_userAmount > 0) {
