@@ -23,35 +23,20 @@ contract ProjBalances is StafiBase, IProjBalances {
         uint256 rethSupply,
         uint256 time
     );
-    event BalancesUpdated(
-        uint256 block,
-        uint256 totalEth,
-        uint256 stakingEth,
-        uint256 rethSupply,
-        uint256 time
-    );
+    event BalancesUpdated(uint256 block, uint256 totalEth, uint256 stakingEth, uint256 rethSupply, uint256 time);
 
     // Construct
-    constructor(
-        uint256 _pId,
-        address _stafiStorageAddress
-    ) StafiBase(_pId, _stafiStorageAddress) {
+    constructor(uint256 _pId, address _stafiStorageAddress) StafiBase(_pId, _stafiStorageAddress) {
         version = 1;
     }
 
     // The block number which balances are current for
     function getBalancesBlock() public view override returns (uint256) {
-        return
-            getUint(
-                keccak256(abi.encode("network.balances.updated.block", pId))
-            );
+        return getUint(keccak256(abi.encode("network.balances.updated.block", pId)));
     }
 
     function setBalancesBlock(uint256 _value) private {
-        setUint(
-            keccak256(abi.encode("network.balances.updated.block", pId)),
-            _value
-        );
+        setUint(keccak256(abi.encode("network.balances.updated.block", pId)), _value);
     }
 
     // The current network total ETH balance
@@ -74,15 +59,11 @@ contract ProjBalances is StafiBase, IProjBalances {
 
     // The current network total rETH supply
     function getTotalRETHSupply() public view override returns (uint256) {
-        return
-            getUint(keccak256(abi.encode("network.balance.reth.supply", pId)));
+        return getUint(keccak256(abi.encode("network.balance.reth.supply", pId)));
     }
 
     function setTotalRETHSupply(uint256 _value) private {
-        setUint(
-            keccak256(abi.encode("network.balance.reth.supply", pId)),
-            _value
-        );
+        setUint(keccak256(abi.encode("network.balance.reth.supply", pId)), _value);
     }
 
     // Get the current network ETH staking rate as a fraction of 1 ETH
@@ -104,52 +85,24 @@ contract ProjBalances is StafiBase, IProjBalances {
         uint256 _totalEth,
         uint256 _stakingEth,
         uint256 _rethSupply
-    )
-        external
-        onlyLatestContract(pId, "projBalances", address(this))
-        onlyTrustedNode(pId, msg.sender)
-    {
+    ) external onlyLatestContract(pId, "projBalances", address(this)) onlyTrustedNode(pId, msg.sender) {
         IStafiNetworkBalances stafiNetworkBalances = IStafiNetworkBalances(
             getContractAddress(1, "stafiNetworkBalances")
         );
         address _voter = msg.sender;
-        bool agreed = stafiNetworkBalances.submitBalances(
-            _voter,
-            _block,
-            _totalEth,
-            _stakingEth,
-            _rethSupply
-        );
-        emit BalancesSubmitted(
-            _voter,
-            _block,
-            _totalEth,
-            _stakingEth,
-            _rethSupply,
-            block.timestamp
-        );
+        bool agreed = stafiNetworkBalances.submitBalances(_voter, _block, _totalEth, _stakingEth, _rethSupply);
+        emit BalancesSubmitted(_voter, _block, _totalEth, _stakingEth, _rethSupply, block.timestamp);
         if (agreed) updateBalances(_block, _totalEth, _stakingEth, _rethSupply);
     }
 
     // Update network balances
-    function updateBalances(
-        uint256 _block,
-        uint256 _totalEth,
-        uint256 _stakingEth,
-        uint256 _rethSupply
-    ) private {
+    function updateBalances(uint256 _block, uint256 _totalEth, uint256 _stakingEth, uint256 _rethSupply) private {
         // Update balances
         setBalancesBlock(_block);
         setTotalETHBalance(_totalEth);
         setStakingETHBalance(_stakingEth);
         setTotalRETHSupply(_rethSupply);
         // Emit balances updated event
-        emit BalancesUpdated(
-            _block,
-            _totalEth,
-            _stakingEth,
-            _rethSupply,
-            block.timestamp
-        );
+        emit BalancesUpdated(_block, _totalEth, _stakingEth, _rethSupply, block.timestamp);
     }
 }

@@ -15,18 +15,10 @@ contract ProjFeePool is StafiBase, IProjFeePool {
     using SafeMath for uint256;
 
     // Events
-    event EtherWithdrawn(
-        string indexed by,
-        address indexed to,
-        uint256 amount,
-        uint256 time
-    );
+    event EtherWithdrawn(string indexed by, address indexed to, uint256 amount, uint256 time);
 
     // Construct
-    constructor(
-        uint256 _pId,
-        address _stafiStorageAddress
-    ) StafiBase(_pId, _stafiStorageAddress) {
+    constructor(uint256 _pId, address _stafiStorageAddress) StafiBase(_pId, _stafiStorageAddress) {
         // Version
         version = 1;
     }

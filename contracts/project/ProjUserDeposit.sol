@@ -17,21 +17,13 @@ contract UserDeposit is StafiBase, IProjUserDeposit, IProjEtherWithdrawer {
     event DepositRecycled(address indexed from, uint256 amount, uint256 time);
     event ExcessWithdrawn(address indexed to, uint256 amount, uint256 time);
 
-    constructor(
-        uint256 _pId,
-        address _stafiStorageAddress
-    ) StafiBase(_pId, _stafiStorageAddress) {
-        if (
-            !getBool(keccak256(abi.encode("settings.user.deposit.init", _pId)))
-        ) {
+    constructor(uint256 _pId, address _stafiStorageAddress) StafiBase(_pId, _stafiStorageAddress) {
+        if (!getBool(keccak256(abi.encode("settings.user.deposit.init", _pId)))) {
             // Apply settings
             setDepositEnabled(true);
             setMinimumDeposit(0.01 ether);
             // Settings initialized
-            setBool(
-                keccak256(abi.encode("settings.user.deposit.init", _pId)),
-                true
-            );
+            setBool(keccak256(abi.encode("settings.user.deposit.init", _pId)), true);
         }
     }
 
@@ -51,19 +43,13 @@ contract UserDeposit is StafiBase, IProjUserDeposit, IProjEtherWithdrawer {
     }
 
     function deposit() external payable {
-        IStafiUserDeposit stafiUserDeposit = IStafiUserDeposit(
-            getContractAddress(1, "stafiUserDeposit")
-        );
+        IStafiUserDeposit stafiUserDeposit = IStafiUserDeposit(getContractAddress(1, "stafiUserDeposit"));
         stafiUserDeposit.deposit(msg.sender, msg.value);
     }
 
     function depositEther(
         uint256 _value
-    )
-        public
-        onlyLatestContract(pId, "projUserDeposit", address(this))
-        onlyLatestStackContract(pId)
-    {
+    ) public onlyLatestContract(pId, "projUserDeposit", address(this)) onlyLatestStackContract(pId) {
         IProjEther projEther = IProjEther(getContractAddress(pId, "projEther"));
         projEther.depositEther{value: _value}();
     }
@@ -78,9 +64,7 @@ contract UserDeposit is StafiBase, IProjUserDeposit, IProjEtherWithdrawer {
         onlyLatestContract(1, "stafiSuperNode", msg.sender)
     {
         // Load contracts
-        IProjSuperNode superNode = IProjSuperNode(
-            getContractAddress(pId, "projSuperNode")
-        );
+        IProjSuperNode superNode = IProjSuperNode(getContractAddress(pId, "projSuperNode"));
         IProjEther projEther = IProjEther(getContractAddress(pId, "projEther"));
         // Check amount
         require(_amount <= getBalance(), "Insufficient balance for withdrawal");
@@ -102,9 +86,7 @@ contract UserDeposit is StafiBase, IProjUserDeposit, IProjEtherWithdrawer {
         onlyLatestContract(1, "stafiLightNode", msg.sender)
     {
         // Load contracts
-        IProjLightNode lightNode = IProjLightNode(
-            getContractAddress(pId, "projLightNode")
-        );
+        IProjLightNode lightNode = IProjLightNode(getContractAddress(pId, "projLightNode"));
         IProjEther projEther = IProjEther(getContractAddress(pId, "projEther"));
         // Check amount
         require(_amount <= getBalance(), "Insufficient balance for withdrawal");
@@ -126,9 +108,7 @@ contract UserDeposit is StafiBase, IProjUserDeposit, IProjEtherWithdrawer {
         onlyLatestContract(1, "stafiWithdraw", msg.sender)
     {
         // Load contracts
-        IProjWithdraw projWithdraw = IProjWithdraw(
-            getContractAddress(pId, "projWithdraw")
-        );
+        IProjWithdraw projWithdraw = IProjWithdraw(getContractAddress(pId, "projWithdraw"));
         IProjEther projEther = IProjEther(getContractAddress(pId, "projEther"));
         // Check amount
         require(_amount <= getBalance(), "Insufficient balance for withdrawal");

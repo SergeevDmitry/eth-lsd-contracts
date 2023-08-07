@@ -17,16 +17,10 @@ contract StafiStorage is IStafiStorage {
     /// @dev Only allow access from the latest version of a contract in the network after deployment
     modifier onlyLatestNetworkContract() {
         // The owner and other contracts are only allowed to set the storage upon deployment to register the initial contracts/settings, afterwards their direct access is disabled
-        if (
-            boolStorage[
-                keccak256(abi.encodePacked("contract.storage.initialised"))
-            ] == true
-        ) {
+        if (boolStorage[keccak256(abi.encodePacked("contract.storage.initialised"))] == true) {
             // Make sure the access is permitted to only contracts in our Dapp
             require(
-                boolStorage[
-                    keccak256(abi.encodePacked("contract.exists", msg.sender))
-                ],
+                boolStorage[keccak256(abi.encodePacked("contract.exists", msg.sender))],
                 "Invalid or outdated network contract"
             );
         }
@@ -36,11 +30,7 @@ contract StafiStorage is IStafiStorage {
     /// @dev Construct
     constructor() {
         // Set the main owner upon deployment
-        boolStorage[
-            keccak256(
-                abi.encodePacked("access.role", uint256(1), "owner", msg.sender)
-            )
-        ] = true;
+        boolStorage[keccak256(abi.encodePacked("access.role", uint256(1), "owner", msg.sender))] = true;
     }
 
     /// @param _key The key for the record
@@ -54,16 +44,12 @@ contract StafiStorage is IStafiStorage {
     }
 
     /// @param _key The key for the record
-    function getString(
-        bytes32 _key
-    ) external view override returns (string memory) {
+    function getString(bytes32 _key) external view override returns (string memory) {
         return stringStorage[_key];
     }
 
     /// @param _key The key for the record
-    function getBytes(
-        bytes32 _key
-    ) external view override returns (bytes memory) {
+    function getBytes(bytes32 _key) external view override returns (bytes memory) {
         return bytesStorage[_key];
     }
 
@@ -83,107 +69,72 @@ contract StafiStorage is IStafiStorage {
     }
 
     /// @param _key The key for the record
-    function setAddress(
-        bytes32 _key,
-        address _value
-    ) external override onlyLatestNetworkContract {
+    function setAddress(bytes32 _key, address _value) external override onlyLatestNetworkContract {
         addressStorage[_key] = _value;
     }
 
     /// @param _key The key for the record
-    function setUint(
-        bytes32 _key,
-        uint256 _value
-    ) external override onlyLatestNetworkContract {
+    function setUint(bytes32 _key, uint256 _value) external override onlyLatestNetworkContract {
         uIntStorage[_key] = _value;
     }
 
     /// @param _key The key for the record
-    function setString(
-        bytes32 _key,
-        string calldata _value
-    ) external override onlyLatestNetworkContract {
+    function setString(bytes32 _key, string calldata _value) external override onlyLatestNetworkContract {
         stringStorage[_key] = _value;
     }
 
     /// @param _key The key for the record
-    function setBytes(
-        bytes32 _key,
-        bytes calldata _value
-    ) external override onlyLatestNetworkContract {
+    function setBytes(bytes32 _key, bytes calldata _value) external override onlyLatestNetworkContract {
         bytesStorage[_key] = _value;
     }
 
     /// @param _key The key for the record
-    function setBool(
-        bytes32 _key,
-        bool _value
-    ) external override onlyLatestNetworkContract {
+    function setBool(bytes32 _key, bool _value) external override onlyLatestNetworkContract {
         boolStorage[_key] = _value;
     }
 
     /// @param _key The key for the record
-    function setInt(
-        bytes32 _key,
-        int256 _value
-    ) external override onlyLatestNetworkContract {
+    function setInt(bytes32 _key, int256 _value) external override onlyLatestNetworkContract {
         intStorage[_key] = _value;
     }
 
     /// @param _key The key for the record
-    function setBytes32(
-        bytes32 _key,
-        bytes32 _value
-    ) external override onlyLatestNetworkContract {
+    function setBytes32(bytes32 _key, bytes32 _value) external override onlyLatestNetworkContract {
         bytes32Storage[_key] = _value;
     }
 
     /// @param _key The key for the record
-    function deleteAddress(
-        bytes32 _key
-    ) external override onlyLatestNetworkContract {
+    function deleteAddress(bytes32 _key) external override onlyLatestNetworkContract {
         delete addressStorage[_key];
     }
 
     /// @param _key The key for the record
-    function deleteUint(
-        bytes32 _key
-    ) external override onlyLatestNetworkContract {
+    function deleteUint(bytes32 _key) external override onlyLatestNetworkContract {
         delete uIntStorage[_key];
     }
 
     /// @param _key The key for the record
-    function deleteString(
-        bytes32 _key
-    ) external override onlyLatestNetworkContract {
+    function deleteString(bytes32 _key) external override onlyLatestNetworkContract {
         delete stringStorage[_key];
     }
 
     /// @param _key The key for the record
-    function deleteBytes(
-        bytes32 _key
-    ) external override onlyLatestNetworkContract {
+    function deleteBytes(bytes32 _key) external override onlyLatestNetworkContract {
         delete bytesStorage[_key];
     }
 
     /// @param _key The key for the record
-    function deleteBool(
-        bytes32 _key
-    ) external override onlyLatestNetworkContract {
+    function deleteBool(bytes32 _key) external override onlyLatestNetworkContract {
         delete boolStorage[_key];
     }
 
     /// @param _key The key for the record
-    function deleteInt(
-        bytes32 _key
-    ) external override onlyLatestNetworkContract {
+    function deleteInt(bytes32 _key) external override onlyLatestNetworkContract {
         delete intStorage[_key];
     }
 
     /// @param _key The key for the record
-    function deleteBytes32(
-        bytes32 _key
-    ) external override onlyLatestNetworkContract {
+    function deleteBytes32(bytes32 _key) external override onlyLatestNetworkContract {
         delete bytes32Storage[_key];
     }
 }

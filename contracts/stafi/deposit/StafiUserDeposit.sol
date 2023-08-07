@@ -17,9 +17,7 @@ contract StafiUserDeposit is StafiBase, IStafiUserDeposit {
     using SafeMath for uint256;
 
     // Construct
-    constructor(
-        address _stafiStorageAddress
-    ) StafiBase(1, _stafiStorageAddress) {
+    constructor(address _stafiStorageAddress) StafiBase(1, _stafiStorageAddress) {
         version = 1;
     }
 
@@ -27,29 +25,16 @@ contract StafiUserDeposit is StafiBase, IStafiUserDeposit {
     function deposit(
         address _user,
         uint256 _value
-    )
-        external
-        override
-        onlyLatestContract(1, "stafiUserDeposit", address(this))
-    {
+    ) external override onlyLatestContract(1, "stafiUserDeposit", address(this)) {
         uint256 _pId = getProjectId(msg.sender);
-        require(
-            _pId > 1 &&
-                getContractAddress(_pId, "projUserDeposit") == msg.sender,
-            "Invalid caller"
-        );
+        require(_pId > 1 && getContractAddress(_pId, "projUserDeposit") == msg.sender, "Invalid caller");
         IProjUserDeposit projUserDeposit = IProjUserDeposit(msg.sender);
-        require(
-            projUserDeposit.getDepositEnabled(),
-            "Deposits into Stafi are currently disabled"
-        );
+        require(projUserDeposit.getDepositEnabled(), "Deposits into Stafi are currently disabled");
         require(
             _value >= projUserDeposit.getMinimumDeposit(),
             "The deposited amount is less than the minimum deposit size"
         );
-        IProjRToken rETHToken = IProjRToken(
-            getContractAddress(_pId, "rETHToken")
-        );
+        IProjRToken rETHToken = IProjRToken(getContractAddress(_pId, "rETHToken"));
         rETHToken.mint(_user, _value);
         projUserDeposit.depositEther(_value);
     }

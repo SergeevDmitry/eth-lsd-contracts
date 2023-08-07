@@ -38,24 +38,14 @@ contract StafiWithdraw is StafiVoteBase, IStafiWithdraw {
     mapping(uint256 => uint256) public userWithdrawLimitPerCycle;
 
     mapping(uint256 => mapping(uint256 => Withdrawal)) public withdrawalAtIndex;
-    mapping(uint256 => mapping(address => EnumerableSet.UintSet))
-        internal unclaimedWithdrawalsOfUser;
-    mapping(uint256 => mapping(uint256 => uint256))
-        public totalWithdrawAmountAtCycle;
-    mapping(uint256 => mapping(address => mapping(uint256 => uint256)))
-        public userWithdrawAmountAtCycle;
-    mapping(uint256 => mapping(uint256 => uint256[]))
-        public ejectedValidatorsAtCycle;
+    mapping(uint256 => mapping(address => EnumerableSet.UintSet)) internal unclaimedWithdrawalsOfUser;
+    mapping(uint256 => mapping(uint256 => uint256)) public totalWithdrawAmountAtCycle;
+    mapping(uint256 => mapping(address => mapping(uint256 => uint256))) public userWithdrawAmountAtCycle;
+    mapping(uint256 => mapping(uint256 => uint256[])) public ejectedValidatorsAtCycle;
 
     // ------------ events ------------
     event EtherDeposited(address indexed from, uint256 amount, uint256 time);
-    event Unstake(
-        address indexed from,
-        uint256 rethAmount,
-        uint256 ethAmount,
-        uint256 withdrawIndex,
-        bool instantly
-    );
+    event Unstake(address indexed from, uint256 rethAmount, uint256 ethAmount, uint256 withdrawIndex, bool instantly);
     event Withdraw(address indexed from, uint256[] withdrawIndexList);
     event VoteProposal(bytes32 indexed proposalId, address voter, uint256 _pId);
     event ProposalExecuted(bytes32 indexed proposalId, uint256 _pId);
@@ -74,11 +64,7 @@ contract StafiWithdraw is StafiVoteBase, IStafiWithdraw {
         uint256 maxClaimableWithdrawIndex,
         uint256 mvAmount
     );
-    event ReserveEthForWithdraw(
-        uint256 pId,
-        uint256 withdrawCycle,
-        uint256 mvAmount
-    );
+    event ReserveEthForWithdraw(uint256 pId, uint256 withdrawCycle, uint256 mvAmount);
     event SetWithdrawLimitPerCycle(uint256 withdrawLimitPerCycle);
     event SetUserWithdrawLimitPerCycle(uint256 userWithdrawLimitPerCycle);
     event DepositCommission(uint256 pId, uint256 amount);
@@ -100,10 +86,7 @@ contract StafiWithdraw is StafiVoteBase, IStafiWithdraw {
 
     function depositCommission() external payable override {
         uint256 _pId = getProjectId(msg.sender);
-        require(
-            _pId > 1 && getContractAddress(_pId, "projWithdraw") == msg.sender,
-            "Invalid caller"
-        );
+        require(_pId > 1 && getContractAddress(_pId, "projWithdraw") == msg.sender, "Invalid caller");
         emit DepositCommission(_pId, msg.value);
     }
 
@@ -111,38 +94,23 @@ contract StafiWithdraw is StafiVoteBase, IStafiWithdraw {
         return IStafiEther(getContractAddress(1, "stafiEther"));
     }
 
-    function StafiNetworkSettings()
-        private
-        view
-        returns (IStafiNetworkSettings)
-    {
-        return
-            IStafiNetworkSettings(
-                getContractAddress(1, "stafiNetworkSettings")
-            );
+    function StafiNetworkSettings() private view returns (IStafiNetworkSettings) {
+        return IStafiNetworkSettings(getContractAddress(1, "stafiNetworkSettings"));
     }
 
-    function ProjectSettings(
-        uint256 _pId
-    ) private view returns (IProjSettings) {
+    function ProjectSettings(uint256 _pId) private view returns (IProjSettings) {
         return IProjSettings(getContractAddress(_pId, "projSettings"));
     }
 
-    function ProjectNodeManager(
-        uint256 _pId
-    ) private view returns (IProjNodeManager) {
+    function ProjectNodeManager(uint256 _pId) private view returns (IProjNodeManager) {
         return IProjNodeManager(getContractAddress(_pId, "projNodeManager"));
     }
 
-    function ProjectUserDeposit(
-        uint256 _pId
-    ) private view returns (IProjUserDeposit) {
+    function ProjectUserDeposit(uint256 _pId) private view returns (IProjUserDeposit) {
         return IProjUserDeposit(getContractAddress(_pId, "projUserDeposit"));
     }
 
-    function ProjectDistributor(
-        uint256 _pId
-    ) private view returns (IProjDistributor) {
+    function ProjectDistributor(uint256 _pId) private view returns (IProjDistributor) {
         return IProjDistributor(getContractAddress(_pId, "projDistributor"));
     }
 
@@ -173,27 +141,17 @@ contract StafiWithdraw is StafiVoteBase, IStafiWithdraw {
 
     // ------------ settings ------------
 
-    function setWithdrawLimitPerCycle(
-        uint256 _withdrawLimitPerCycle
-    ) external onlySuperUser(1) {
+    function setWithdrawLimitPerCycle(uint256 _withdrawLimitPerCycle) external onlySuperUser(1) {
         uint256 _pId = getProjectId(msg.sender);
-        require(
-            _pId > 1 && getContractAddress(_pId, "projWithdraw") == msg.sender,
-            "Invalid caller"
-        );
+        require(_pId > 1 && getContractAddress(_pId, "projWithdraw") == msg.sender, "Invalid caller");
         withdrawLimitPerCycle[_pId] = _withdrawLimitPerCycle;
 
         emit SetWithdrawLimitPerCycle(_withdrawLimitPerCycle);
     }
 
-    function setUserWithdrawLimitPerCycle(
-        uint256 _userWithdrawLimitPerCycle
-    ) external onlySuperUser(1) {
+    function setUserWithdrawLimitPerCycle(uint256 _userWithdrawLimitPerCycle) external onlySuperUser(1) {
         uint256 _pId = getProjectId(msg.sender);
-        require(
-            _pId > 1 && getContractAddress(_pId, "projWithdraw") == msg.sender,
-            "Invalid caller"
-        );
+        require(_pId > 1 && getContractAddress(_pId, "projWithdraw") == msg.sender, "Invalid caller");
         userWithdrawLimitPerCycle[_pId] = _userWithdrawLimitPerCycle;
 
         emit SetUserWithdrawLimitPerCycle(_userWithdrawLimitPerCycle);
@@ -206,19 +164,12 @@ contract StafiWithdraw is StafiVoteBase, IStafiWithdraw {
         uint256 _rEthAmount
     ) external override onlyLatestContract(1, "stafiWithdraw", address(this)) {
         uint256 _pId = getProjectId(msg.sender);
-        require(
-            _pId > 1 && getContractAddress(_pId, "projWithdraw") == msg.sender,
-            "Invalid caller"
-        );
+        require(_pId > 1 && getContractAddress(_pId, "projWithdraw") == msg.sender, "Invalid caller");
         uint256 ethAmount = _processWithdraw(_pId, _user, _rEthAmount);
-        IProjUserDeposit projUserDeposit = IProjUserDeposit(
-            getContractAddress(_pId, "projUserDeposit")
-        );
+        IProjUserDeposit projUserDeposit = IProjUserDeposit(getContractAddress(_pId, "projUserDeposit"));
         uint256 stakePoolBalance = projUserDeposit.getBalance();
 
-        uint256 totalMissingAmount = totalMissingAmountForWithdraw[_pId].add(
-            ethAmount
-        );
+        uint256 totalMissingAmount = totalMissingAmountForWithdraw[_pId].add(ethAmount);
         if (stakePoolBalance > 0) {
             uint256 mvAmount = totalMissingAmount;
             if (stakePoolBalance < mvAmount) {
@@ -233,19 +184,10 @@ contract StafiWithdraw is StafiVoteBase, IStafiWithdraw {
         bool unstakeInstantly = totalMissingAmountForWithdraw[_pId] == 0;
         uint256 willUseWithdrawalIndex = nextWithdrawIndex[_pId];
 
-        withdrawalAtIndex[_pId][willUseWithdrawalIndex] = Withdrawal({
-            _address: _user,
-            _amount: ethAmount
-        });
+        withdrawalAtIndex[_pId][willUseWithdrawalIndex] = Withdrawal({_address: _user, _amount: ethAmount});
         nextWithdrawIndex[_pId] = willUseWithdrawalIndex.add(1);
 
-        emit Unstake(
-            _user,
-            _rEthAmount,
-            ethAmount,
-            willUseWithdrawalIndex,
-            unstakeInstantly
-        );
+        emit Unstake(_user, _rEthAmount, ethAmount, willUseWithdrawalIndex, unstakeInstantly);
 
         if (unstakeInstantly) {
             maxClaimableWithdrawIndex[_pId] = willUseWithdrawalIndex;
@@ -263,26 +205,15 @@ contract StafiWithdraw is StafiVoteBase, IStafiWithdraw {
         require(_withdrawIndexList.length > 0, "index list empty");
 
         uint256 _pId = getProjectId(msg.sender);
-        require(
-            _pId > 1 && getContractAddress(_pId, "projWithdraw") == msg.sender,
-            "Invalid caller"
-        );
+        require(_pId > 1 && getContractAddress(_pId, "projWithdraw") == msg.sender, "Invalid caller");
 
         uint256 totalAmount;
         for (uint256 i = 0; i < _withdrawIndexList.length; i++) {
             uint256 withdrawIndex = _withdrawIndexList[i];
-            require(
-                withdrawIndex <= maxClaimableWithdrawIndex[_pId],
-                "not claimable"
-            );
-            require(
-                unclaimedWithdrawalsOfUser[_pId][_user].remove(withdrawIndex),
-                "already claimed"
-            );
+            require(withdrawIndex <= maxClaimableWithdrawIndex[_pId], "not claimable");
+            require(unclaimedWithdrawalsOfUser[_pId][_user].remove(withdrawIndex), "already claimed");
 
-            totalAmount = totalAmount.add(
-                withdrawalAtIndex[_pId][withdrawIndex]._amount
-            );
+            totalAmount = totalAmount.add(withdrawalAtIndex[_pId][withdrawIndex]._amount);
         }
 
         if (totalAmount > 0) {
@@ -304,24 +235,11 @@ contract StafiWithdraw is StafiVoteBase, IStafiWithdraw {
         uint256 _maxClaimableWithdrawIndex
     ) external override onlyLatestContract(1, "stafiWithdraw", address(this)) {
         uint256 _pId = getProjectId(msg.sender);
-        require(
-            _pId > 1 && getContractAddress(_pId, "projWithdraw") == msg.sender,
-            "Invalid caller"
-        );
+        require(_pId > 1 && getContractAddress(_pId, "projWithdraw") == msg.sender, "Invalid caller");
 
-        require(
-            _dealedHeight > latestDistributeHeight[_pId],
-            "height already dealed"
-        );
-        require(
-            _maxClaimableWithdrawIndex < nextWithdrawIndex[_pId],
-            "withdraw index over"
-        );
-        require(
-            _userAmount.add(_nodeAmount).add(_platformAmount) <=
-                address(msg.sender).balance,
-            "balance not enough"
-        );
+        require(_dealedHeight > latestDistributeHeight[_pId], "height already dealed");
+        require(_maxClaimableWithdrawIndex < nextWithdrawIndex[_pId], "withdraw index over");
+        require(_userAmount.add(_nodeAmount).add(_platformAmount) <= address(msg.sender).balance, "balance not enough");
 
         bytes32 proposalId = keccak256(
             abi.encodePacked(
@@ -343,9 +261,7 @@ contract StafiWithdraw is StafiVoteBase, IStafiWithdraw {
 
             latestDistributeHeight[_pId] = _dealedHeight;
 
-            uint256 stafiCommission = _platformAmount
-                .mul(StafiNetworkSettings().getStafiFeeRatio(_pId))
-                .div(1000);
+            uint256 stafiCommission = _platformAmount.mul(StafiNetworkSettings().getStafiFeeRatio(_pId)).div(1000);
             uint256 platformAmount = _platformAmount.sub(stafiCommission);
             uint256 mvAmount = _userAmount;
             if (totalMissingAmountForWithdraw[_pId] < _userAmount) {
@@ -353,9 +269,7 @@ contract StafiWithdraw is StafiVoteBase, IStafiWithdraw {
                 totalMissingAmountForWithdraw[_pId] = 0;
             } else {
                 mvAmount = 0;
-                totalMissingAmountForWithdraw[
-                    _pId
-                ] = totalMissingAmountForWithdraw[_pId].sub(_userAmount);
+                totalMissingAmountForWithdraw[_pId] = totalMissingAmountForWithdraw[_pId].sub(_userAmount);
             }
 
             if (stafiCommission > 0) {
@@ -370,9 +284,7 @@ contract StafiWithdraw is StafiVoteBase, IStafiWithdraw {
             // distribute withdrawals
             uint256 nodeAndPlatformAmount = _nodeAmount.add(platformAmount);
             if (nodeAndPlatformAmount > 0) {
-                IProjWithdraw(msg.sender).doDistributeWithdrawals(
-                    nodeAndPlatformAmount
-                );
+                IProjWithdraw(msg.sender).doDistributeWithdrawals(nodeAndPlatformAmount);
             }
 
             emit DistributeWithdrawals(
@@ -394,14 +306,9 @@ contract StafiWithdraw is StafiVoteBase, IStafiWithdraw {
         uint256 _withdrawCycle
     ) external override onlyLatestContract(1, "stafiWithdraw", address(this)) {
         uint256 _pId = getProjectId(msg.sender);
-        require(
-            _pId > 1 && getContractAddress(_pId, "projWithdraw") == msg.sender,
-            "Invalid caller"
-        );
+        require(_pId > 1 && getContractAddress(_pId, "projWithdraw") == msg.sender, "Invalid caller");
 
-        bytes32 proposalId = keccak256(
-            abi.encodePacked("reserveEthForWithdraw", _pId, _withdrawCycle)
-        );
+        bytes32 proposalId = keccak256(abi.encodePacked("reserveEthForWithdraw", _pId, _withdrawCycle));
         bool needExe = _voteProposal(_pId, _voter, proposalId, true);
 
         // Finalize if Threshold has been reached
@@ -409,19 +316,14 @@ contract StafiWithdraw is StafiVoteBase, IStafiWithdraw {
             IProjUserDeposit projUserDeposit = ProjectUserDeposit(_pId);
             uint256 depositPoolBalance = projUserDeposit.getBalance();
 
-            if (
-                depositPoolBalance > 0 &&
-                totalMissingAmountForWithdraw[_pId] > 0
-            ) {
+            if (depositPoolBalance > 0 && totalMissingAmountForWithdraw[_pId] > 0) {
                 uint256 mvAmount = totalMissingAmountForWithdraw[_pId];
                 if (depositPoolBalance < mvAmount) {
                     mvAmount = depositPoolBalance;
                 }
                 projUserDeposit.withdrawExcessBalanceForWithdraw(mvAmount);
 
-                totalMissingAmountForWithdraw[
-                    _pId
-                ] = totalMissingAmountForWithdraw[_pId].sub(mvAmount);
+                totalMissingAmountForWithdraw[_pId] = totalMissingAmountForWithdraw[_pId].sub(mvAmount);
 
                 emit ReserveEthForWithdraw(_pId, _withdrawCycle, mvAmount);
             }
@@ -436,50 +338,29 @@ contract StafiWithdraw is StafiVoteBase, IStafiWithdraw {
         uint256[] calldata _validatorIndexList
     ) external override onlyLatestContract(1, "stafiWithdraw", address(this)) {
         uint256 _pId = getProjectId(msg.sender);
-        require(
-            _pId > 1 && getContractAddress(_pId, "projWithdraw") == msg.sender,
-            "Invalid caller"
-        );
+        require(_pId > 1 && getContractAddress(_pId, "projWithdraw") == msg.sender, "Invalid caller");
         require(
             _validatorIndexList.length > 0 &&
-                _validatorIndexList.length <=
-                withdrawLimitPerCycle[_pId].mul(3).div(20 ether),
+                _validatorIndexList.length <= withdrawLimitPerCycle[_pId].mul(3).div(20 ether),
             "length not match"
         );
         require(
-            _ejectedStartCycle < _withdrawCycle &&
-                _withdrawCycle.add(1) == currentWithdrawCycle(),
+            _ejectedStartCycle < _withdrawCycle && _withdrawCycle.add(1) == currentWithdrawCycle(),
             "cycle not match"
         );
-        require(
-            ejectedValidatorsAtCycle[_pId][_withdrawCycle].length == 0,
-            "already dealed"
-        );
+        require(ejectedValidatorsAtCycle[_pId][_withdrawCycle].length == 0, "already dealed");
 
         bytes32 proposalId = keccak256(
-            abi.encodePacked(
-                "notifyValidatorExit",
-                _pId,
-                _withdrawCycle,
-                _ejectedStartCycle,
-                _validatorIndexList
-            )
+            abi.encodePacked("notifyValidatorExit", _pId, _withdrawCycle, _ejectedStartCycle, _validatorIndexList)
         );
         bool needExe = _voteProposal(_pId, _voter, proposalId, true);
 
         // Finalize if Threshold has been reached
         if (needExe) {
-            ejectedValidatorsAtCycle[_pId][
-                _withdrawCycle
-            ] = _validatorIndexList;
+            ejectedValidatorsAtCycle[_pId][_withdrawCycle] = _validatorIndexList;
             ejectedStartCycle[_pId] = _ejectedStartCycle;
 
-            emit NotifyValidatorExit(
-                _pId,
-                _withdrawCycle,
-                _ejectedStartCycle,
-                _validatorIndexList
-            );
+            emit NotifyValidatorExit(_pId, _withdrawCycle, _ejectedStartCycle, _validatorIndexList);
 
             emit ProposalExecuted(proposalId, _pId);
         }
@@ -493,34 +374,25 @@ contract StafiWithdraw is StafiVoteBase, IStafiWithdraw {
     // burn reth from user
     // return:
     // 1 eth withdraw amount
-    function _processWithdraw(
-        uint256 _pId,
-        address _user,
-        uint256 _rEthAmount
-    ) private returns (uint256) {
+    function _processWithdraw(uint256 _pId, address _user, uint256 _rEthAmount) private returns (uint256) {
         require(_rEthAmount > 0, "reth amount zero");
         address rEthAddress = getContractAddress(_pId, "projRToken");
         uint256 ethAmount = IProjRToken(rEthAddress).getEthValue(_rEthAmount);
         require(ethAmount > 0, "eth amount zero");
         uint256 currentCycle = currentWithdrawCycle();
         require(
-            totalWithdrawAmountAtCycle[_pId][currentCycle].add(ethAmount) <=
-                withdrawLimitPerCycle[_pId],
+            totalWithdrawAmountAtCycle[_pId][currentCycle].add(ethAmount) <= withdrawLimitPerCycle[_pId],
             "reach cycle limit"
         );
         require(
-            userWithdrawAmountAtCycle[_pId][_user][currentCycle].add(
-                ethAmount
-            ) <= userWithdrawLimitPerCycle[_pId],
+            userWithdrawAmountAtCycle[_pId][_user][currentCycle].add(ethAmount) <= userWithdrawLimitPerCycle[_pId],
             "reach user limit"
         );
 
-        totalWithdrawAmountAtCycle[_pId][
-            currentCycle
-        ] = totalWithdrawAmountAtCycle[_pId][currentCycle].add(ethAmount);
-        userWithdrawAmountAtCycle[_pId][_user][
-            currentCycle
-        ] = userWithdrawAmountAtCycle[_pId][_user][currentCycle].add(ethAmount);
+        totalWithdrawAmountAtCycle[_pId][currentCycle] = totalWithdrawAmountAtCycle[_pId][currentCycle].add(ethAmount);
+        userWithdrawAmountAtCycle[_pId][_user][currentCycle] = userWithdrawAmountAtCycle[_pId][_user][currentCycle].add(
+            ethAmount
+        );
 
         ERC20Burnable(rEthAddress).burnFrom(_user, _rEthAmount);
 
@@ -528,9 +400,7 @@ contract StafiWithdraw is StafiVoteBase, IStafiWithdraw {
     }
 
     // override StafiBase._voteThreshold to decide proposal consensus
-    function _voteThreshold(
-        uint256 _pId
-    ) internal view override returns (uint256) {
+    function _voteThreshold(uint256 _pId) internal view override returns (uint256) {
         uint256 threshold = ProjectSettings(_pId).getNodeConsensusThreshold();
         return ProjectNodeManager(_pId).getTrustedNodeCount().mul(threshold);
     }

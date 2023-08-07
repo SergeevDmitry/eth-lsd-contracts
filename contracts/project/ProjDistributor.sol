@@ -20,26 +20,13 @@ contract ProjDistributor is StafiBase, IProjDistributor {
         uint256 claimableDeposit,
         ClaimType claimType
     );
-    event DistributeFee(
-        uint256 dealedHeight,
-        uint256 userAmount,
-        uint256 nodeAmount,
-        uint256 platformAmount
-    );
-    event DistributeSuperNodeFee(
-        uint256 dealedHeight,
-        uint256 userAmount,
-        uint256 nodeAmount,
-        uint256 platformAmount
-    );
+    event DistributeFee(uint256 dealedHeight, uint256 userAmount, uint256 nodeAmount, uint256 platformAmount);
+    event DistributeSuperNodeFee(uint256 dealedHeight, uint256 userAmount, uint256 nodeAmount, uint256 platformAmount);
     event DistributeSlash(uint256 dealedHeight, uint256 slashAmount);
     event SetMerkleRoot(uint256 dealedEpoch, bytes32 merkleRoot);
 
     // Construct
-    constructor(
-        uint256 _pId,
-        address _stafiStorageAddress
-    ) StafiBase(_pId, _stafiStorageAddress) {
+    constructor(uint256 _pId, address _stafiStorageAddress) StafiBase(_pId, _stafiStorageAddress) {
         // Version
         version = 1;
     }
@@ -74,14 +61,8 @@ contract ProjDistributor is StafiBase, IProjDistributor {
 
     function updateMerkleRoot(
         bytes32 _merkleRoot
-    )
-        external
-        onlyLatestContract(pId, "projDistributor", address(this))
-        onlySuperNode(pId, msg.sender)
-    {
-        IStafiDistributor stafiDistributor = IStafiDistributor(
-            getContractAddress(1, "stafiDistributor")
-        );
+    ) external onlyLatestContract(pId, "projDistributor", address(this)) onlySuperNode(pId, msg.sender) {
+        IStafiDistributor stafiDistributor = IStafiDistributor(getContractAddress(1, "stafiDistributor"));
         stafiDistributor.updateMerkleRoot(_merkleRoot);
     }
 
@@ -94,27 +75,10 @@ contract ProjDistributor is StafiBase, IProjDistributor {
         uint256 _userAmount,
         uint256 _nodeAmount,
         uint256 _platformAmount
-    )
-        external
-        onlyLatestContract(pId, "projDistributor", address(this))
-        onlyTrustedNode(pId, msg.sender)
-    {
-        IStafiDistributor stafiDistributor = IStafiDistributor(
-            getContractAddress(1, "stafiDistributor")
-        );
-        stafiDistributor.distributeFee(
-            msg.sender,
-            _dealedHeight,
-            _userAmount,
-            _nodeAmount,
-            _platformAmount
-        );
-        emit DistributeFee(
-            _dealedHeight,
-            _userAmount,
-            _nodeAmount,
-            _platformAmount
-        );
+    ) external onlyLatestContract(pId, "projDistributor", address(this)) onlyTrustedNode(pId, msg.sender) {
+        IStafiDistributor stafiDistributor = IStafiDistributor(getContractAddress(1, "stafiDistributor"));
+        stafiDistributor.distributeFee(msg.sender, _dealedHeight, _userAmount, _nodeAmount, _platformAmount);
+        emit DistributeFee(_dealedHeight, _userAmount, _nodeAmount, _platformAmount);
     }
 
     function distributeSuperNodeFee(
@@ -122,59 +86,26 @@ contract ProjDistributor is StafiBase, IProjDistributor {
         uint256 _userAmount,
         uint256 _nodeAmount,
         uint256 _platformAmount
-    )
-        external
-        onlyLatestContract(pId, "projDistributor", address(this))
-        onlyTrustedNode(pId, msg.sender)
-    {
-        IStafiDistributor stafiDistributor = IStafiDistributor(
-            getContractAddress(1, "stafiDistributor")
-        );
-        stafiDistributor.distributeSuperNodeFee(
-            msg.sender,
-            _dealedHeight,
-            _userAmount,
-            _nodeAmount,
-            _platformAmount
-        );
-        emit DistributeSuperNodeFee(
-            _dealedHeight,
-            _userAmount,
-            _nodeAmount,
-            _platformAmount
-        );
+    ) external onlyLatestContract(pId, "projDistributor", address(this)) onlyTrustedNode(pId, msg.sender) {
+        IStafiDistributor stafiDistributor = IStafiDistributor(getContractAddress(1, "stafiDistributor"));
+        stafiDistributor.distributeSuperNodeFee(msg.sender, _dealedHeight, _userAmount, _nodeAmount, _platformAmount);
+        emit DistributeSuperNodeFee(_dealedHeight, _userAmount, _nodeAmount, _platformAmount);
     }
 
     function distributeSlashAmount(
         uint256 _dealedHeight,
         uint256 _amount
-    )
-        external
-        onlyLatestContract(pId, "projDistributor", address(this))
-        onlyTrustedNode(pId, msg.sender)
-    {
-        IStafiDistributor stafiDistributor = IStafiDistributor(
-            getContractAddress(1, "stafiDistributor")
-        );
-        stafiDistributor.distributeSlashAmount(
-            msg.sender,
-            _dealedHeight,
-            _amount
-        );
+    ) external onlyLatestContract(pId, "projDistributor", address(this)) onlyTrustedNode(pId, msg.sender) {
+        IStafiDistributor stafiDistributor = IStafiDistributor(getContractAddress(1, "stafiDistributor"));
+        stafiDistributor.distributeSlashAmount(msg.sender, _dealedHeight, _amount);
         emit DistributeSlash(_dealedHeight, _amount);
     }
 
     function setMerkleRoot(
         uint256 _dealedEpoch,
         bytes32 _merkleRoot
-    )
-        external
-        onlyLatestContract(pId, "projDistributor", address(this))
-        onlyTrustedNode(pId, msg.sender)
-    {
-        IStafiDistributor stafiDistributor = IStafiDistributor(
-            getContractAddress(1, "stafiDistributor")
-        );
+    ) external onlyLatestContract(pId, "projDistributor", address(this)) onlyTrustedNode(pId, msg.sender) {
+        IStafiDistributor stafiDistributor = IStafiDistributor(getContractAddress(1, "stafiDistributor"));
         stafiDistributor.setMerkleRoot(msg.sender, _dealedEpoch, _merkleRoot);
         emit SetMerkleRoot(_dealedEpoch, _merkleRoot);
     }
@@ -187,17 +118,8 @@ contract ProjDistributor is StafiBase, IProjDistributor {
         bytes32[] calldata _merkleProof,
         ClaimType _claimType
     ) external onlyLatestContract(pId, "projDistributor", address(this)) {
-        IStafiDistributor stafiDistributor = IStafiDistributor(
-            getContractAddress(1, "stafiDistributor")
-        );
-        stafiDistributor.claim(
-            _index,
-            _account,
-            _totalRewardAmount,
-            _totalExitDepositAmount,
-            _merkleProof,
-            _claimType
-        );
+        IStafiDistributor stafiDistributor = IStafiDistributor(getContractAddress(1, "stafiDistributor"));
+        stafiDistributor.claim(_index, _account, _totalRewardAmount, _totalExitDepositAmount, _merkleProof, _claimType);
     }
 
     function claimToAccount(

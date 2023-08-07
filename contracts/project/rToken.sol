@@ -33,9 +33,7 @@ contract rToken is StafiBase, ERC20Burnable, IProjRToken {
     // Calculate the amount of ETH backing an amount of rETH
     function getEthValue(uint256 _rethAmount) public view returns (uint256) {
         // Get network balances
-        IProjBalances projNetworkBalances = IProjBalances(
-            getContractAddress(pId, "stafiNetworkBalances")
-        );
+        IProjBalances projNetworkBalances = IProjBalances(getContractAddress(pId, "stafiNetworkBalances"));
         uint256 totalEthBalance = projNetworkBalances.getTotalETHBalance();
         uint256 rethSupply = projNetworkBalances.getTotalRETHSupply();
         // Use 1:1 ratio if no rETH is minted
@@ -49,9 +47,7 @@ contract rToken is StafiBase, ERC20Burnable, IProjRToken {
     // Calculate the amount of rETH backed by an amount of ETH
     function getRethValue(uint256 _ethAmount) public view returns (uint256) {
         // Get network balances
-        IProjBalances projBalances = IProjBalances(
-            getContractAddress(pId, "stafiNetworkBalances")
-        );
+        IProjBalances projBalances = IProjBalances(getContractAddress(pId, "stafiNetworkBalances"));
         uint256 totalEthBalance = projBalances.getTotalETHBalance();
         uint256 rethSupply = projBalances.getTotalRETHSupply();
         // Use 1:1 ratio if no rETH is minted
@@ -59,10 +55,7 @@ contract rToken is StafiBase, ERC20Burnable, IProjRToken {
             return _ethAmount;
         }
         // Check network ETH balance
-        require(
-            totalEthBalance > 0,
-            "Cannot calculate rETH token amount while total network balance is zero"
-        );
+        require(totalEthBalance > 0, "Cannot calculate rETH token amount while total network balance is zero");
         // Calculate and return
         return _ethAmount.mul(rethSupply).div(totalEthBalance);
     }
@@ -75,22 +68,14 @@ contract rToken is StafiBase, ERC20Burnable, IProjRToken {
 
     // Deposit ETH rewards
     // Only accepts calls from the StafiNetworkWithdrawal contract
-    function depositRewards()
-        external
-        payable
-        onlyLatestContract(pId, "stafiNetworkWithdrawal", msg.sender)
-    {
+    function depositRewards() external payable onlyLatestContract(pId, "stafiNetworkWithdrawal", msg.sender) {
         // Emit ether deposited event
         emit EtherDeposited(msg.sender, msg.value, block.timestamp);
     }
 
     // Deposit excess ETH from deposit pool
     // Only accepts calls from the StafiUserDeposit contract
-    function depositExcess()
-        external
-        payable
-        onlyLatestContract(pId, "stafiUserDeposit", msg.sender)
-    {
+    function depositExcess() external payable onlyLatestContract(pId, "stafiUserDeposit", msg.sender) {
         // Emit ether deposited event
         emit EtherDeposited(msg.sender, msg.value, block.timestamp);
     }

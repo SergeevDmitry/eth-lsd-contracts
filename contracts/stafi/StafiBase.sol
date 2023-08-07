@@ -18,10 +18,7 @@ abstract contract StafiBase {
      * @dev Throws if called by any sender that doesn't match a system contract
      */
     modifier onlyLatestSystemContract() {
-        require(
-            getProjectId(msg.sender) == 1,
-            "Invalid or outdated network contract"
-        );
+        require(getProjectId(msg.sender) == 1, "Invalid or outdated network contract");
         _;
     }
 
@@ -29,19 +26,13 @@ abstract contract StafiBase {
      * @dev Throws if called by any sender that doesn't match a project contract
      */
     modifier onlyLatestProjectContract(uint256 _pId) {
-        require(
-            getProjectId(msg.sender) == _pId,
-            "Invalid or outdated project contract"
-        );
+        require(getProjectId(msg.sender) == _pId, "Invalid or outdated project contract");
         _;
     }
 
     modifier onlyLatestStackContract(uint256 _pId) {
         uint256 _callerPId = getProjectId(msg.sender);
-        require(
-            _callerPId == _pId || _callerPId == 1,
-            "Invalid or outdated stack contract"
-        );
+        require(_callerPId == _pId || _callerPId == 1, "Invalid or outdated stack contract");
         _;
     }
 
@@ -54,16 +45,7 @@ abstract contract StafiBase {
         address _contractAddress
     ) {
         require(
-            _contractAddress ==
-                getAddress(
-                    keccak256(
-                        abi.encodePacked(
-                            "contract.address",
-                            _pId,
-                            _contractName
-                        )
-                    )
-                ),
+            _contractAddress == getAddress(keccak256(abi.encodePacked("contract.address", _pId, _contractName))),
             "Invalid or outdated contract"
         );
         _;
@@ -72,12 +54,7 @@ abstract contract StafiBase {
      * @dev Throws if called by any sender that isn't a trusted node
      */
     modifier onlyTrustedNode(uint256 _pId, address _nodeAddress) {
-        require(
-            getBool(
-                keccak256(abi.encodePacked("node.trusted", _pId, _nodeAddress))
-            ),
-            "Invalid trusted node"
-        );
+        require(getBool(keccak256(abi.encodePacked("node.trusted", _pId, _nodeAddress))), "Invalid trusted node");
         _;
     }
 
@@ -85,12 +62,7 @@ abstract contract StafiBase {
      * @dev Throws if called by any sender that isn't a super node
      */
     modifier onlySuperNode(uint256 _pId, address _nodeAddress) {
-        require(
-            getBool(
-                keccak256(abi.encodePacked("node.super", _pId, _nodeAddress))
-            ),
-            "Invalid super node"
-        );
+        require(getBool(keccak256(abi.encodePacked("node.super", _pId, _nodeAddress))), "Invalid super node");
         _;
     }
 
@@ -115,8 +87,7 @@ abstract contract StafiBase {
      */
     modifier onlySuperUser(uint256 _pId) {
         require(
-            roleHas(_pId, "owner", msg.sender) ||
-                roleHas(_pId, "admin", msg.sender),
+            roleHas(_pId, "owner", msg.sender) || roleHas(_pId, "admin", msg.sender),
             "Account is not a super user"
         );
         _;
@@ -126,10 +97,7 @@ abstract contract StafiBase {
      * @dev Reverts if the address doesn't have this role
      */
     modifier onlyRole(uint256 _pId, string memory _role) {
-        require(
-            roleHas(_pId, _role, msg.sender),
-            "Account does not match the specified role"
-        );
+        require(roleHas(_pId, _role, msg.sender), "Account does not match the specified role");
         _;
     }
 
@@ -141,66 +109,36 @@ abstract contract StafiBase {
         stafiStorage = IStafiStorage(_stafiStorageAddress);
     }
 
-    function contractAddressKey(
-        uint256 _pId,
-        string memory _contractName
-    ) internal pure returns (bytes32) {
-        return
-            keccak256(
-                abi.encodePacked("contract.address", _pId, _contractName)
-            );
+    function contractAddressKey(uint256 _pId, string memory _contractName) internal pure returns (bytes32) {
+        return keccak256(abi.encodePacked("contract.address", _pId, _contractName));
     }
 
     /// @dev Get the address of a network contract by name
-    function getContractAddress(
-        uint256 _pId,
-        string memory _contractName
-    ) internal view returns (address) {
+    function getContractAddress(uint256 _pId, string memory _contractName) internal view returns (address) {
         // Get the current contract address
-        address contractAddress = getAddress(
-            contractAddressKey(_pId, _contractName)
-        );
+        address contractAddress = getAddress(contractAddressKey(_pId, _contractName));
         // Check it
         require(contractAddress != address(0x0), "System contract not found");
         // Return
         return contractAddress;
     }
 
-    function projectIdKey(
-        address _contractAddress
-    ) internal pure returns (bytes32) {
+    function projectIdKey(address _contractAddress) internal pure returns (bytes32) {
         return keccak256(abi.encode("project.id", _contractAddress));
     }
 
-    function getProjectId(
-        address _contractAddress
-    ) internal view returns (uint256) {
+    function getProjectId(address _contractAddress) internal view returns (uint256) {
         return getUint(projectIdKey(_contractAddress));
     }
 
-    function contractNameKey(
-        uint256 _pId,
-        address _contractAddress
-    ) internal pure returns (bytes32) {
-        return
-            keccak256(
-                abi.encodePacked("contract.name", _pId, _contractAddress)
-            );
+    function contractNameKey(uint256 _pId, address _contractAddress) internal pure returns (bytes32) {
+        return keccak256(abi.encodePacked("contract.name", _pId, _contractAddress));
     }
 
     /// @dev Get the name of a network contract by address
-    function getContractName(
-        uint256 _pId,
-        address _contractAddress
-    ) internal view returns (string memory) {
-        string memory contractName = getString(
-            contractNameKey(_pId, _contractAddress)
-        );
-        require(
-            keccak256(abi.encodePacked(contractName)) !=
-                keccak256(abi.encodePacked("")),
-            "Contract not found"
-        );
+    function getContractName(uint256 _pId, address _contractAddress) internal view returns (string memory) {
+        string memory contractName = getString(contractNameKey(_pId, _contractAddress));
+        require(keccak256(abi.encodePacked(contractName)) != keccak256(abi.encodePacked("")), "Contract not found");
         return contractName;
     }
 
@@ -241,15 +179,11 @@ abstract contract StafiBase {
         return stafiStorage.getUint(keccak256(abi.encodePacked(_key)));
     }
 
-    function getStringS(
-        string memory _key
-    ) internal view returns (string memory) {
+    function getStringS(string memory _key) internal view returns (string memory) {
         return stafiStorage.getString(keccak256(abi.encodePacked(_key)));
     }
 
-    function getBytesS(
-        string memory _key
-    ) internal view returns (bytes memory) {
+    function getBytesS(string memory _key) internal view returns (bytes memory) {
         return stafiStorage.getBytes(keccak256(abi.encodePacked(_key)));
     }
 
@@ -382,16 +316,7 @@ abstract contract StafiBase {
     /**
      * @dev Check if an address has this role
      */
-    function roleHas(
-        uint256 _pId,
-        string memory _role,
-        address _address
-    ) internal view returns (bool) {
-        return
-            getBool(
-                keccak256(
-                    abi.encodePacked("access.role", _pId, _role, _address)
-                )
-            );
+    function roleHas(uint256 _pId, string memory _role, address _address) internal view returns (bool) {
+        return getBool(keccak256(abi.encodePacked("access.role", _pId, _role, _address)));
     }
 }

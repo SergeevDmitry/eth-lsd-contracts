@@ -19,43 +19,21 @@ contract StafiNodeManager is StafiBase, IStafiNodeManager {
     function setNodeTrusted(
         address _nodeAddress,
         bool _trusted
-    )
-        external
-        override
-        onlyLatestContract(1, "stafiNodeManager", address(this))
-    {
+    ) external override onlyLatestContract(1, "stafiNodeManager", address(this)) {
         uint256 _pId = getProjectId(msg.sender);
-        require(
-            _pId > 1 &&
-                getContractAddress(_pId, "projNodeManager") == msg.sender,
-            "Invalid caller"
-        );
+        require(_pId > 1 && getContractAddress(_pId, "projNodeManager") == msg.sender, "Invalid caller");
         IProjNodeManager projNodeManager = IProjNodeManager(msg.sender);
         // Check current node status
-        require(
-            projNodeManager.getNodeTrusted(_nodeAddress) != _trusted,
-            "The node's trusted status is already set"
-        );
+        require(projNodeManager.getNodeTrusted(_nodeAddress) != _trusted, "The node's trusted status is already set");
         // Load contracts
-        IAddressSetStorage addressSetStorage = IAddressSetStorage(
-            getContractAddress(1, "addressSetStorage")
-        );
+        IAddressSetStorage addressSetStorage = IAddressSetStorage(getContractAddress(1, "addressSetStorage"));
         // Set status
-        setBool(
-            keccak256(abi.encodePacked("node.trusted", _pId, _nodeAddress)),
-            _trusted
-        );
+        setBool(keccak256(abi.encodePacked("node.trusted", _pId, _nodeAddress)), _trusted);
         // Add node to / remove node from trusted index
         if (_trusted) {
-            addressSetStorage.addItem(
-                keccak256(abi.encodePacked("nodes.trusted.index", _pId)),
-                _nodeAddress
-            );
+            addressSetStorage.addItem(keccak256(abi.encodePacked("nodes.trusted.index", _pId)), _nodeAddress);
         } else {
-            addressSetStorage.removeItem(
-                keccak256(abi.encodePacked("nodes.trusted.index", _pId)),
-                _nodeAddress
-            );
+            addressSetStorage.removeItem(keccak256(abi.encodePacked("nodes.trusted.index", _pId)), _nodeAddress);
         }
     }
 
@@ -64,43 +42,21 @@ contract StafiNodeManager is StafiBase, IStafiNodeManager {
     function setNodeSuper(
         address _nodeAddress,
         bool _super
-    )
-        external
-        override
-        onlyLatestContract(1, "stafiNodeManager", address(this))
-    {
+    ) external override onlyLatestContract(1, "stafiNodeManager", address(this)) {
         uint256 _pId = getProjectId(msg.sender);
-        require(
-            _pId > 1 &&
-                getContractAddress(_pId, "projNodeManager") == msg.sender,
-            "Invalid caller"
-        );
+        require(_pId > 1 && getContractAddress(_pId, "projNodeManager") == msg.sender, "Invalid caller");
         IProjNodeManager projNodeManager = IProjNodeManager(msg.sender);
         // Check current node status
-        require(
-            !projNodeManager.getSuperNodeExists(_nodeAddress),
-            "The node's super status is already set"
-        );
+        require(!projNodeManager.getSuperNodeExists(_nodeAddress), "The node's super status is already set");
         // Load contracts
-        IAddressSetStorage addressSetStorage = IAddressSetStorage(
-            getContractAddress(1, "addressSetStorage")
-        );
+        IAddressSetStorage addressSetStorage = IAddressSetStorage(getContractAddress(1, "addressSetStorage"));
         // Set status
-        setBool(
-            keccak256(abi.encodePacked("node.super", _pId, _nodeAddress)),
-            _super
-        );
+        setBool(keccak256(abi.encodePacked("node.super", _pId, _nodeAddress)), _super);
         // Add node to / remove node from trusted index
         if (_super) {
-            addressSetStorage.addItem(
-                keccak256(abi.encodePacked("nodes.super.index", _pId)),
-                _nodeAddress
-            );
+            addressSetStorage.addItem(keccak256(abi.encodePacked("nodes.super.index", _pId)), _nodeAddress);
         } else {
-            addressSetStorage.removeItem(
-                keccak256(abi.encodePacked("nodes.super.index", _pId)),
-                _nodeAddress
-            );
+            addressSetStorage.removeItem(keccak256(abi.encodePacked("nodes.super.index", _pId)), _nodeAddress);
         }
     }
 }

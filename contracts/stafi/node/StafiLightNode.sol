@@ -20,12 +20,7 @@ contract StafiLightNode is StafiVoteBase, IStafiLightNode {
     using SafeMath for uint256;
 
     event EtherDeposited(address indexed from, uint256 amount, uint256 time);
-    event Deposited(
-        address node,
-        bytes pubkey,
-        bytes validatorSignature,
-        uint256 amount
-    );
+    event Deposited(address node, bytes pubkey, bytes validatorSignature, uint256 amount);
     event Staked(address node, bytes pubkey);
     event OffBoarded(address node, bytes pubkey);
     event SetPubkeyStatus(bytes pubkey, uint256 status);
@@ -40,20 +35,13 @@ contract StafiLightNode is StafiVoteBase, IStafiLightNode {
     uint256 public constant PUBKEY_STATUS_WITHDRAWED = 7;
 
     // Construct
-    constructor(
-        address _stafiStorageAddress
-    ) StafiVoteBase(1, _stafiStorageAddress) {
+    constructor(address _stafiStorageAddress) StafiVoteBase(1, _stafiStorageAddress) {
         version = 1;
     }
 
     // Deposit ETH from deposit pool
     // Only accepts calls from the StafiUserDeposit contract
-    function depositEth()
-        external
-        payable
-        override
-        onlyLatestContract(1, "stafiUserDeposit", msg.sender)
-    {
+    function depositEth() external payable override onlyLatestContract(1, "stafiUserDeposit", msg.sender) {
         // Emit ether deposited event
         emit EtherDeposited(msg.sender, msg.value, block.timestamp);
     }
@@ -62,33 +50,17 @@ contract StafiLightNode is StafiVoteBase, IStafiLightNode {
         return IPubkeySetStorage(getContractAddress(1, "pubkeySetStorage"));
     }
 
-    function ProjectNodeManager(
-        uint256 _pId
-    ) private view returns (IProjNodeManager) {
+    function ProjectNodeManager(uint256 _pId) private view returns (IProjNodeManager) {
         return IProjNodeManager(getContractAddress(_pId, "stafiNodeManager"));
     }
 
-    function ProjectSettings(
-        uint256 _pId
-    ) private view returns (IProjSettings) {
+    function ProjectSettings(uint256 _pId) private view returns (IProjSettings) {
         return IProjSettings(getContractAddress(_pId, "projSettings"));
     }
 
     // Get the number of pubkeys owned by a light node
-    function getLightNodePubkeyCount(
-        uint256 _pId,
-        address _nodeAddress
-    ) public view returns (uint256) {
-        return
-            PubkeySetStorage().getCount(
-                keccak256(
-                    abi.encodePacked(
-                        "lightNode.pubkeys.index",
-                        _pId,
-                        _nodeAddress
-                    )
-                )
-            );
+    function getLightNodePubkeyCount(uint256 _pId, address _nodeAddress) public view returns (uint256) {
+        return PubkeySetStorage().getCount(keccak256(abi.encodePacked("lightNode.pubkeys.index", _pId, _nodeAddress)));
     }
 
     // Get a light node pubkey by index
@@ -99,50 +71,19 @@ contract StafiLightNode is StafiVoteBase, IStafiLightNode {
     ) public view returns (bytes memory) {
         return
             PubkeySetStorage().getItem(
-                keccak256(
-                    abi.encodePacked(
-                        "lightNode.pubkeys.index",
-                        _pId,
-                        _nodeAddress
-                    )
-                ),
+                keccak256(abi.encodePacked("lightNode.pubkeys.index", _pId, _nodeAddress)),
                 _index
             );
     }
 
     // Get a light node pubkey status
-    function getLightNodePubkeyStatus(
-        uint256 _pId,
-        bytes calldata _validatorPubkey
-    ) public view returns (uint256) {
-        return
-            getUint(
-                keccak256(
-                    abi.encodePacked(
-                        "lightNode.pubkey.status",
-                        _pId,
-                        _validatorPubkey
-                    )
-                )
-            );
+    function getLightNodePubkeyStatus(uint256 _pId, bytes calldata _validatorPubkey) public view returns (uint256) {
+        return getUint(keccak256(abi.encodePacked("lightNode.pubkey.status", _pId, _validatorPubkey)));
     }
 
     // Set a light node pubkey status
-    function _setLightNodePubkeyStatus(
-        uint256 _pId,
-        bytes calldata _validatorPubkey,
-        uint256 _status
-    ) private {
-        setUint(
-            keccak256(
-                abi.encodePacked(
-                    "lightNode.pubkey.status",
-                    _pId,
-                    _validatorPubkey
-                )
-            ),
-            _status
-        );
+    function _setLightNodePubkeyStatus(uint256 _pId, bytes calldata _validatorPubkey, uint256 _status) private {
+        setUint(keccak256(abi.encodePacked("lightNode.pubkey.status", _pId, _validatorPubkey)), _status);
 
         emit SetPubkeyStatus(_validatorPubkey, _status);
     }
@@ -155,48 +96,17 @@ contract StafiLightNode is StafiVoteBase, IStafiLightNode {
         _setLightNodePubkeyStatus(_pId, _validatorPubkey, _status);
     }
 
-    function getPubkeyVoted(
-        uint256 _pId,
-        bytes calldata _validatorPubkey,
-        address user
-    ) public view returns (bool) {
-        return
-            getBool(
-                keccak256(
-                    abi.encodePacked(
-                        "lightNode.memberVotes.",
-                        _pId,
-                        _validatorPubkey,
-                        user
-                    )
-                )
-            );
+    function getPubkeyVoted(uint256 _pId, bytes calldata _validatorPubkey, address user) public view returns (bool) {
+        return getBool(keccak256(abi.encodePacked("lightNode.memberVotes.", _pId, _validatorPubkey, user)));
     }
 
-    function getSuperNodePublicKeyStatus(
-        uint256 _pId,
-        bytes calldata _pubkey
-    ) private view returns (uint256) {
-        return
-            getUint(
-                keccak256(
-                    abi.encodePacked("superNode.pubkey.status", _pId, _pubkey)
-                )
-            );
+    function getSuperNodePublicKeyStatus(uint256 _pId, bytes calldata _pubkey) private view returns (uint256) {
+        return getUint(keccak256(abi.encodePacked("superNode.pubkey.status", _pId, _pubkey)));
     }
 
-    function getPubkeyIndex(
-        uint256 _pId,
-        address _user,
-        bytes calldata _pubkey
-    ) public view returns (int256) {
+    function getPubkeyIndex(uint256 _pId, address _user, bytes calldata _pubkey) public view returns (int256) {
         return
-            PubkeySetStorage().getIndexOf(
-                keccak256(
-                    abi.encodePacked("lightNode.pubkeys.index", _pId, _user)
-                ),
-                _pubkey
-            );
+            PubkeySetStorage().getIndexOf(keccak256(abi.encodePacked("lightNode.pubkeys.index", _pId, _user)), _pubkey);
     }
 
     function deposit(
@@ -207,34 +117,14 @@ contract StafiLightNode is StafiVoteBase, IStafiLightNode {
         bytes32[] calldata _depositDataRoots
     ) external override onlyLatestContract(1, "stafiLightNode", address(this)) {
         uint256 _pId = getProjectId(msg.sender);
-        require(
-            _pId > 1 && getContractAddress(_pId, "projLightNode") == msg.sender,
-            "Invalid caller"
-        );
-        require(
-            ProjectSettings(_pId).getLightNodeDepositEnabled(),
-            "light node deposits are currently disabled"
-        );
+        require(_pId > 1 && getContractAddress(_pId, "projLightNode") == msg.sender, "Invalid caller");
+        require(ProjectSettings(_pId).getLightNodeDepositEnabled(), "light node deposits are currently disabled");
         uint256 len = _validatorPubkeys.length;
-        require(
-            len == _validatorSignatures.length &&
-                len == _depositDataRoots.length,
-            "params len err"
-        );
-        require(
-            _value ==
-                len.mul(ProjectSettings(_pId).getCurrentNodeDepositAmount()),
-            "msg value not match"
-        );
+        require(len == _validatorSignatures.length && len == _depositDataRoots.length, "params len err");
+        require(_value == len.mul(ProjectSettings(_pId).getCurrentNodeDepositAmount()), "msg value not match");
 
         for (uint256 i = 0; i < len; i++) {
-            _deposit(
-                _pId,
-                _user,
-                _validatorPubkeys[i],
-                _validatorSignatures[i],
-                _depositDataRoots[i]
-            );
+            _deposit(_pId, _user, _validatorPubkeys[i], _validatorSignatures[i], _depositDataRoots[i]);
         }
     }
 
@@ -245,35 +135,20 @@ contract StafiLightNode is StafiVoteBase, IStafiLightNode {
         bytes32[] calldata _depositDataRoots
     ) external override onlyLatestContract(1, "stafiLightNode", address(this)) {
         uint256 _pId = getProjectId(msg.sender);
-        require(
-            _pId > 1 && getContractAddress(_pId, "projLightNode") == msg.sender,
-            "Invalid caller"
-        );
+        require(_pId > 1 && getContractAddress(_pId, "projLightNode") == msg.sender, "Invalid caller");
         require(
             _validatorPubkeys.length == _validatorSignatures.length &&
                 _validatorPubkeys.length == _depositDataRoots.length,
             "params len err"
         );
         // Load contracts
-        IProjUserDeposit projUserDeposit = IProjUserDeposit(
-            getContractAddress(_pId, "projUserDeposit")
-        );
+        IProjUserDeposit projUserDeposit = IProjUserDeposit(getContractAddress(_pId, "projUserDeposit"));
         projUserDeposit.withdrawExcessBalanceForLightNode(
-            _validatorPubkeys.length.mul(
-                uint256(32 ether).sub(
-                    ProjectSettings(_pId).getCurrentNodeDepositAmount()
-                )
-            )
+            _validatorPubkeys.length.mul(uint256(32 ether).sub(ProjectSettings(_pId).getCurrentNodeDepositAmount()))
         );
 
         for (uint256 i = 0; i < _validatorPubkeys.length; i++) {
-            _stake(
-                _pId,
-                _user,
-                _validatorPubkeys[i],
-                _validatorSignatures[i],
-                _depositDataRoots[i]
-            );
+            _stake(_pId, _user, _validatorPubkeys[i], _validatorSignatures[i], _depositDataRoots[i]);
         }
     }
 
@@ -282,10 +157,7 @@ contract StafiLightNode is StafiVoteBase, IStafiLightNode {
         bytes calldata _validatorPubkey
     ) external override onlyLatestContract(1, "stafiLightNode", address(this)) {
         uint256 _pId = getProjectId(msg.sender);
-        require(
-            _pId > 1 && getContractAddress(_pId, "projLightNode") == msg.sender,
-            "Invalid caller"
-        );
+        require(_pId > 1 && getContractAddress(_pId, "projLightNode") == msg.sender, "Invalid caller");
         setAndCheckNodePubkeyInOffBoard(_pId, _user, _validatorPubkey);
 
         emit OffBoarded(msg.sender, _validatorPubkey);
@@ -294,37 +166,18 @@ contract StafiLightNode is StafiVoteBase, IStafiLightNode {
     function provideNodeDepositToken(
         uint256 _value,
         bytes calldata _validatorPubkey
-    )
-        external
-        payable
-        override
-        onlyLatestContract(1, "stafiLightNode", address(this))
-    {
+    ) external payable override onlyLatestContract(1, "stafiLightNode", address(this)) {
         uint256 _pId = getProjectId(msg.sender);
-        require(
-            _pId > 1 && getContractAddress(_pId, "projLightNode") == msg.sender,
-            "Invalid caller"
-        );
+        require(_pId > 1 && getContractAddress(_pId, "projLightNode") == msg.sender, "Invalid caller");
         IProjLightNode projLightNode = IProjLightNode(msg.sender);
-        require(
-            _value == ProjectSettings(_pId).getCurrentNodeDepositAmount(),
-            "msg value not match"
-        );
+        require(_value == ProjectSettings(_pId).getCurrentNodeDepositAmount(), "msg value not match");
         // check status
-        require(
-            getLightNodePubkeyStatus(_pId, _validatorPubkey) ==
-                PUBKEY_STATUS_OFFBOARD,
-            "pubkey status unmatch"
-        );
+        require(getLightNodePubkeyStatus(_pId, _validatorPubkey) == PUBKEY_STATUS_OFFBOARD, "pubkey status unmatch");
 
         projLightNode.provideEther(_value);
 
         // set pubkey status
-        _setLightNodePubkeyStatus(
-            _pId,
-            _validatorPubkey,
-            PUBKEY_STATUS_CANWITHDRAW
-        );
+        _setLightNodePubkeyStatus(_pId, _validatorPubkey, PUBKEY_STATUS_CANWITHDRAW);
     }
 
     function withdrawNodeDepositToken(
@@ -332,30 +185,16 @@ contract StafiLightNode is StafiVoteBase, IStafiLightNode {
         bytes calldata _validatorPubkey
     ) external override onlyLatestContract(1, "stafiLightNode", address(this)) {
         uint256 _pId = getProjectId(msg.sender);
-        require(
-            _pId > 1 && getContractAddress(_pId, "projLightNode") == msg.sender,
-            "Invalid caller"
-        );
+        require(_pId > 1 && getContractAddress(_pId, "projLightNode") == msg.sender, "Invalid caller");
         IProjLightNode projLightNode = IProjLightNode(msg.sender);
         // check status
-        require(
-            getLightNodePubkeyStatus(_pId, _validatorPubkey) ==
-                PUBKEY_STATUS_CANWITHDRAW,
-            "pubkey status unmatch"
-        );
+        require(getLightNodePubkeyStatus(_pId, _validatorPubkey) == PUBKEY_STATUS_CANWITHDRAW, "pubkey status unmatch");
 
         // check owner
-        require(
-            getPubkeyIndex(_pId, _user, _validatorPubkey) >= 0,
-            "not pubkey owner"
-        );
+        require(getPubkeyIndex(_pId, _user, _validatorPubkey) >= 0, "not pubkey owner");
 
         // set pubkey status
-        _setLightNodePubkeyStatus(
-            _pId,
-            _validatorPubkey,
-            PUBKEY_STATUS_WITHDRAWED
-        );
+        _setLightNodePubkeyStatus(_pId, _validatorPubkey, PUBKEY_STATUS_WITHDRAWED);
 
         projLightNode.withdrawEther(_user);
     }
@@ -369,12 +208,7 @@ contract StafiLightNode is StafiVoteBase, IStafiLightNode {
     ) private {
         setAndCheckNodePubkeyInDeposit(_pId, _user, _validatorPubkey);
         IProjLightNode projLightNode = IProjLightNode(msg.sender);
-        projLightNode.ethDeposit(
-            _user,
-            _validatorPubkey,
-            _validatorSignature,
-            _depositDataRoot
-        );
+        projLightNode.ethDeposit(_user, _validatorPubkey, _validatorSignature, _depositDataRoot);
     }
 
     function _stake(
@@ -385,54 +219,26 @@ contract StafiLightNode is StafiVoteBase, IStafiLightNode {
         bytes32 _depositDataRoot
     ) private {
         setAndCheckNodePubkeyInStake(_pId, _user, _validatorPubkey);
-        IProjLightNode projLightNode = IProjLightNode(
-            getContractAddress(_pId, "projLightNode")
-        );
-        projLightNode.ethStake(
-            _user,
-            _validatorPubkey,
-            _validatorSignature,
-            _depositDataRoot
-        );
+        IProjLightNode projLightNode = IProjLightNode(getContractAddress(_pId, "projLightNode"));
+        projLightNode.ethStake(_user, _validatorPubkey, _validatorSignature, _depositDataRoot);
     }
 
     // Set and check a node's validator pubkey
-    function setAndCheckNodePubkeyInDeposit(
-        uint256 _pId,
-        address _user,
-        bytes calldata _pubkey
-    ) private {
+    function setAndCheckNodePubkeyInDeposit(uint256 _pId, address _user, bytes calldata _pubkey) private {
         // check pubkey of superNodes
-        require(
-            getSuperNodePublicKeyStatus(_pId, _pubkey) ==
-                PUBKEY_STATUS_UNINITIAL,
-            "super Node pubkey exists"
-        );
+        require(getSuperNodePublicKeyStatus(_pId, _pubkey) == PUBKEY_STATUS_UNINITIAL, "super Node pubkey exists");
         // check status
-        require(
-            getLightNodePubkeyStatus(_pId, _pubkey) == PUBKEY_STATUS_UNINITIAL,
-            "pubkey status unmatch"
-        );
+        require(getLightNodePubkeyStatus(_pId, _pubkey) == PUBKEY_STATUS_UNINITIAL, "pubkey status unmatch");
         // set pubkey status
         _setLightNodePubkeyStatus(_pId, _pubkey, PUBKEY_STATUS_INITIAL);
         // add pubkey to set
-        PubkeySetStorage().addItem(
-            keccak256(abi.encodePacked("lightNode.pubkeys.index", _pId, _user)),
-            _pubkey
-        );
+        PubkeySetStorage().addItem(keccak256(abi.encodePacked("lightNode.pubkeys.index", _pId, _user)), _pubkey);
     }
 
     // Set and check a node's validator pubkey
-    function setAndCheckNodePubkeyInStake(
-        uint256 _pId,
-        address _user,
-        bytes calldata _pubkey
-    ) private {
+    function setAndCheckNodePubkeyInStake(uint256 _pId, address _user, bytes calldata _pubkey) private {
         // check status
-        require(
-            getLightNodePubkeyStatus(_pId, _pubkey) == PUBKEY_STATUS_MATCH,
-            "pubkey status unmatch"
-        );
+        require(getLightNodePubkeyStatus(_pId, _pubkey) == PUBKEY_STATUS_MATCH, "pubkey status unmatch");
         // check owner
         require(getPubkeyIndex(_pId, _user, _pubkey) >= 0, "not pubkey owner");
 
@@ -441,22 +247,13 @@ contract StafiLightNode is StafiVoteBase, IStafiLightNode {
     }
 
     // Set and check a node's validator pubkey
-    function setAndCheckNodePubkeyInOffBoard(
-        uint256 _pId,
-        address _user,
-        bytes calldata _pubkey
-    ) private {
+    function setAndCheckNodePubkeyInOffBoard(uint256 _pId, address _user, bytes calldata _pubkey) private {
         // check status
-        require(
-            getLightNodePubkeyStatus(_pId, _pubkey) == PUBKEY_STATUS_MATCH,
-            "pubkey status unmatch"
-        );
+        require(getLightNodePubkeyStatus(_pId, _pubkey) == PUBKEY_STATUS_MATCH, "pubkey status unmatch");
         // check owner
         require(
             PubkeySetStorage().getIndexOf(
-                keccak256(
-                    abi.encodePacked("lightNode.pubkeys.index", _pId, _user)
-                ),
+                keccak256(abi.encodePacked("lightNode.pubkeys.index", _pId, _user)),
                 _pubkey
             ) >= 0,
             "not pubkey owner"
@@ -473,27 +270,16 @@ contract StafiLightNode is StafiVoteBase, IStafiLightNode {
         bool[] calldata _matchs
     ) external override onlyLatestContract(1, "stafiLightNode", address(this)) {
         uint256 _pId = getProjectId(msg.sender);
-        require(
-            _pId > 1 && getContractAddress(_pId, "projLightNode") == msg.sender,
-            "Invalid caller"
-        );
+        require(_pId > 1 && getContractAddress(_pId, "projLightNode") == msg.sender, "Invalid caller");
         require(_pubkeys.length == _matchs.length, "params len err");
         for (uint256 i = 0; i < _pubkeys.length; i++) {
-            if (
-                _voteProposal(_pId, _voter, keccak256(_pubkeys[i]), _matchs[i])
-            ) {
-                _setLightNodePubkeyStatus(
-                    _pId,
-                    _pubkeys[i],
-                    _matchs[i] ? PUBKEY_STATUS_MATCH : PUBKEY_STATUS_UNMATCH
-                );
+            if (_voteProposal(_pId, _voter, keccak256(_pubkeys[i]), _matchs[i])) {
+                _setLightNodePubkeyStatus(_pId, _pubkeys[i], _matchs[i] ? PUBKEY_STATUS_MATCH : PUBKEY_STATUS_UNMATCH);
             }
         }
     }
 
-    function _voteThreshold(
-        uint256 _pId
-    ) internal view override returns (uint256) {
+    function _voteThreshold(uint256 _pId) internal view override returns (uint256) {
         uint256 threshold = ProjectSettings(_pId).getNodeConsensusThreshold();
         return ProjectNodeManager(_pId).getTrustedNodeCount().mul(threshold);
     }

@@ -21,36 +21,19 @@ contract ProjEther is StafiBase, IProjEther {
     event EtherWithdrawn(bytes32 indexed by, uint256 amount, uint256 time);
 
     // Construct
-    constructor(
-        uint256 _pId,
-        address _stafiStorageAddress
-    ) StafiBase(_pId, _stafiStorageAddress) {
+    constructor(uint256 _pId, address _stafiStorageAddress) StafiBase(_pId, _stafiStorageAddress) {
         version = 1;
     }
 
     // Get a contract's ETH balance by address
-    function balanceOf(
-        address _contractAddress
-    ) public view override returns (uint256) {
-        return
-            balances[
-                keccak256(
-                    abi.encodePacked(getContractName(pId, _contractAddress))
-                )
-            ];
+    function balanceOf(address _contractAddress) public view override returns (uint256) {
+        return balances[keccak256(abi.encodePacked(getContractName(pId, _contractAddress)))];
     }
 
     // Accept an ETH deposit from a network contract
-    function depositEther()
-        external
-        payable
-        override
-        onlyLatestProjectContract(pId)
-    {
+    function depositEther() external payable override onlyLatestProjectContract(pId) {
         // Get contract key
-        bytes32 contractKey = keccak256(
-            abi.encode(getContractName(pId, msg.sender))
-        );
+        bytes32 contractKey = keccak256(abi.encode(getContractName(pId, msg.sender)));
         // Update contract balance
         balances[contractKey] = balances[contractKey].add(msg.value);
         // Emit ether deposited event
@@ -58,18 +41,11 @@ contract ProjEther is StafiBase, IProjEther {
     }
 
     // Withdraw an amount of ETH to a network contract
-    function withdrawEther(
-        uint256 _amount
-    ) external override onlyLatestProjectContract(pId) {
+    function withdrawEther(uint256 _amount) external override onlyLatestProjectContract(pId) {
         // Get contract key
-        bytes32 contractKey = keccak256(
-            abi.encode(getContractName(pId, msg.sender))
-        );
+        bytes32 contractKey = keccak256(abi.encode(getContractName(pId, msg.sender)));
         // Check and update contract balance
-        require(
-            balances[contractKey] >= _amount,
-            "Insufficient contract ETH balance"
-        );
+        require(balances[contractKey] >= _amount, "Insufficient contract ETH balance");
         balances[contractKey] = balances[contractKey].sub(_amount);
         // Withdraw
         IProjEtherWithdrawer withdrawer = IProjEtherWithdrawer(msg.sender);

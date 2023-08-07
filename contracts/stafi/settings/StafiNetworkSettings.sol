@@ -11,9 +11,7 @@ contract StafiNetworkSettings is StafiBase, IStafiNetworkSettings {
     event StafiFeeRatioUpdate(uint256 pId, uint256 value);
 
     // Construct
-    constructor(
-        address _stafiStorageAddress
-    ) StafiBase(1, _stafiStorageAddress) {
+    constructor(address _stafiStorageAddress) StafiBase(1, _stafiStorageAddress) {
         // Set version
         version = 1;
         // Initialize settings on deployment
@@ -34,40 +32,24 @@ contract StafiNetworkSettings is StafiBase, IStafiNetworkSettings {
     }
 
     // The platform commission rate as a fraction of 1 ether
-    function getStafiFeeRatio(
-        uint256 _pId
-    ) public view override returns (uint256) {
+    function getStafiFeeRatio(uint256 _pId) public view override returns (uint256) {
         return getUint(keccak256(abi.encode("settings.protocol.fee", _pId)));
     }
 
     // stafi proposal and project approve
-    function proposalStafiFeeRatio(
-        uint256 _pId,
-        uint256 _value
-    ) external onlySuperUser(1) {
+    function proposalStafiFeeRatio(uint256 _pId, uint256 _value) external onlySuperUser(1) {
         require(_value <= 1000 && _value > 0, "Invalid fee ratio");
-        setUint(
-            keccak256(abi.encode("settings.protocol.fee.proposal", _pId)),
-            _value
-        );
+        setUint(keccak256(abi.encode("settings.protocol.fee.proposal", _pId)), _value);
         emit StafiFeeRatioProposal(_pId, _value);
     }
 
-    function getStafiFeeRatioProposal(
-        uint256 _pId
-    ) public view returns (uint256) {
-        return
-            getUint(
-                keccak256(abi.encode("settings.protocol.fee.proposal", _pId))
-            );
+    function getStafiFeeRatioProposal(uint256 _pId) public view returns (uint256) {
+        return getUint(keccak256(abi.encode("settings.protocol.fee.proposal", _pId)));
     }
 
     function agreeStafiFeeRatio(uint256 _value) external {
         uint256 _pId = getProjectId(msg.sender);
-        require(
-            _pId > 1 && getContractAddress(_pId, "projSettings") == msg.sender,
-            "Invalid caller"
-        );
+        require(_pId > 1 && getContractAddress(_pId, "projSettings") == msg.sender, "Invalid caller");
         uint256 _proposalValue = getStafiFeeRatioProposal(_pId);
         require(_proposalValue > 0, "Invalid proposal fee ratio");
         require(_proposalValue == _value, "Invalid agreed fee ratio");
@@ -76,9 +58,7 @@ contract StafiNetworkSettings is StafiBase, IStafiNetworkSettings {
 
     function updateStafiFeeRatio(uint256 _pId, uint256 _value) private {
         setUint(keccak256(abi.encode("settings.protocol.fee", _pId)), _value);
-        deleteUint(
-            keccak256(abi.encode("settings.protocol.fee.proposal", _pId))
-        );
+        deleteUint(keccak256(abi.encode("settings.protocol.fee.proposal", _pId)));
         emit StafiFeeRatioUpdate(_pId, _value);
     }
 

@@ -16,17 +16,11 @@ contract StafiEther is StafiBase, IStafiEther {
     mapping(uint256 => uint256) commissions;
 
     // Events
-    event CommissionDeposited(
-        uint256 indexed pId,
-        uint256 amount,
-        uint256 time
-    );
+    event CommissionDeposited(uint256 indexed pId, uint256 amount, uint256 time);
     event EtherWithdrawn(bytes32 indexed by, uint256 amount, uint256 time);
 
     // Construct
-    constructor(
-        address _stafiStorageAddress
-    ) StafiBase(1, _stafiStorageAddress) {
+    constructor(address _stafiStorageAddress) StafiBase(1, _stafiStorageAddress) {
         version = 1;
     }
 

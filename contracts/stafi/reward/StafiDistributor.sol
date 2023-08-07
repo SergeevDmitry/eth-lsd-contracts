@@ -28,32 +28,19 @@ contract StafiDistributor is StafiVoteBase, IStafiDistributor {
     event VoteProposal(bytes32 indexed proposalId, uint256 pId, address voter);
     event ProposalExecuted(bytes32 indexed proposalId, uint256 pId);
     event DistributeFee(uint256 pId, uint256 dealedHeight, uint256 totalAmount);
-    event DistributeSuperNodeFee(
-        uint256 pId,
-        uint256 dealedHeight,
-        uint256 totalAmount
-    );
-    event DistributeSlash(
-        uint256 pId,
-        uint256 dealedHeight,
-        uint256 slashAmount
-    );
+    event DistributeSuperNodeFee(uint256 pId, uint256 dealedHeight, uint256 totalAmount);
+    event DistributeSlash(uint256 pId, uint256 dealedHeight, uint256 slashAmount);
     event SetMerkleRoot(uint256 pId, uint256 dealedEpoch, bytes32 merkleRoot);
     event DepositCommission(uint256 pId, uint256 amount);
 
     // Construct
-    constructor(
-        address _stafiStorageAddress
-    ) StafiVoteBase(1, _stafiStorageAddress) {
+    constructor(address _stafiStorageAddress) StafiVoteBase(1, _stafiStorageAddress) {
         version = 1;
     }
 
     function depositCommission() external payable override {
         uint256 _pId = getProjectId(msg.sender);
-        require(
-            _pId > 1 && getContractAddress(_pId, "projFeePool") == msg.sender,
-            "Invalid caller"
-        );
+        require(_pId > 1 && getContractAddress(_pId, "projFeePool") == msg.sender, "Invalid caller");
         emit DepositCommission(_pId, msg.value);
     }
 
@@ -61,141 +48,57 @@ contract StafiDistributor is StafiVoteBase, IStafiDistributor {
         return IStafiEther(getContractAddress(1, "stafiEther"));
     }
 
-    function StafiNetworkSettings()
-        private
-        view
-        returns (IStafiNetworkSettings)
-    {
-        return
-            IStafiNetworkSettings(
-                getContractAddress(1, "stafiNetworkSettings")
-            );
+    function StafiNetworkSettings() private view returns (IStafiNetworkSettings) {
+        return IStafiNetworkSettings(getContractAddress(1, "stafiNetworkSettings"));
     }
 
-    function ProjectSettings(
-        uint256 _pId
-    ) private view returns (IProjSettings) {
+    function ProjectSettings(uint256 _pId) private view returns (IProjSettings) {
         return IProjSettings(getContractAddress(_pId, "projSettings"));
     }
 
-    function ProjectNodeManager(
-        uint256 _pId
-    ) private view returns (IProjNodeManager) {
+    function ProjectNodeManager(uint256 _pId) private view returns (IProjNodeManager) {
         return IProjNodeManager(getContractAddress(_pId, "projNodeManager"));
     }
 
     // ------------ getter ------------
 
-    function getCurrentNodeDepositAmount(
-        uint256 _pId
-    ) public view returns (uint256) {
+    function getCurrentNodeDepositAmount(uint256 _pId) public view returns (uint256) {
         return ProjectSettings(_pId).getCurrentNodeDepositAmount();
     }
 
     function getMerkleDealedEpoch(uint256 _pId) public view returns (uint256) {
-        return
-            getUint(
-                keccak256(
-                    abi.encodePacked(
-                        "stafiDistributor.merkleRoot.dealedEpoch",
-                        _pId
-                    )
-                )
-            );
+        return getUint(keccak256(abi.encodePacked("stafiDistributor.merkleRoot.dealedEpoch", _pId)));
     }
 
-    function getTotalClaimedReward(
-        uint256 _pId,
-        address _account
-    ) public view returns (uint256) {
-        return
-            getUint(
-                keccak256(
-                    abi.encodePacked(
-                        "stafiDistributor.node.totalClaimedReward",
-                        _pId,
-                        _account
-                    )
-                )
-            );
+    function getTotalClaimedReward(uint256 _pId, address _account) public view returns (uint256) {
+        return getUint(keccak256(abi.encodePacked("stafiDistributor.node.totalClaimedReward", _pId, _account)));
     }
 
-    function getTotalClaimedDeposit(
-        uint256 _pId,
-        address _account
-    ) public view returns (uint256) {
-        return
-            getUint(
-                keccak256(
-                    abi.encodePacked(
-                        "stafiDistributor.node.totalClaimedDeposit",
-                        _pId,
-                        _account
-                    )
-                )
-            );
+    function getTotalClaimedDeposit(uint256 _pId, address _account) public view returns (uint256) {
+        return getUint(keccak256(abi.encodePacked("stafiDistributor.node.totalClaimedDeposit", _pId, _account)));
     }
 
     function getMerkleRoot(uint256 _pId) public view returns (bytes32) {
-        return
-            getBytes32(
-                keccak256(abi.encodePacked("stafiDistributor.merkleRoot", _pId))
-            );
+        return getBytes32(keccak256(abi.encodePacked("stafiDistributor.merkleRoot", _pId)));
     }
 
-    function getDistributeFeeDealedHeight(
-        uint256 _pId
-    ) public view returns (uint256) {
-        return
-            getUint(
-                keccak256(
-                    abi.encodePacked(
-                        "stafiDistributor.distributeFee.dealedHeight",
-                        _pId
-                    )
-                )
-            );
+    function getDistributeFeeDealedHeight(uint256 _pId) public view returns (uint256) {
+        return getUint(keccak256(abi.encodePacked("stafiDistributor.distributeFee.dealedHeight", _pId)));
     }
 
-    function getDistributeSuperNodeFeeDealedHeight(
-        uint256 _pId
-    ) public view returns (uint256) {
-        return
-            getUint(
-                keccak256(
-                    abi.encodePacked(
-                        "stafiDistributor.distributeSuperNodeFee.dealedHeight",
-                        _pId
-                    )
-                )
-            );
+    function getDistributeSuperNodeFeeDealedHeight(uint256 _pId) public view returns (uint256) {
+        return getUint(keccak256(abi.encodePacked("stafiDistributor.distributeSuperNodeFee.dealedHeight", _pId)));
     }
 
-    function getDistributeSlashDealedHeight(
-        uint256 _pId
-    ) public view returns (uint256) {
-        return
-            getUint(
-                keccak256(
-                    abi.encodePacked(
-                        "stafiDistributor.distributeSlashAmount.dealedHeight",
-                        _pId
-                    )
-                )
-            );
+    function getDistributeSlashDealedHeight(uint256 _pId) public view returns (uint256) {
+        return getUint(keccak256(abi.encodePacked("stafiDistributor.distributeSlashAmount.dealedHeight", _pId)));
     }
 
     // ------------ settings ------------
 
-    function updateMerkleRoot(
-        bytes32 _merkleRoot
-    ) external onlyLatestContract(1, "stafiDistributor", address(this)) {
+    function updateMerkleRoot(bytes32 _merkleRoot) external onlyLatestContract(1, "stafiDistributor", address(this)) {
         uint256 _pId = getProjectId(msg.sender);
-        require(
-            _pId > 1 &&
-                getContractAddress(_pId, "projDistributor") == msg.sender,
-            "Invalid caller"
-        );
+        require(_pId > 1 && getContractAddress(_pId, "projDistributor") == msg.sender, "Invalid caller");
         setMerkleRoot(_pId, _merkleRoot);
     }
 
@@ -209,41 +112,21 @@ contract StafiDistributor is StafiVoteBase, IStafiDistributor {
         uint256 _userAmount,
         uint256 _nodeAmount,
         uint256 _platformAmount
-    )
-        external
-        override
-        onlyLatestContract(1, "stafiDistributor", address(this))
-    {
+    ) external override onlyLatestContract(1, "stafiDistributor", address(this)) {
         uint256 _pId = getProjectId(msg.sender);
-        require(
-            _pId > 1 &&
-                getContractAddress(_pId, "projDistributor") == msg.sender,
-            "Invalid caller"
-        );
+        require(_pId > 1 && getContractAddress(_pId, "projDistributor") == msg.sender, "Invalid caller");
         uint256 totalAmount = _userAmount.add(_nodeAmount).add(_platformAmount);
         require(totalAmount > 0, "zero amount");
 
-        require(
-            _dealedHeight > getDistributeFeeDealedHeight(_pId),
-            "height already dealed"
-        );
+        require(_dealedHeight > getDistributeFeeDealedHeight(_pId), "height already dealed");
 
         bytes32 proposalId = keccak256(
-            abi.encodePacked(
-                "distributeFee",
-                _pId,
-                _dealedHeight,
-                _userAmount,
-                _nodeAmount,
-                _platformAmount
-            )
+            abi.encodePacked("distributeFee", _pId, _dealedHeight, _userAmount, _nodeAmount, _platformAmount)
         );
 
         // Finalize if Threshold has been reached
         if (_voteProposal(_pId, _voter, proposalId, true)) {
-            uint256 stafiCommission = _platformAmount
-                .mul(StafiNetworkSettings().getStafiFeeRatio(_pId))
-                .div(1000);
+            uint256 stafiCommission = _platformAmount.mul(StafiNetworkSettings().getStafiFeeRatio(_pId)).div(1000);
             uint256 platformAmount = _platformAmount.sub(stafiCommission);
             uint256 nodeAndPlatformAmount = _nodeAmount.add(platformAmount);
 
@@ -273,40 +156,21 @@ contract StafiDistributor is StafiVoteBase, IStafiDistributor {
         uint256 _userAmount,
         uint256 _nodeAmount,
         uint256 _platformAmount
-    )
-        external
-        override
-        onlyLatestContract(1, "stafiDistributor", address(this))
-    {
+    ) external override onlyLatestContract(1, "stafiDistributor", address(this)) {
         uint256 _pId = getProjectId(msg.sender);
-        require(
-            _pId > 1 &&
-                getContractAddress(_pId, "projDistributor") == msg.sender,
-            "Invalid caller"
-        );
+        require(_pId > 1 && getContractAddress(_pId, "projDistributor") == msg.sender, "Invalid caller");
         uint256 totalAmount = _userAmount.add(_nodeAmount).add(_platformAmount);
         require(totalAmount > 0, "zero amount");
 
-        require(
-            _dealedHeight > getDistributeSuperNodeFeeDealedHeight(_pId),
-            "height already dealed"
-        );
+        require(_dealedHeight > getDistributeSuperNodeFeeDealedHeight(_pId), "height already dealed");
 
         bytes32 proposalId = keccak256(
-            abi.encodePacked(
-                "distributeSuperNodeFee",
-                _dealedHeight,
-                _userAmount,
-                _nodeAmount,
-                _platformAmount
-            )
+            abi.encodePacked("distributeSuperNodeFee", _dealedHeight, _userAmount, _nodeAmount, _platformAmount)
         );
 
         // Finalize if Threshold has been reached
         if (_voteProposal(_pId, _voter, proposalId, true)) {
-            uint256 stafiCommission = _platformAmount
-                .mul(StafiNetworkSettings().getStafiFeeRatio(_pId))
-                .div(1000);
+            uint256 stafiCommission = _platformAmount.mul(StafiNetworkSettings().getStafiFeeRatio(_pId)).div(1000);
             uint256 platformAmount = _platformAmount.sub(stafiCommission);
             uint256 nodeAndPlatformAmount = _nodeAmount.add(platformAmount);
 
@@ -333,33 +197,15 @@ contract StafiDistributor is StafiVoteBase, IStafiDistributor {
         address _voter,
         uint256 _dealedHeight,
         uint256 _amount
-    )
-        external
-        override
-        onlyLatestContract(1, "stafiDistributor", address(this))
-    {
+    ) external override onlyLatestContract(1, "stafiDistributor", address(this)) {
         uint256 _pId = getProjectId(msg.sender);
-        require(
-            _pId > 1 &&
-                getContractAddress(_pId, "projDistributor") == msg.sender,
-            "Invalid caller"
-        );
+        require(_pId > 1 && getContractAddress(_pId, "projDistributor") == msg.sender, "Invalid caller");
 
         require(_amount > 0, "zero amount");
 
-        require(
-            _dealedHeight > getDistributeSlashDealedHeight(_pId),
-            "height already dealed"
-        );
+        require(_dealedHeight > getDistributeSlashDealedHeight(_pId), "height already dealed");
 
-        bytes32 proposalId = keccak256(
-            abi.encodePacked(
-                "distributeSlashAmount",
-                _pId,
-                _dealedHeight,
-                _amount
-            )
-        );
+        bytes32 proposalId = keccak256(abi.encodePacked("distributeSlashAmount", _pId, _dealedHeight, _amount));
         bool needExe = _voteProposal(_pId, _voter, proposalId, true);
 
         // Finalize if Threshold has been reached
@@ -379,24 +225,14 @@ contract StafiDistributor is StafiVoteBase, IStafiDistributor {
         address _voter,
         uint256 _dealedEpoch,
         bytes32 _merkleRoot
-    )
-        external
-        override
-        onlyLatestContract(1, "stafiDistributor", address(this))
-    {
+    ) external override onlyLatestContract(1, "stafiDistributor", address(this)) {
         uint256 _pId = getProjectId(msg.sender);
-        require(
-            _pId > 1 &&
-                getContractAddress(_pId, "projDistributor") == msg.sender,
-            "Invalid caller"
-        );
+        require(_pId > 1 && getContractAddress(_pId, "projDistributor") == msg.sender, "Invalid caller");
 
         uint256 predealedEpoch = getMerkleDealedEpoch(_pId);
         require(_dealedEpoch > predealedEpoch, "epoch already dealed");
 
-        bytes32 proposalId = keccak256(
-            abi.encodePacked("setMerkleRoot", _pId, _dealedEpoch, _merkleRoot)
-        );
+        bytes32 proposalId = keccak256(abi.encodePacked("setMerkleRoot", _pId, _dealedEpoch, _merkleRoot));
         bool needExe = _voteProposal(_pId, _voter, proposalId, true);
 
         // Finalize if Threshold has been reached
@@ -419,31 +255,12 @@ contract StafiDistributor is StafiVoteBase, IStafiDistributor {
         uint256 _totalExitDepositAmount,
         bytes32[] calldata _merkleProof,
         ClaimType _claimType
-    )
-        external
-        override
-        onlyLatestContract(1, "stafiDistributor", address(this))
-    {
+    ) external override onlyLatestContract(1, "stafiDistributor", address(this)) {
         uint256 _pId = getProjectId(msg.sender);
-        require(
-            _pId > 1 &&
-                getContractAddress(_pId, "projDistributor") == msg.sender,
-            "Invalid caller"
-        );
-        uint256 claimableReward = _totalRewardAmount.sub(
-            getTotalClaimedReward(_pId, _account)
-        );
-        uint256 claimableDeposit = _totalExitDepositAmount.sub(
-            getTotalClaimedDeposit(_pId, _account)
-        );
-        verifyMerkleProof(
-            _pId,
-            _index,
-            _account,
-            _totalRewardAmount,
-            _totalExitDepositAmount,
-            _merkleProof
-        );
+        require(_pId > 1 && getContractAddress(_pId, "projDistributor") == msg.sender, "Invalid caller");
+        uint256 claimableReward = _totalRewardAmount.sub(getTotalClaimedReward(_pId, _account));
+        uint256 claimableDeposit = _totalExitDepositAmount.sub(getTotalClaimedDeposit(_pId, _account));
+        verifyMerkleProof(_pId, _index, _account, _totalRewardAmount, _totalExitDepositAmount, _merkleProof);
         uint256 willClaimAmount;
         if (_claimType == ClaimType.CLAIMREWARD) {
             require(claimableReward > 0, "no claimable reward");
@@ -467,13 +284,7 @@ contract StafiDistributor is StafiVoteBase, IStafiDistributor {
 
         IProjDistributor(msg.sender).claimToAccount(willClaimAmount, _account);
 
-        emit Claimed(
-            _index,
-            _account,
-            claimableReward,
-            claimableDeposit,
-            _claimType
-        );
+        emit Claimed(_index, _account, claimableReward, claimableDeposit, _claimType);
     }
 
     // --- helper ----
@@ -487,122 +298,46 @@ contract StafiDistributor is StafiVoteBase, IStafiDistributor {
         bytes32[] calldata _merkleProof
     ) internal view {
         // Verify the merkle proof.
-        bytes32 node = keccak256(
-            abi.encodePacked(
-                _index,
-                _account,
-                _totalRewardAmount,
-                _totalExitDepositAmount
-            )
-        );
-        require(
-            MerkleProof.verify(_merkleProof, getMerkleRoot(_pId), node),
-            "invalid proof"
-        );
+        bytes32 node = keccak256(abi.encodePacked(_index, _account, _totalRewardAmount, _totalExitDepositAmount));
+        require(MerkleProof.verify(_merkleProof, getMerkleRoot(_pId), node), "invalid proof");
     }
 
-    function setTotalClaimedReward(
-        uint256 _pId,
-        address _account,
-        uint256 _totalAmount
-    ) internal {
-        setUint(
-            keccak256(
-                abi.encodePacked(
-                    "stafiDistributor.node.totalClaimedReward",
-                    _pId,
-                    _account
-                )
-            ),
-            _totalAmount
-        );
+    function setTotalClaimedReward(uint256 _pId, address _account, uint256 _totalAmount) internal {
+        setUint(keccak256(abi.encodePacked("stafiDistributor.node.totalClaimedReward", _pId, _account)), _totalAmount);
     }
 
-    function setTotalClaimedDeposit(
-        uint256 _pId,
-        address _account,
-        uint256 _totalAmount
-    ) internal {
-        setUint(
-            keccak256(
-                abi.encodePacked(
-                    "stafiDistributor.node.totalClaimedDeposit",
-                    _pId,
-                    _account
-                )
-            ),
-            _totalAmount
-        );
+    function setTotalClaimedDeposit(uint256 _pId, address _account, uint256 _totalAmount) internal {
+        setUint(keccak256(abi.encodePacked("stafiDistributor.node.totalClaimedDeposit", _pId, _account)), _totalAmount);
     }
 
     function setMerkleDealedEpoch(uint256 _pId, uint256 _dealedEpoch) internal {
-        setUint(
-            keccak256(
-                abi.encodePacked(
-                    "stafiDistributor.merkleRoot.dealedEpoch",
-                    _pId
-                )
-            ),
-            _dealedEpoch
-        );
+        setUint(keccak256(abi.encodePacked("stafiDistributor.merkleRoot.dealedEpoch", _pId)), _dealedEpoch);
     }
 
     function setMerkleRoot(uint256 _pId, bytes32 _merkleRoot) internal {
-        setBytes32(
-            keccak256(abi.encodePacked("stafiDistributor.merkleRoot", _pId)),
-            _merkleRoot
-        );
+        setBytes32(keccak256(abi.encodePacked("stafiDistributor.merkleRoot", _pId)), _merkleRoot);
     }
 
-    function setDistributeFeeDealedHeight(
-        uint256 _pId,
-        uint256 _dealedHeight
-    ) internal {
+    function setDistributeFeeDealedHeight(uint256 _pId, uint256 _dealedHeight) internal {
+        setUint(keccak256(abi.encodePacked("stafiDistributor.distributeFee.dealedHeight", _pId)), _dealedHeight);
+    }
+
+    function setDistributeSuperNodeFeeDealedHeight(uint256 _pId, uint256 _dealedHeight) internal {
         setUint(
-            keccak256(
-                abi.encodePacked(
-                    "stafiDistributor.distributeFee.dealedHeight",
-                    _pId
-                )
-            ),
+            keccak256(abi.encodePacked("stafiDistributor.distributeSuperNodeFee.dealedHeight", _pId)),
             _dealedHeight
         );
     }
 
-    function setDistributeSuperNodeFeeDealedHeight(
-        uint256 _pId,
-        uint256 _dealedHeight
-    ) internal {
+    function setDistributeSlashDealedHeight(uint256 _pId, uint256 _dealedHeight) internal {
         setUint(
-            keccak256(
-                abi.encodePacked(
-                    "stafiDistributor.distributeSuperNodeFee.dealedHeight",
-                    _pId
-                )
-            ),
-            _dealedHeight
-        );
-    }
-
-    function setDistributeSlashDealedHeight(
-        uint256 _pId,
-        uint256 _dealedHeight
-    ) internal {
-        setUint(
-            keccak256(
-                abi.encodePacked(
-                    "stafiDistributor.distributeSlashAmount.dealedHeight",
-                    _pId
-                )
-            ),
+            keccak256(abi.encodePacked("stafiDistributor.distributeSlashAmount.dealedHeight", _pId)),
             _dealedHeight
         );
     }
 
     // override StafiBase._voteThreshold to decide proposal consensus
-    function _voteThreshold(
-        uint256 _pId
-    ) internal view override returns (uint256) {
+    function _voteThreshold(uint256 _pId) internal view override returns (uint256) {
         uint256 threshold = ProjectSettings(_pId).getNodeConsensusThreshold();
         return ProjectNodeManager(_pId).getTrustedNodeCount().mul(threshold);
     }

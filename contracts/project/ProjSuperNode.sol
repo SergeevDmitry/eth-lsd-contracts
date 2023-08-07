@@ -13,10 +13,7 @@ contract ProjSuperNode is StafiBase, IProjSuperNode {
     event Deposited(address node, bytes pubkey, bytes validatorSignature);
     event Staked(address node, bytes pubkey);
 
-    constructor(
-        uint256 _pId,
-        address _stafiStorageAddress
-    ) StafiBase(_pId, _stafiStorageAddress) {
+    constructor(uint256 _pId, address _stafiStorageAddress) StafiBase(_pId, _stafiStorageAddress) {
         version = 1;
     }
 
@@ -24,12 +21,7 @@ contract ProjSuperNode is StafiBase, IProjSuperNode {
 
     // Deposit ETH from deposit pool
     // Only accepts calls from the StafiUserDeposit contract
-    function depositEth()
-        external
-        payable
-        override
-        onlyLatestContract(pId, "projUserDeposit", msg.sender)
-    {
+    function depositEth() external payable override onlyLatestContract(pId, "projUserDeposit", msg.sender) {
         // Emit ether deposited event
         emit EtherDeposited(msg.sender, msg.value, block.timestamp);
     }
@@ -43,34 +35,15 @@ contract ProjSuperNode is StafiBase, IProjSuperNode {
     }
 
     function getSuperNodeDepositEnabled() public view returns (bool) {
-        return
-            getBool(
-                keccak256(abi.encode("settings.superNode.deposit.enabled", pId))
-            );
+        return getBool(keccak256(abi.encode("settings.superNode.deposit.enabled", pId)));
     }
 
     function setSuperNodeDepositEnabled(bool _value) public onlySuperUser(pId) {
-        setBool(
-            keccak256(abi.encode("settings.superNode.deposit.enabled", pId)),
-            _value
-        );
+        setBool(keccak256(abi.encode("settings.superNode.deposit.enabled", pId)), _value);
     }
 
-    function getPubkeyVoted(
-        bytes calldata _validatorPubkey,
-        address user
-    ) public view returns (bool) {
-        return
-            getBool(
-                keccak256(
-                    abi.encodePacked(
-                        "superNode.memberVotes.",
-                        pId,
-                        _validatorPubkey,
-                        user
-                    )
-                )
-            );
+    function getPubkeyVoted(bytes calldata _validatorPubkey, address user) public view returns (bool) {
+        return getBool(keccak256(abi.encodePacked("superNode.memberVotes.", pId, _validatorPubkey, user)));
     }
 
     function deposit(
@@ -78,15 +51,8 @@ contract ProjSuperNode is StafiBase, IProjSuperNode {
         bytes[] calldata _validatorSignatures,
         bytes32[] calldata _depositDataRoots
     ) external onlyLatestContract(pId, "projSuperNode", address(this)) {
-        IStafiSuperNode stafiSuperNode = IStafiSuperNode(
-            getContractAddress(1, "stafiSuperNode")
-        );
-        stafiSuperNode.deposit(
-            msg.sender,
-            _validatorPubkeys,
-            _validatorSignatures,
-            _depositDataRoots
-        );
+        IStafiSuperNode stafiSuperNode = IStafiSuperNode(getContractAddress(1, "stafiSuperNode"));
+        stafiSuperNode.deposit(msg.sender, _validatorPubkeys, _validatorSignatures, _depositDataRoots);
     }
 
     function ethDeposit(
@@ -113,15 +79,8 @@ contract ProjSuperNode is StafiBase, IProjSuperNode {
         bytes[] calldata _validatorSignatures,
         bytes32[] calldata _depositDataRoots
     ) external payable onlyLatestContract(pId, "projSuperNode", address(this)) {
-        IStafiSuperNode projSuperNode = IStafiSuperNode(
-            getContractAddress(1, "stafiSuperNode")
-        );
-        projSuperNode.stake(
-            msg.sender,
-            _validatorPubkeys,
-            _validatorSignatures,
-            _depositDataRoots
-        );
+        IStafiSuperNode projSuperNode = IStafiSuperNode(getContractAddress(1, "stafiSuperNode"));
+        projSuperNode.stake(msg.sender, _validatorPubkeys, _validatorSignatures, _depositDataRoots);
     }
 
     function ethStake(
