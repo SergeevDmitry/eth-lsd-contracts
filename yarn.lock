@@ -2356,7 +2356,7 @@ hardhat-contract-sizer@^2.6.1:
     cli-table3 "^0.6.0"
     strip-ansi "^6.0.0"
 
-hardhat@^2.10.2:
+hardhat@^2.17.1:
   version "2.17.1"
   resolved "https://registry.yarnpkg.com/hardhat/-/hardhat-2.17.1.tgz#4b6c8c8f624fd23d9f40185a4af24815d05a486a"
   integrity sha512-1PxRkfjhEzXs/wDxI5YgzYBxNmvzifBTjYzuopwel+vXpAhCudplusJthN5eig0FTs4qbi828DBIITEDh8x9LA==
