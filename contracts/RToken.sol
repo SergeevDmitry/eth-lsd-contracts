@@ -8,7 +8,7 @@ import "./interfaces/IRToken.sol";
 import "./interfaces/IUserDeposit.sol";
 
 // rETH is backed by ETH (subject to liquidity) at a variable exchange rate
-contract RToken is ERC20Burnable, IRToken {
+contract RToken is IRToken, ERC20Burnable {
     address public userDepositAddress;
     address public networkBalanceAddress;
 
