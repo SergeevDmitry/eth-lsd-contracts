@@ -3,19 +3,19 @@ pragma solidity 0.8.19;
 // SPDX-License-Identifier: GPL-3.0-only
 
 import "./interfaces/INetworkBalances.sol";
-import "./interfaces/INodeManager.sol";
-import "./interfaces/INetworkSettings.sol";
-import "./NetworkProposal.sol";
+import "./interfaces/INetworkProposal.sol";
+import "./interfaces/IProposalType.sol";
 
 // Network balances
-contract NetworkBalances is NetworkProposal, INetworkBalances {
+contract NetworkBalances is INetworkBalances, IProposalType {
     bool public initialized;
-    address public networkSettingsAddress;
+    address public networkProposalAddress;
 
     uint256 public balanceBlock;
     uint256 public totalEthBalance;
     uint256 public totalRTokenSupply;
     uint256 public stakingEthBalance;
+    bool public submitBalancesEnabled;
 
     // Events
     event BalancesSubmitted(
@@ -65,20 +65,18 @@ contract NetworkBalances is NetworkProposal, INetworkBalances {
         uint256 _totalEth,
         uint256 _stakingEth,
         uint256 _rethSupply
-    ) external override onlyVoter {
-        // Check settings
-        INetworkSettings stafiNetworkSettings = INetworkSettings(networkSettingsAddress);
-        require(stafiNetworkSettings.getSubmitBalancesEnabled(), "Submitting balances is currently disabled");
-        // Check block
-        require(_block > balanceBlock, "Network balances for an equal or higher block are set");
-        // Check balances
-        require(_stakingEth <= _totalEth, "Invalid network balances");
-        // Get submission keys
+    ) external override {
+        INetworkProposal networkProposal = INetworkProposal(networkProposalAddress);
+        require(networkProposal.isVoter(msg.sender), "not voter");
+        require(submitBalancesEnabled, "submitting balances is disabled");
+        require(_block > balanceBlock, "network balances for an equal or higher block are set");
+        require(_stakingEth <= _totalEth, "invalid network balances");
+
         bytes32 proposalId = keccak256(
-            abi.encodePacked("network.balances.submitted.node", msg.sender, _block, _totalEth, _stakingEth, _rethSupply)
+            abi.encodePacked("submitBalances", msg.sender, _block, _totalEth, _stakingEth, _rethSupply)
         );
 
-        Proposal memory proposal = _checkProposal(proposalId);
+        (Proposal memory proposal, uint8 threshold) = networkProposal.checkProposal(proposalId);
 
         // Emit balances submitted event
         emit BalancesSubmitted(msg.sender, _block, _totalEth, _stakingEth, _rethSupply, block.timestamp);
@@ -90,7 +88,8 @@ contract NetworkBalances is NetworkProposal, INetworkBalances {
             proposal._status = ProposalStatus.Executed;
             emit ProposalExecuted(proposalId);
         }
-        proposals[proposalId] = proposal;
+
+        networkProposal.saveProposal(proposalId, proposal);
     }
 
     // Update network balances

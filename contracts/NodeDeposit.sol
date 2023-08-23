@@ -3,15 +3,13 @@ pragma solidity 0.8.19;
 // SPDX-License-Identifier: GPL-3.0-only
 
 import "./interfaces/INodeDeposit.sol";
-import "./interfaces/INodeManager.sol";
 import "./interfaces/IUserDeposit.sol";
 import "./interfaces/IDepositContract.sol";
-import "./interfaces/INetworkSettings.sol";
-import "./interfaces/IEtherWithdrawer.sol";
-import "./NetworkProposal.sol";
+import "./interfaces/INetworkProposal.sol";
+import "./interfaces/IProposalType.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
-contract NodeDeposit is NetworkProposal, INodeDeposit {
+contract NodeDeposit is INodeDeposit, IProposalType {
     using EnumerableSet for EnumerableSet.UintSet;
 
     event EtherDeposited(address indexed from, uint256 amount, uint256 time);
@@ -51,7 +49,9 @@ contract NodeDeposit is NetworkProposal, INodeDeposit {
 
     address public userDepositAddress;
     address public ethDepositAddress;
-    address public networkSettingsAddress;
+    address public networkProposalAddress;
+
+    bytes public withdrawCredentials;
 
     // Deposit ETH from deposit pool
     // Only accepts calls from the StafiUserDeposit contract
@@ -60,7 +60,8 @@ contract NodeDeposit is NetworkProposal, INodeDeposit {
         emit EtherDeposited(msg.sender, msg.value, block.timestamp);
     }
 
-    function setLightNodePubkeyStatus(bytes calldata _validatorPubkey, uint8 _status) public onlyAdmin {
+    function setLightNodePubkeyStatus(bytes calldata _validatorPubkey, uint8 _status) public {
+        require(INetworkProposal(networkProposalAddress).isAdmin(msg.sender), "not admin");
         require(pubkeyOf[_validatorPubkey]._status != PUBKEY_STATUS_UNINITIAL, "pubkey not exist");
 
         _setLightNodePubkeyStatus(_validatorPubkey, _status);
@@ -92,14 +93,11 @@ contract NodeDeposit is NetworkProposal, INodeDeposit {
             nodeDepositAmount = lightNodeDepositAmount;
         }
 
-        bytes memory credentials = INetworkSettings(networkSettingsAddress).getWithdrawalCredentials();
-
         for (uint256 i = 0; i < _validatorPubkeys.length; i++) {
             _deposit(
                 _validatorPubkeys[i],
                 _validatorSignatures[i],
                 _depositDataRoots[i],
-                credentials,
                 nodeType,
                 nodeDepositAmount,
                 depositAmount
@@ -118,9 +116,8 @@ contract NodeDeposit is NetworkProposal, INodeDeposit {
             "params len err"
         );
 
-        bytes memory credentials = INetworkSettings(networkSettingsAddress).getWithdrawalCredentials();
         for (uint256 i = 0; i < _validatorPubkeys.length; i++) {
-            _stake(_validatorPubkeys[i], _validatorSignatures[i], _depositDataRoots[i], credentials);
+            _stake(_validatorPubkeys[i], _validatorSignatures[i], _depositDataRoots[i]);
         }
     }
 
@@ -156,7 +153,6 @@ contract NodeDeposit is NetworkProposal, INodeDeposit {
         bytes calldata _validatorPubkey,
         bytes calldata _validatorSignature,
         bytes32 _depositDataRoot,
-        bytes memory _credentials,
         uint8 _nodeType,
         uint256 _nodeDepositAmount,
         uint256 _depositAmount
@@ -165,7 +161,7 @@ contract NodeDeposit is NetworkProposal, INodeDeposit {
 
         IDepositContract(ethDepositAddress).deposit{value: _depositAmount}(
             _validatorPubkey,
-            _credentials,
+            withdrawCredentials,
             _validatorSignature,
             _depositDataRoot
         );
@@ -176,8 +172,7 @@ contract NodeDeposit is NetworkProposal, INodeDeposit {
     function _stake(
         bytes calldata _validatorPubkey,
         bytes calldata _validatorSignature,
-        bytes32 _depositDataRoot,
-        bytes memory _credentials
+        bytes32 _depositDataRoot
     ) private {
         Pubkey memory pubkey = pubkeyOf[_validatorPubkey];
 
@@ -194,7 +189,7 @@ contract NodeDeposit is NetworkProposal, INodeDeposit {
 
         IDepositContract(ethDepositAddress).deposit{value: willWithdrawAmount}(
             _validatorPubkey,
-            _credentials,
+            withdrawCredentials,
             _validatorSignature,
             _depositDataRoot
         );
@@ -243,8 +238,10 @@ contract NodeDeposit is NetworkProposal, INodeDeposit {
     }
 
     // Only accepts calls from trusted (oracle) nodes
-    function voteWithdrawCredentials(bytes[] calldata _pubkeys, bool[] calldata _matchs) external override onlyVoter {
+    function voteWithdrawCredentials(bytes[] calldata _pubkeys, bool[] calldata _matchs) external override {
+        require(INetworkProposal(networkProposalAddress).isVoter(msg.sender), "not voter");
         require(_pubkeys.length == _matchs.length, "params len err");
+
         for (uint256 i = 0; i < _pubkeys.length; i++) {
             _voteWithdrawCredentials(_pubkeys[i], _matchs[i]);
         }
@@ -252,7 +249,9 @@ contract NodeDeposit is NetworkProposal, INodeDeposit {
 
     function _voteWithdrawCredentials(bytes calldata _pubkey, bool _match) private {
         bytes32 proposalId = keccak256(abi.encodePacked("voteWithdrawCredentials", _pubkey));
-        Proposal memory proposal = _checkProposal(proposalId);
+        (Proposal memory proposal, uint8 threshold) = INetworkProposal(networkProposalAddress).checkProposal(
+            proposalId
+        );
 
         // Finalize if Threshold has been reached
         if (proposal._yesVotesTotal >= threshold) {
@@ -262,7 +261,7 @@ contract NodeDeposit is NetworkProposal, INodeDeposit {
             emit ProposalExecuted(proposalId);
         }
 
-        proposals[proposalId] = proposal;
+        INetworkProposal(networkProposalAddress).saveProposal(proposalId, proposal);
     }
 
     // Set a light node pubkey status

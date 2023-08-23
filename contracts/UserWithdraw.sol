@@ -3,18 +3,17 @@ pragma solidity 0.8.19;
 
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
-import "./interfaces/IWithdraw.sol";
+import "./interfaces/IUserWithdraw.sol";
 import "./interfaces/IRToken.sol";
-import "./interfaces/INetworkSettings.sol";
-import "./interfaces/INodeManager.sol";
+import "./interfaces/INetworkProposal.sol";
 import "./interfaces/IDistributor.sol";
 import "./interfaces/IUserDeposit.sol";
-import "./NetworkProposal.sol";
+import "./interfaces/IProposalType.sol";
 
 // Notice:
 // 1 proxy admin must be different from owner
 // 2 the new storage needs to be appended to the old storage if this contract is upgraded,
-contract UserWithdraw is NetworkProposal, IWithdraw {
+contract UserWithdraw is IUserWithdraw, IProposalType {
     using EnumerableSet for EnumerableSet.UintSet;
 
     struct Withdrawal {
@@ -28,6 +27,7 @@ contract UserWithdraw is NetworkProposal, IWithdraw {
     address public lightNodeAddress;
     address public userDepositAddress;
     address public distributorAddress;
+    address public networkProposalAddress;
 
     uint256 public nextWithdrawIndex;
     uint256 public maxClaimableWithdrawIndex;
@@ -98,13 +98,17 @@ contract UserWithdraw is NetworkProposal, IWithdraw {
 
     // ------------ settings ------------
 
-    function setWithdrawLimitPerCycle(uint256 _withdrawLimitPerCycle) external onlyAdmin {
+    function setWithdrawLimitPerCycle(uint256 _withdrawLimitPerCycle) external {
+        require(INetworkProposal(networkProposalAddress).isAdmin(msg.sender), "not admin");
+
         withdrawLimitPerCycle = _withdrawLimitPerCycle;
 
         emit SetWithdrawLimitPerCycle(_withdrawLimitPerCycle);
     }
 
-    function setUserWithdrawLimitPerCycle(uint256 _userWithdrawLimitPerCycle) external onlyAdmin {
+    function setUserWithdrawLimitPerCycle(uint256 _userWithdrawLimitPerCycle) external {
+        require(INetworkProposal(networkProposalAddress).isAdmin(msg.sender), "not admin");
+
         userWithdrawLimitPerCycle = _userWithdrawLimitPerCycle;
 
         emit SetUserWithdrawLimitPerCycle(_userWithdrawLimitPerCycle);
@@ -176,6 +180,7 @@ contract UserWithdraw is NetworkProposal, IWithdraw {
         uint256 _platformAmount,
         uint256 _maxClaimableWithdrawIndex
     ) external override {
+        require(INetworkProposal(networkProposalAddress).isVoter(msg.sender), "not voter");
         require(_dealedHeight > latestDistributeHeight, "height already dealed");
         require(_maxClaimableWithdrawIndex < nextWithdrawIndex, "withdraw index over");
         require(_userAmount + _nodeAmount + _platformAmount <= address(this).balance, "balance not enough");
@@ -190,7 +195,9 @@ contract UserWithdraw is NetworkProposal, IWithdraw {
                 _maxClaimableWithdrawIndex
             )
         );
-        Proposal memory proposal = _checkProposal(proposalId);
+        (Proposal memory proposal, uint8 threshold) = INetworkProposal(networkProposalAddress).checkProposal(
+            proposalId
+        );
 
         // Finalize if Threshold has been reached
         if (proposal._yesVotesTotal >= threshold) {
@@ -233,13 +240,17 @@ contract UserWithdraw is NetworkProposal, IWithdraw {
             proposal._status = ProposalStatus.Executed;
             emit ProposalExecuted(proposalId);
         }
-        proposals[proposalId] = proposal;
+        INetworkProposal(networkProposalAddress).saveProposal(proposalId, proposal);
     }
 
     function reserveEthForWithdraw(uint256 _withdrawCycle) external override {
+        require(INetworkProposal(networkProposalAddress).isVoter(msg.sender), "not voter");
+
         bytes32 proposalId = keccak256(abi.encodePacked("reserveEthForWithdraw", _withdrawCycle));
 
-        Proposal memory proposal = _checkProposal(proposalId);
+        (Proposal memory proposal, uint8 threshold) = INetworkProposal(networkProposalAddress).checkProposal(
+            proposalId
+        );
 
         // Finalize if Threshold has been reached
         if (proposal._yesVotesTotal >= threshold) {
@@ -262,14 +273,15 @@ contract UserWithdraw is NetworkProposal, IWithdraw {
             emit ProposalExecuted(proposalId);
         }
 
-        proposals[proposalId] = proposal;
+        INetworkProposal(networkProposalAddress).saveProposal(proposalId, proposal);
     }
 
     function notifyValidatorExit(
         uint256 _withdrawCycle,
         uint256 _ejectedStartCycle,
         uint256[] calldata _validatorIndexList
-    ) external override onlyVoter {
+    ) external override {
+        require(INetworkProposal(networkProposalAddress).isVoter(msg.sender), "not voter");
         require(
             _validatorIndexList.length > 0 && _validatorIndexList.length <= (withdrawLimitPerCycle * 3) / 20 ether,
             "length not match"
@@ -280,7 +292,9 @@ contract UserWithdraw is NetworkProposal, IWithdraw {
         bytes32 proposalId = keccak256(
             abi.encodePacked("notifyValidatorExit", _withdrawCycle, _ejectedStartCycle, _validatorIndexList)
         );
-        Proposal memory proposal = _checkProposal(proposalId);
+        (Proposal memory proposal, uint8 threshold) = INetworkProposal(networkProposalAddress).checkProposal(
+            proposalId
+        );
 
         // Finalize if Threshold has been reached
         if (proposal._yesVotesTotal >= threshold) {
@@ -292,7 +306,7 @@ contract UserWithdraw is NetworkProposal, IWithdraw {
             proposal._status = ProposalStatus.Executed;
             emit ProposalExecuted(proposalId);
         }
-        proposals[proposalId] = proposal;
+        INetworkProposal(networkProposalAddress).saveProposal(proposalId, proposal);
     }
 
     // ------------ helper ------------

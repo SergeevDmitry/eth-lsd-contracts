@@ -5,7 +5,7 @@ pragma solidity 0.8.19;
 import "./interfaces/INodeDeposit.sol";
 import "./interfaces/IRToken.sol";
 import "./interfaces/IUserDeposit.sol";
-import "./interfaces/IWithdraw.sol";
+import "./interfaces/IUserWithdraw.sol";
 
 contract UserDeposit is IUserDeposit {
     event DepositReceived(address indexed from, uint256 amount, uint256 time);
@@ -61,7 +61,7 @@ contract UserDeposit is IUserDeposit {
         // Check amount
         require(_amount <= getBalance(), "Insufficient balance for withdrawal");
         // Transfer to withdraw contract
-        IWithdraw(userWithdrawAddress).depositEth{value: _amount}();
+        IUserWithdraw(userWithdrawAddress).depositEth{value: _amount}();
         // Emit excess withdrawn event
         emit ExcessWithdrawn(msg.sender, _amount, block.timestamp);
     }
