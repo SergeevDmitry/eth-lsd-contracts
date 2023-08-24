@@ -6,10 +6,15 @@ import "./interfaces/IFeePool.sol";
 
 // receive priority fee
 contract FeePool is IFeePool {
+    bool public initialized;
     address public distributorAddress;
 
-    // Events
-    event EtherWithdrawn(address indexed to, uint256 amount, uint256 time);
+    function init(address _distributorAddress) public {
+        require(!initialized, "already initialized");
+
+        initialized = true;
+        distributorAddress = _distributorAddress;
+    }
 
     // Allow receiving ETH
     receive() external payable {}

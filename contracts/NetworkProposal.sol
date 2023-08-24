@@ -10,9 +10,10 @@ contract NetworkProposal is INetworkProposal {
     using SafeCast for *;
     using EnumerableSet for EnumerableSet.AddressSet;
 
-    address public admin;
-    uint8 public threshold;
     bool public initialized;
+    uint8 public threshold;
+    address public admin;
+
     EnumerableSet.AddressSet voters;
     mapping(bytes32 => Proposal) public proposals;
 
@@ -26,44 +27,22 @@ contract NetworkProposal is INetworkProposal {
         _;
     }
 
-    function init(address[] memory _voters, uint256 _initialThreshold) public {
+    function init(address[] memory _voters, uint256 _initialThreshold, address adminAddress) public {
         require(!initialized, "already initialized");
         require(_voters.length >= _initialThreshold && _initialThreshold > _voters.length / 2, "invalid threshold");
         require(_voters.length <= 16, "too much voters");
+        require(adminAddress != address(0), "not valid address");
 
+        initialized = true;
         threshold = _initialThreshold.toUint8();
         uint256 initialVoterCount = _voters.length;
         for (uint256 i; i < initialVoterCount; ++i) {
             voters.add(_voters[i]);
         }
-        admin = msg.sender;
-        initialized = true;
+        admin = adminAddress;
     }
 
-    function transferOwnership(address _newOwner) public onlyAdmin {
-        require(_newOwner != address(0), "zero address");
-
-        admin = _newOwner;
-    }
-
-    function addVoter(address _voter) public onlyAdmin {
-        require(voters.length() < 16, "too much voters");
-        require(threshold > (voters.length() + 1) / 2, "invalid threshold");
-
-        voters.add(_voter);
-    }
-
-    function removeVoter(address _voter) public onlyAdmin {
-        require(voters.length() > threshold, "voters not enough");
-
-        voters.remove(_voter);
-    }
-
-    function changeThreshold(uint256 _newThreshold) external onlyAdmin {
-        require(voters.length() >= _newThreshold && _newThreshold > voters.length() / 2, "invalid threshold");
-
-        threshold = _newThreshold.toUint8();
-    }
+    // ------------ getter ------------
 
     function getVoterIndex(address _voter) public view returns (uint256) {
         return voters._inner._indexes[bytes32(uint256(uint160(_voter)))];
@@ -90,7 +69,34 @@ contract NetworkProposal is INetworkProposal {
         proposals[_proposalId] = proposal;
     }
 
-    // helper----------
+    // ------------ settings ------------
+
+    function transferOwnership(address _newOwner) public onlyAdmin {
+        require(_newOwner != address(0), "zero address");
+
+        admin = _newOwner;
+    }
+
+    function addVoter(address _voter) public onlyAdmin {
+        require(voters.length() < 16, "too much voters");
+        require(threshold > (voters.length() + 1) / 2, "invalid threshold");
+
+        voters.add(_voter);
+    }
+
+    function removeVoter(address _voter) public onlyAdmin {
+        require(voters.length() > threshold, "voters not enough");
+
+        voters.remove(_voter);
+    }
+
+    function changeThreshold(uint256 _newThreshold) external onlyAdmin {
+        require(voters.length() >= _newThreshold && _newThreshold > voters.length() / 2, "invalid threshold");
+
+        threshold = _newThreshold.toUint8();
+    }
+
+    // ------------ helper ------------
 
     function voterBit(address _voter) internal view returns (uint256) {
         return uint256(1) << (getVoterIndex(_voter) - 1);

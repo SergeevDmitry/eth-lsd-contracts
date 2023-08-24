@@ -10,9 +10,6 @@ import "./interfaces/IDistributor.sol";
 import "./interfaces/IUserDeposit.sol";
 import "./interfaces/IProposalType.sol";
 
-// Notice:
-// 1 proxy admin must be different from owner
-// 2 the new storage needs to be appended to the old storage if this contract is upgraded,
 contract UserWithdraw is IUserWithdraw, IProposalType {
     using EnumerableSet for EnumerableSet.UintSet;
 
@@ -22,9 +19,8 @@ contract UserWithdraw is IUserWithdraw, IProposalType {
     }
 
     bool public initialized;
+
     address public rTokenAddress;
-    address public superNodeAddress;
-    address public lightNodeAddress;
     address public userDepositAddress;
     address public distributorAddress;
     address public networkProposalAddress;
@@ -43,39 +39,38 @@ contract UserWithdraw is IUserWithdraw, IProposalType {
     mapping(address => mapping(uint256 => uint256)) public userWithdrawAmountAtCycle;
     mapping(uint256 => uint256[]) public ejectedValidatorsAtCycle;
 
-    // ------------ events ------------
-    event EtherDeposited(address indexed from, uint256 amount, uint256 time);
-    event Unstake(address indexed from, uint256 rethAmount, uint256 ethAmount, uint256 withdrawIndex, bool instantly);
-    event Withdraw(address indexed from, uint256[] withdrawIndexList);
-    event NotifyValidatorExit(uint256 withdrawCycle, uint256 ejectedStartWithdrawCycle, uint256[] ejectedValidators);
-    event DistributeWithdrawals(
-        uint256 dealedHeight,
-        uint256 userAmount,
-        uint256 nodeAmount,
-        uint256 platformAmount,
-        uint256 maxClaimableWithdrawIndex,
-        uint256 mvAmount
-    );
-    event ReserveEthForWithdraw(uint256 withdrawCycle, uint256 mvAmount);
-    event SetWithdrawLimitPerCycle(uint256 withdrawLimitPerCycle);
-    event SetUserWithdrawLimitPerCycle(uint256 userWithdrawLimitPerCycle);
+    modifier onlyVoter() {
+        require(INetworkProposal(networkProposalAddress).isVoter(msg.sender), "not voter");
+        _;
+    }
 
-    function initialize(uint256 _withdrawLimitPerCycle, uint256 _userWithdrawLimitPerCycle) external {
+    modifier onlyAdmin() {
+        require(INetworkProposal(networkProposalAddress).isAdmin(msg.sender), "not admin");
+        _;
+    }
+
+    function init(
+        uint256 _withdrawLimitPerCycle,
+        uint256 _userWithdrawLimitPerCycle,
+        address _rTokenAddress,
+        address _userDepositAddress,
+        address _distributorAddress,
+        address _networkProposalAddress
+    ) external {
         require(!initialized, "already initizlized");
-        // init StafiWithdraw storage
+
+        initialized = true;
         withdrawLimitPerCycle = _withdrawLimitPerCycle;
         userWithdrawLimitPerCycle = _userWithdrawLimitPerCycle;
+
+        rTokenAddress = _rTokenAddress;
+        userDepositAddress = _userDepositAddress;
+        distributorAddress = _distributorAddress;
+        networkProposalAddress = _networkProposalAddress;
     }
 
     // Receive eth
     receive() external payable {}
-
-    // Deposit ETH from deposit pool
-    // Only accepts calls from the StafiUserDeposit contract
-    function depositEth() external payable override {
-        // Emit ether deposited event
-        emit EtherDeposited(msg.sender, msg.value, block.timestamp);
-    }
 
     // ------------ getter ------------
 
@@ -98,17 +93,13 @@ contract UserWithdraw is IUserWithdraw, IProposalType {
 
     // ------------ settings ------------
 
-    function setWithdrawLimitPerCycle(uint256 _withdrawLimitPerCycle) external {
-        require(INetworkProposal(networkProposalAddress).isAdmin(msg.sender), "not admin");
-
+    function setWithdrawLimitPerCycle(uint256 _withdrawLimitPerCycle) external onlyAdmin {
         withdrawLimitPerCycle = _withdrawLimitPerCycle;
 
         emit SetWithdrawLimitPerCycle(_withdrawLimitPerCycle);
     }
 
-    function setUserWithdrawLimitPerCycle(uint256 _userWithdrawLimitPerCycle) external {
-        require(INetworkProposal(networkProposalAddress).isAdmin(msg.sender), "not admin");
-
+    function setUserWithdrawLimitPerCycle(uint256 _userWithdrawLimitPerCycle) external onlyAdmin {
         userWithdrawLimitPerCycle = _userWithdrawLimitPerCycle;
 
         emit SetUserWithdrawLimitPerCycle(_userWithdrawLimitPerCycle);
@@ -171,7 +162,7 @@ contract UserWithdraw is IUserWithdraw, IProposalType {
         emit Withdraw(msg.sender, _withdrawIndexList);
     }
 
-    // ------------ voter(trust node) ------------
+    // ------------ voter ------------
 
     function distributeWithdrawals(
         uint256 _dealedHeight,
@@ -179,8 +170,7 @@ contract UserWithdraw is IUserWithdraw, IProposalType {
         uint256 _nodeAmount,
         uint256 _platformAmount,
         uint256 _maxClaimableWithdrawIndex
-    ) external override {
-        require(INetworkProposal(networkProposalAddress).isVoter(msg.sender), "not voter");
+    ) external override onlyVoter {
         require(_dealedHeight > latestDistributeHeight, "height already dealed");
         require(_maxClaimableWithdrawIndex < nextWithdrawIndex, "withdraw index over");
         require(_userAmount + _nodeAmount + _platformAmount <= address(this).balance, "balance not enough");
@@ -243,9 +233,7 @@ contract UserWithdraw is IUserWithdraw, IProposalType {
         INetworkProposal(networkProposalAddress).saveProposal(proposalId, proposal);
     }
 
-    function reserveEthForWithdraw(uint256 _withdrawCycle) external override {
-        require(INetworkProposal(networkProposalAddress).isVoter(msg.sender), "not voter");
-
+    function reserveEthForWithdraw(uint256 _withdrawCycle) external override onlyVoter {
         bytes32 proposalId = keccak256(abi.encodePacked("reserveEthForWithdraw", _withdrawCycle));
 
         (Proposal memory proposal, uint8 threshold) = INetworkProposal(networkProposalAddress).checkProposal(
@@ -280,8 +268,7 @@ contract UserWithdraw is IUserWithdraw, IProposalType {
         uint256 _withdrawCycle,
         uint256 _ejectedStartCycle,
         uint256[] calldata _validatorIndexList
-    ) external override {
-        require(INetworkProposal(networkProposalAddress).isVoter(msg.sender), "not voter");
+    ) external override onlyVoter {
         require(
             _validatorIndexList.length > 0 && _validatorIndexList.length <= (withdrawLimitPerCycle * 3) / 20 ether,
             "length not match"
@@ -307,6 +294,15 @@ contract UserWithdraw is IUserWithdraw, IProposalType {
             emit ProposalExecuted(proposalId);
         }
         INetworkProposal(networkProposalAddress).saveProposal(proposalId, proposal);
+    }
+
+    // ------------ network ------------
+
+    // Deposit ETH from deposit pool
+    // Only accepts calls from the UserDeposit contract
+    function depositEth() external payable override {
+        // Emit ether deposited event
+        emit EtherDeposited(msg.sender, msg.value, block.timestamp);
     }
 
     // ------------ helper ------------

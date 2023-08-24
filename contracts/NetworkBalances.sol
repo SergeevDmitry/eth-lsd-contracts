@@ -9,24 +9,29 @@ import "./interfaces/IProposalType.sol";
 // Network balances
 contract NetworkBalances is INetworkBalances, IProposalType {
     bool public initialized;
-    address public networkProposalAddress;
+    bool public submitBalancesEnabled;
 
     uint256 public balanceBlock;
     uint256 public totalEthBalance;
     uint256 public totalRTokenSupply;
     uint256 public stakingEthBalance;
-    bool public submitBalancesEnabled;
 
-    // Events
-    event BalancesSubmitted(
-        address indexed from,
-        uint256 block,
-        uint256 totalEth,
-        uint256 stakingEth,
-        uint256 rethSupply,
-        uint256 time
-    );
-    event BalancesUpdated(uint256 block, uint256 totalEth, uint256 stakingEth, uint256 rethSupply, uint256 time);
+    address public networkProposalAddress;
+
+    modifier onlyVoter() {
+        require(INetworkProposal(networkProposalAddress).isVoter(msg.sender), "not voter");
+        _;
+    }
+
+    function init(address _networkProposalAddress) public {
+        require(!initialized, "already initialized");
+
+        initialized = true;
+        submitBalancesEnabled = true;
+        networkProposalAddress = _networkProposalAddress;
+    }
+
+    // ------------ getter ------------
 
     // The block number which balances are current for
     function getBalancesBlock() public view override returns (uint256) {
@@ -43,8 +48,8 @@ contract NetworkBalances is INetworkBalances, IProposalType {
         return stakingEthBalance;
     }
 
-    // The current network total rETH supply
-    function getTotalRETHSupply() public view override returns (uint256) {
+    // The current network total rToken supply
+    function getTotalRTokenSupply() public view override returns (uint256) {
         return totalRTokenSupply;
     }
 
@@ -58,6 +63,8 @@ contract NetworkBalances is INetworkBalances, IProposalType {
         return (calcBase * stakingEthBalance) / totalEthBalance;
     }
 
+    // ------------ voter ------------
+
     // Submit network balances for a block
     // Only accepts calls from trusted (oracle) nodes
     function submitBalances(
@@ -65,9 +72,7 @@ contract NetworkBalances is INetworkBalances, IProposalType {
         uint256 _totalEth,
         uint256 _stakingEth,
         uint256 _rethSupply
-    ) external override {
-        INetworkProposal networkProposal = INetworkProposal(networkProposalAddress);
-        require(networkProposal.isVoter(msg.sender), "not voter");
+    ) external override onlyVoter {
         require(submitBalancesEnabled, "submitting balances is disabled");
         require(_block > balanceBlock, "network balances for an equal or higher block are set");
         require(_stakingEth <= _totalEth, "invalid network balances");
@@ -76,6 +81,7 @@ contract NetworkBalances is INetworkBalances, IProposalType {
             abi.encodePacked("submitBalances", msg.sender, _block, _totalEth, _stakingEth, _rethSupply)
         );
 
+        INetworkProposal networkProposal = INetworkProposal(networkProposalAddress);
         (Proposal memory proposal, uint8 threshold) = networkProposal.checkProposal(proposalId);
 
         // Emit balances submitted event
@@ -91,6 +97,8 @@ contract NetworkBalances is INetworkBalances, IProposalType {
 
         networkProposal.saveProposal(proposalId, proposal);
     }
+
+    // ------------ helper ------------
 
     // Update network balances
     function updateBalances(uint256 _block, uint256 _totalEth, uint256 _stakingEth, uint256 _rethSupply) private {

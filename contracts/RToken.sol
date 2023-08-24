@@ -12,11 +12,6 @@ contract RToken is IRToken, ERC20Burnable {
     address public userDepositAddress;
     address public networkBalanceAddress;
 
-    // Events
-    event EtherDeposited(address indexed from, uint256 amount, uint256 time);
-    event TokensMinted(address indexed to, uint256 amount, uint256 time);
-    event TokensBurned(address indexed from, uint256 amount, uint256 time);
-
     // Construct
     constructor(
         address _userDepositAddress,
@@ -29,33 +24,33 @@ contract RToken is IRToken, ERC20Burnable {
     }
 
     // Calculate the amount of ETH backing an amount of rETH
-    function getEthValue(uint256 _rethAmount) public view returns (uint256) {
+    function getEthValue(uint256 _rTokenAmount) public view returns (uint256) {
         // Get network balances
-        INetworkBalances projNetworkBalances = INetworkBalances(networkBalanceAddress);
-        uint256 totalEthBalance = projNetworkBalances.getTotalETHBalance();
-        uint256 rethSupply = projNetworkBalances.getTotalRETHSupply();
+        INetworkBalances networkBalances = INetworkBalances(networkBalanceAddress);
+        uint256 totalEthBalance = networkBalances.getTotalETHBalance();
+        uint256 rTokenSupply = networkBalances.getTotalRTokenSupply();
         // Use 1:1 ratio if no rETH is minted
-        if (rethSupply == 0) {
-            return _rethAmount;
+        if (rTokenSupply == 0) {
+            return _rTokenAmount;
         }
         // Calculate and return
-        return (_rethAmount * totalEthBalance) / rethSupply;
+        return (_rTokenAmount * totalEthBalance) / rTokenSupply;
     }
 
     // Calculate the amount of rETH backed by an amount of ETH
-    function getRethValue(uint256 _ethAmount) public view returns (uint256) {
+    function getRTokenValue(uint256 _ethAmount) public view returns (uint256) {
         // Get network balances
-        INetworkBalances projBalances = INetworkBalances(networkBalanceAddress);
-        uint256 totalEthBalance = projBalances.getTotalETHBalance();
-        uint256 rethSupply = projBalances.getTotalRETHSupply();
+        INetworkBalances networkBalances = INetworkBalances(networkBalanceAddress);
+        uint256 totalEthBalance = networkBalances.getTotalETHBalance();
+        uint256 rTokenSupply = networkBalances.getTotalRTokenSupply();
         // Use 1:1 ratio if no rETH is minted
-        if (rethSupply == 0) {
+        if (rTokenSupply == 0) {
             return _ethAmount;
         }
         // Check network ETH balance
         require(totalEthBalance > 0, "Cannot calculate rETH token amount while total network balance is zero");
         // Calculate and return
-        return (_ethAmount * rethSupply) / totalEthBalance;
+        return (_ethAmount * rTokenSupply) / totalEthBalance;
     }
 
     // Get the current ETH : rETH exchange rate
@@ -70,7 +65,7 @@ contract RToken is IRToken, ERC20Burnable {
         require(msg.sender == userDepositAddress, "not userDeposit");
 
         // Get rETH amount
-        uint256 rethAmount = getRethValue(_ethAmount);
+        uint256 rethAmount = getRTokenValue(_ethAmount);
         // Check rETH amount
         require(rethAmount > 0, "Invalid token mint amount");
         // Update balance & supply

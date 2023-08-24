@@ -6,29 +6,50 @@ import "./interfaces/INodeDeposit.sol";
 import "./interfaces/IRToken.sol";
 import "./interfaces/IUserDeposit.sol";
 import "./interfaces/IUserWithdraw.sol";
+import "./interfaces/INetworkProposal.sol";
 
 contract UserDeposit is IUserDeposit {
-    event DepositReceived(address indexed from, uint256 amount, uint256 time);
-    event DepositRecycled(address indexed from, uint256 amount, uint256 time);
-    event ExcessWithdrawn(address indexed to, uint256 amount, uint256 time);
-
-    bool public depositEnabled;
-    uint256 public minDeposit;
     bool public initialized;
-    address public admin;
+    bool public depositEnabled;
+
+    uint256 public minDeposit;
+
     address public rTokenAddress;
     address public nodeDepositAddress;
     address public userWithdrawAddress;
     address public distributorAddress;
+    address public networkProposalAddress;
 
     modifier onlyAdmin() {
-        require(msg.sender == admin, "Invalid admin");
+        require(INetworkProposal(networkProposalAddress).isAdmin(msg.sender), "not admin");
         _;
     }
+
+    function init(
+        address _rTokenAddress,
+        address _nodeDepositAddress,
+        address _userWithdrawAddress,
+        address _distributorAddress,
+        address _networkProposalAddress
+    ) public {
+        require(!initialized, "already initialized");
+
+        depositEnabled = true;
+        initialized = true;
+        rTokenAddress = _rTokenAddress;
+        nodeDepositAddress = _nodeDepositAddress;
+        userWithdrawAddress = _userWithdrawAddress;
+        distributorAddress = _distributorAddress;
+        networkProposalAddress = _networkProposalAddress;
+    }
+
+    // ------------ getter ------------
 
     function getBalance() public view returns (uint256) {
         return address(this).balance;
     }
+
+    // ------------ settings ------------
 
     function setDepositEnabled(bool _value) public onlyAdmin {
         depositEnabled = _value;
@@ -38,18 +59,22 @@ contract UserDeposit is IUserDeposit {
         minDeposit = _value;
     }
 
+    // ------------ user ------------
+
     function deposit() external payable override {
-        require(depositEnabled, "Deposits into Stafi are currently disabled");
-        require(msg.value >= minDeposit, "The deposited amount is less than the minimum deposit size");
+        require(depositEnabled, "deposit  disabled");
+        require(msg.value >= minDeposit, "deposit amount is less than the minimum deposit size");
+
         IRToken(rTokenAddress).mint(msg.sender, msg.value);
     }
 
-    // Withdraw excess deposit pool balance for light node
+    // ------------ network ------------
+
+    // Withdraw excess deposit pool balance
     function withdrawExcessBalanceForNodeDeposit(uint256 _amount) external override {
-        require(msg.sender == nodeDepositAddress, "not lightNode");
+        require(msg.sender == nodeDepositAddress, "not nodeDeposit");
         // Check amount
-        require(_amount <= getBalance(), "Insufficient balance for withdrawal");
-        // Transfer to lightNode contract
+        require(_amount <= getBalance(), "insufficient balance for withdrawal");
         INodeDeposit(nodeDepositAddress).depositEth{value: _amount}();
         // Emit excess withdrawn event
         emit ExcessWithdrawn(msg.sender, _amount, block.timestamp);
@@ -57,9 +82,9 @@ contract UserDeposit is IUserDeposit {
 
     // Withdraw excess deposit pool balance for withdraw
     function withdrawExcessBalanceForUserWithdraw(uint256 _amount) external override {
-        require(msg.sender == userWithdrawAddress, "not withdraw");
+        require(msg.sender == userWithdrawAddress, "not userWithdraw");
         // Check amount
-        require(_amount <= getBalance(), "Insufficient balance for withdrawal");
+        require(_amount <= getBalance(), "insufficient balance for withdrawal");
         // Transfer to withdraw contract
         IUserWithdraw(userWithdrawAddress).depositEth{value: _amount}();
         // Emit excess withdrawn event
@@ -67,15 +92,18 @@ contract UserDeposit is IUserDeposit {
     }
 
     // Recycle a deposit from fee collector
-    // Only accepts calls from registered stafiDistributor
+    // Only accepts calls from distributor
     function recycleDistributorDeposit() external payable override {
+        require(msg.sender == distributorAddress, "not distributor");
+
         // Emit deposit recycled event
         emit DepositRecycled(msg.sender, msg.value, block.timestamp);
     }
 
     // Recycle a deposit from withdraw
-    // Only accepts calls from registered stafiWithdraw
+    // Only accepts calls from  userWithdraw
     function recycleWithdrawDeposit() external payable override {
+        require(msg.sender == userWithdrawAddress, "not userWithdraw");
         // Emit deposit recycled event
         emit DepositRecycled(msg.sender, msg.value, block.timestamp);
     }
