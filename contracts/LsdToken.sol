@@ -4,11 +4,10 @@ pragma solidity 0.8.19;
 
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
 import "./interfaces/INetworkBalances.sol";
-import "./interfaces/IRToken.sol";
+import "./interfaces/ILsdToken.sol";
 import "./interfaces/IUserDeposit.sol";
 
-// rETH is backed by ETH (subject to liquidity) at a variable exchange rate
-contract RToken is IRToken, ERC20Burnable {
+contract LsdToken is ILsdToken, ERC20Burnable {
     address public userDepositAddress;
     address public networkBalanceAddress;
 
@@ -23,54 +22,54 @@ contract RToken is IRToken, ERC20Burnable {
         networkBalanceAddress = _networkBalanceAddress;
     }
 
-    // Calculate the amount of ETH backing an amount of rETH
-    function getEthValue(uint256 _rTokenAmount) public view returns (uint256) {
+    // Calculate the amount of ETH backing an amount of lsdToken
+    function getEthValue(uint256 _lsdTokenAmount) public view returns (uint256) {
         // Get network balances
         INetworkBalances networkBalances = INetworkBalances(networkBalanceAddress);
         uint256 totalEthBalance = networkBalances.getTotalETHBalance();
-        uint256 rTokenSupply = networkBalances.getTotalRTokenSupply();
-        // Use 1:1 ratio if no rETH is minted
-        if (rTokenSupply == 0) {
-            return _rTokenAmount;
+        uint256 lsdTokenSupply = networkBalances.getTotalLsdTokenSupply();
+        // Use 1:1 ratio if no lsdToken is minted
+        if (lsdTokenSupply == 0) {
+            return _lsdTokenAmount;
         }
         // Calculate and return
-        return (_rTokenAmount * totalEthBalance) / rTokenSupply;
+        return (_lsdTokenAmount * totalEthBalance) / lsdTokenSupply;
     }
 
-    // Calculate the amount of rETH backed by an amount of ETH
-    function getRTokenValue(uint256 _ethAmount) public view returns (uint256) {
+    // Calculate the amount of lsdToken backed by an amount of ETH
+    function getLsdTokenValue(uint256 _ethAmount) public view returns (uint256) {
         // Get network balances
         INetworkBalances networkBalances = INetworkBalances(networkBalanceAddress);
         uint256 totalEthBalance = networkBalances.getTotalETHBalance();
-        uint256 rTokenSupply = networkBalances.getTotalRTokenSupply();
-        // Use 1:1 ratio if no rETH is minted
-        if (rTokenSupply == 0) {
+        uint256 lsdTokenSupply = networkBalances.getTotalLsdTokenSupply();
+        // Use 1:1 ratio if no lsdToken is minted
+        if (lsdTokenSupply == 0) {
             return _ethAmount;
         }
         // Check network ETH balance
-        require(totalEthBalance > 0, "Cannot calculate rETH token amount while total network balance is zero");
+        require(totalEthBalance > 0, "Cannot calculate lsdToken token amount while total network balance is zero");
         // Calculate and return
-        return (_ethAmount * rTokenSupply) / totalEthBalance;
+        return (_ethAmount * lsdTokenSupply) / totalEthBalance;
     }
 
-    // Get the current ETH : rETH exchange rate
-    // Returns the amount of ETH backing 1 rETH
+    // Get the current ETH : lsdToken exchange rate
+    // Returns the amount of ETH backing 1 lsdToken
     function getExchangeRate() public view returns (uint256) {
         return getEthValue(1 ether);
     }
 
-    // Mint rETH
-    // Only accepts calls from the StafiUserDeposit contract
+    // Mint lsdToken
+    // Only accepts calls from the UserDeposit contract
     function mint(address _to, uint256 _ethAmount) external {
         require(msg.sender == userDepositAddress, "not userDeposit");
 
-        // Get rETH amount
-        uint256 rethAmount = getRTokenValue(_ethAmount);
-        // Check rETH amount
-        require(rethAmount > 0, "Invalid token mint amount");
+        // Get lsdToken amount
+        uint256 lsdTokenAmount = getLsdTokenValue(_ethAmount);
+        // Check lsdToken amount
+        require(lsdTokenAmount > 0, "Invalid token mint amount");
         // Update balance & supply
-        _mint(_to, rethAmount);
+        _mint(_to, lsdTokenAmount);
         // Emit tokens minted event
-        emit TokensMinted(_to, rethAmount, block.timestamp);
+        emit TokensMinted(_to, lsdTokenAmount, block.timestamp);
     }
 }

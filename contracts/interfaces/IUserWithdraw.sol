@@ -3,8 +3,13 @@ pragma solidity 0.8.19;
 // SPDX-License-Identifier: GPL-3.0-only
 
 interface IUserWithdraw {
+    struct Withdrawal {
+        address _address;
+        uint256 _amount;
+    }
+    
     event EtherDeposited(address indexed from, uint256 amount, uint256 time);
-    event Unstake(address indexed from, uint256 rethAmount, uint256 ethAmount, uint256 withdrawIndex, bool instantly);
+    event Unstake(address indexed from, uint256 lsdTokenAmount, uint256 ethAmount, uint256 withdrawIndex, bool instantly);
     event Withdraw(address indexed from, uint256[] withdrawIndexList);
     event NotifyValidatorExit(uint256 withdrawCycle, uint256 ejectedStartWithdrawCycle, uint256[] ejectedValidators);
     event DistributeWithdrawals(
@@ -20,7 +25,7 @@ interface IUserWithdraw {
     event SetUserWithdrawLimitPerCycle(uint256 userWithdrawLimitPerCycle);
 
     // user
-    function unstake(uint256 _rEthAmount) external;
+    function unstake(uint256 _lsdTokenAmount) external;
 
     function withdraw(uint256[] calldata _withdrawIndexList) external;
 

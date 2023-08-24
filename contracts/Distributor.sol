@@ -10,44 +10,42 @@ import "./interfaces/IProposalType.sol";
 
 // Distribute network validator priorityFees/withdrawals/slashs
 contract Distributor is IDistributor, IProposalType {
+    bool public initialized;
+
     address public networkProposalAddress;
     address public feePoolAddress;
     address public userDepositAddress;
 
     uint256 public merkleDealedEpoch;
-    mapping(address => uint256) public totalClaimedRewardOf;
-    mapping(address => uint256) public totalClaimedDepositOf;
-    bytes32 public merkleRoot;
     uint256 public distributeLightNodeFeeDealedHeight;
     uint256 public distributeSuperNodeFeeDealedHeight;
     uint256 public distributeSlashDealedHeight;
 
-    event Claimed(
-        uint256 index,
-        address account,
-        uint256 claimableReward,
-        uint256 claimableDeposit,
-        ClaimType claimType
-    );
+    bytes32 public merkleRoot;
 
-    event DistributeFee(uint256 dealedHeight, uint256 userAmount, uint256 nodeAmount, uint256 platformAmount);
-    event DistributeSuperNodeFee(uint256 dealedHeight, uint256 userAmount, uint256 nodeAmount, uint256 platformAmount);
-    event DistributeSlash(uint256 dealedHeight, uint256 slashAmount);
-    event SetMerkleRoot(uint256 dealedEpoch, bytes32 merkleRoot);
+    mapping(address => uint256) public totalClaimedRewardOf;
+    mapping(address => uint256) public totalClaimedDepositOf;
 
-    enum ClaimType {
-        None,
-        CLAIMREWARD,
-        CLAIMDEPOSIT,
-        CLAIMTOTAL
+    modifier onlyVoter() {
+        require(INetworkProposal(networkProposalAddress).isVoter(msg.sender), "not voter");
+        _;
+    }
+
+    modifier onlyAdmin() {
+        require(INetworkProposal(networkProposalAddress).isAdmin(msg.sender), "not admin");
+        _;
+    }
+
+    function init(address _networkProposalAddress, address _feePoolAddress, address _userDepositAddress) public {
+        require(!initialized, "already initizlized");
+
+        initialized = true;
+        networkProposalAddress = _networkProposalAddress;
+        feePoolAddress = _feePoolAddress;
+        userDepositAddress = _userDepositAddress;
     }
 
     receive() external payable {}
-
-    // distribute withdrawals for node/platform, accept calls from userWithdraw
-    function distributeWithdrawals() external payable override {
-        require(msg.value > 0, "zero amount");
-    }
 
     // ------------ getter ------------
 
@@ -81,9 +79,7 @@ contract Distributor is IDistributor, IProposalType {
 
     // ------------ settings ------------
 
-    function updateMerkleRoot(bytes32 _merkleRoot) external {
-        require(INetworkProposal(networkProposalAddress).isAdmin(msg.sender), "not admin");
-
+    function updateMerkleRoot(bytes32 _merkleRoot) external onlyAdmin {
         merkleRoot = _merkleRoot;
     }
 
@@ -97,10 +93,7 @@ contract Distributor is IDistributor, IProposalType {
         uint256 _userAmount,
         uint256 _nodeAmount,
         uint256 _platformAmount
-    ) external {
-        INetworkProposal networkProposal = INetworkProposal(networkProposalAddress);
-        require(networkProposal.isVoter(msg.sender), "not voter");
-
+    ) external onlyVoter {
         uint256 totalAmount = _userAmount + _nodeAmount + _platformAmount;
         require(totalAmount > 0, "zero amount");
 
@@ -110,6 +103,7 @@ contract Distributor is IDistributor, IProposalType {
             abi.encodePacked("distributeLightNodeFee", _dealedHeight, _userAmount, _nodeAmount, _platformAmount)
         );
 
+        INetworkProposal networkProposal = INetworkProposal(networkProposalAddress);
         (Proposal memory proposal, uint8 threshold) = networkProposal.checkProposal(proposalId);
 
         // Finalize if Threshold has been reached
@@ -138,10 +132,7 @@ contract Distributor is IDistributor, IProposalType {
         uint256 _userAmount,
         uint256 _nodeAmount,
         uint256 _platformAmount
-    ) external {
-        INetworkProposal networkProposal = INetworkProposal(networkProposalAddress);
-        require(networkProposal.isVoter(msg.sender), "not voter");
-
+    ) external onlyVoter {
         uint256 totalAmount = _userAmount + _nodeAmount + _platformAmount;
         require(totalAmount > 0, "zero amount");
 
@@ -151,6 +142,7 @@ contract Distributor is IDistributor, IProposalType {
             abi.encodePacked("distributeSuperNodeFee", _dealedHeight, _userAmount, _nodeAmount, _platformAmount)
         );
 
+        INetworkProposal networkProposal = INetworkProposal(networkProposalAddress);
         (Proposal memory proposal, uint8 threshold) = networkProposal.checkProposal(proposalId);
 
         // Finalize if Threshold has been reached
@@ -173,23 +165,21 @@ contract Distributor is IDistributor, IProposalType {
     }
 
     // distribute slash amount for user
-    function distributeSlashAmount(uint256 _dealedHeight, uint256 _amount) external {
-        INetworkProposal networkProposal = INetworkProposal(networkProposalAddress);
-        require(networkProposal.isVoter(msg.sender), "not voter");
-
+    function distributeSlashAmount(uint256 _dealedHeight, uint256 _amount) external onlyVoter {
         require(_amount > 0, "zero amount");
 
         require(_dealedHeight > getDistributeSlashDealedHeight(), "height already dealed");
 
         bytes32 proposalId = keccak256(abi.encodePacked("distributeSlashAmount", _dealedHeight, _amount));
 
+        INetworkProposal networkProposal = INetworkProposal(networkProposalAddress);
         (Proposal memory proposal, uint8 threshold) = networkProposal.checkProposal(proposalId);
 
         // Finalize if Threshold has been reached
         if (proposal._yesVotesTotal >= threshold) {
-            IUserDeposit stafiUserDeposit = IUserDeposit(userDepositAddress);
+            IUserDeposit userDeposit = IUserDeposit(userDepositAddress);
 
-            stafiUserDeposit.recycleDistributorDeposit{value: _amount}();
+            userDeposit.recycleDistributorDeposit{value: _amount}();
 
             distributeSlashDealedHeight = _dealedHeight;
 
@@ -198,14 +188,13 @@ contract Distributor is IDistributor, IProposalType {
         networkProposal.saveProposal(proposalId, proposal);
     }
 
-    function setMerkleRoot(uint256 _dealedEpoch, bytes32 _merkleRoot) external {
-        INetworkProposal networkProposal = INetworkProposal(networkProposalAddress);
-        require(networkProposal.isVoter(msg.sender), "not voter");
-
+    function setMerkleRoot(uint256 _dealedEpoch, bytes32 _merkleRoot) external onlyVoter {
         uint256 predealedEpoch = getMerkleDealedEpoch();
         require(_dealedEpoch > predealedEpoch, "epoch already dealed");
 
         bytes32 proposalId = keccak256(abi.encodePacked("setMerkleRoot", _dealedEpoch, _merkleRoot));
+
+        INetworkProposal networkProposal = INetworkProposal(networkProposalAddress);
         (Proposal memory proposal, uint8 threshold) = networkProposal.checkProposal(proposalId);
 
         // Finalize if Threshold has been reached
@@ -236,17 +225,17 @@ contract Distributor is IDistributor, IProposalType {
         require(MerkleProof.verify(_merkleProof, getMerkleRoot(), node), "invalid proof");
 
         uint256 willClaimAmount;
-        if (_claimType == ClaimType.CLAIMREWARD) {
+        if (_claimType == ClaimType.ClaimReward) {
             require(claimableReward > 0, "no claimable reward");
 
             totalClaimedRewardOf[_account] = _totalRewardAmount;
             willClaimAmount = claimableReward;
-        } else if (_claimType == ClaimType.CLAIMDEPOSIT) {
+        } else if (_claimType == ClaimType.ClaimDeposit) {
             require(claimableDeposit > 0, "no claimable deposit");
 
             totalClaimedDepositOf[_account] = _totalExitDepositAmount;
             willClaimAmount = claimableDeposit;
-        } else if (_claimType == ClaimType.CLAIMTOTAL) {
+        } else if (_claimType == ClaimType.ClaimTotal) {
             willClaimAmount = claimableReward + claimableDeposit;
             require(willClaimAmount > 0, "no claimable amount");
 
@@ -260,5 +249,12 @@ contract Distributor is IDistributor, IProposalType {
         require(success, "failed to claim ETH");
 
         emit Claimed(_index, _account, claimableReward, claimableDeposit, _claimType);
+    }
+
+    // ----- network --------------
+
+    // distribute withdrawals for node/platform, accept calls from userWithdraw
+    function distributeWithdrawals() external payable override {
+        require(msg.value > 0, "zero amount");
     }
 }

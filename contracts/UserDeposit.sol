@@ -3,7 +3,7 @@ pragma solidity 0.8.19;
 // SPDX-License-Identifier: GPL-3.0-only
 
 import "./interfaces/INodeDeposit.sol";
-import "./interfaces/IRToken.sol";
+import "./interfaces/ILsdToken.sol";
 import "./interfaces/IUserDeposit.sol";
 import "./interfaces/IUserWithdraw.sol";
 import "./interfaces/INetworkProposal.sol";
@@ -14,7 +14,7 @@ contract UserDeposit is IUserDeposit {
 
     uint256 public minDeposit;
 
-    address public rTokenAddress;
+    address public lsdTokenAddress;
     address public nodeDepositAddress;
     address public userWithdrawAddress;
     address public distributorAddress;
@@ -26,7 +26,7 @@ contract UserDeposit is IUserDeposit {
     }
 
     function init(
-        address _rTokenAddress,
+        address _lsdTokenAddress,
         address _nodeDepositAddress,
         address _userWithdrawAddress,
         address _distributorAddress,
@@ -36,7 +36,7 @@ contract UserDeposit is IUserDeposit {
 
         depositEnabled = true;
         initialized = true;
-        rTokenAddress = _rTokenAddress;
+        lsdTokenAddress = _lsdTokenAddress;
         nodeDepositAddress = _nodeDepositAddress;
         userWithdrawAddress = _userWithdrawAddress;
         distributorAddress = _distributorAddress;
@@ -65,7 +65,7 @@ contract UserDeposit is IUserDeposit {
         require(depositEnabled, "deposit  disabled");
         require(msg.value >= minDeposit, "deposit amount is less than the minimum deposit size");
 
-        IRToken(rTokenAddress).mint(msg.sender, msg.value);
+        ILsdToken(lsdTokenAddress).mint(msg.sender, msg.value);
     }
 
     // ------------ network ------------

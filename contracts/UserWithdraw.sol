@@ -4,7 +4,7 @@ pragma solidity 0.8.19;
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
 import "./interfaces/IUserWithdraw.sol";
-import "./interfaces/IRToken.sol";
+import "./interfaces/ILsdToken.sol";
 import "./interfaces/INetworkProposal.sol";
 import "./interfaces/IDistributor.sol";
 import "./interfaces/IUserDeposit.sol";
@@ -13,14 +13,9 @@ import "./interfaces/IProposalType.sol";
 contract UserWithdraw is IUserWithdraw, IProposalType {
     using EnumerableSet for EnumerableSet.UintSet;
 
-    struct Withdrawal {
-        address _address;
-        uint256 _amount;
-    }
-
     bool public initialized;
 
-    address public rTokenAddress;
+    address public lsdTokenAddress;
     address public userDepositAddress;
     address public distributorAddress;
     address public networkProposalAddress;
@@ -52,7 +47,7 @@ contract UserWithdraw is IUserWithdraw, IProposalType {
     function init(
         uint256 _withdrawLimitPerCycle,
         uint256 _userWithdrawLimitPerCycle,
-        address _rTokenAddress,
+        address _lsdTokenAddress,
         address _userDepositAddress,
         address _distributorAddress,
         address _networkProposalAddress
@@ -63,7 +58,7 @@ contract UserWithdraw is IUserWithdraw, IProposalType {
         withdrawLimitPerCycle = _withdrawLimitPerCycle;
         userWithdrawLimitPerCycle = _userWithdrawLimitPerCycle;
 
-        rTokenAddress = _rTokenAddress;
+        lsdTokenAddress = _lsdTokenAddress;
         userDepositAddress = _userDepositAddress;
         distributorAddress = _distributorAddress;
         networkProposalAddress = _networkProposalAddress;
@@ -107,10 +102,10 @@ contract UserWithdraw is IUserWithdraw, IProposalType {
 
     // ------------ user unstake ------------
 
-    function unstake(uint256 _rEthAmount) external override {
-        uint256 ethAmount = _processWithdraw(_rEthAmount);
-        IUserDeposit stafiUserDeposit = IUserDeposit(userDepositAddress);
-        uint256 stakePoolBalance = stafiUserDeposit.getBalance();
+    function unstake(uint256 _lsdTokenAmount) external override {
+        uint256 ethAmount = _processWithdraw(_lsdTokenAmount);
+        IUserDeposit userDeposit = IUserDeposit(userDepositAddress);
+        uint256 stakePoolBalance = userDeposit.getBalance();
 
         uint256 totalMissingAmount = totalMissingAmountForWithdraw + ethAmount;
         if (stakePoolBalance > 0) {
@@ -118,7 +113,7 @@ contract UserWithdraw is IUserWithdraw, IProposalType {
             if (stakePoolBalance < mvAmount) {
                 mvAmount = stakePoolBalance;
             }
-            stafiUserDeposit.withdrawExcessBalanceForUserWithdraw(mvAmount);
+            userDeposit.withdrawExcessBalanceForUserWithdraw(mvAmount);
 
             totalMissingAmount = totalMissingAmount - mvAmount;
         }
@@ -130,7 +125,7 @@ contract UserWithdraw is IUserWithdraw, IProposalType {
         withdrawalAtIndex[willUseWithdrawalIndex] = Withdrawal({_address: msg.sender, _amount: ethAmount});
         nextWithdrawIndex = willUseWithdrawalIndex - 1;
 
-        emit Unstake(msg.sender, _rEthAmount, ethAmount, willUseWithdrawalIndex, unstakeInstantly);
+        emit Unstake(msg.sender, _lsdTokenAmount, ethAmount, willUseWithdrawalIndex, unstakeInstantly);
 
         if (unstakeInstantly) {
             maxClaimableWithdrawIndex = willUseWithdrawalIndex;
@@ -207,15 +202,15 @@ contract UserWithdraw is IUserWithdraw, IProposalType {
             }
 
             if (mvAmount > 0) {
-                IUserDeposit stafiUserDeposit = IUserDeposit(userDepositAddress);
-                stafiUserDeposit.recycleWithdrawDeposit{value: mvAmount}();
+                IUserDeposit userDeposit = IUserDeposit(userDepositAddress);
+                userDeposit.recycleWithdrawDeposit{value: mvAmount}();
             }
 
             // distribute withdrawals
-            IDistributor stafiDistributor = IDistributor(distributorAddress);
+            IDistributor distributor = IDistributor(distributorAddress);
             uint256 nodeAndPlatformAmount = _nodeAmount + _platformAmount;
             if (nodeAndPlatformAmount > 0) {
-                stafiDistributor.distributeWithdrawals{value: nodeAndPlatformAmount}();
+                distributor.distributeWithdrawals{value: nodeAndPlatformAmount}();
             }
 
             emit DistributeWithdrawals(
@@ -242,15 +237,15 @@ contract UserWithdraw is IUserWithdraw, IProposalType {
 
         // Finalize if Threshold has been reached
         if (proposal._yesVotesTotal >= threshold) {
-            IUserDeposit stafiUserDeposit = IUserDeposit(userDepositAddress);
-            uint256 depositPoolBalance = stafiUserDeposit.getBalance();
+            IUserDeposit userDeposit = IUserDeposit(userDepositAddress);
+            uint256 depositPoolBalance = userDeposit.getBalance();
 
             if (depositPoolBalance > 0 && totalMissingAmountForWithdraw > 0) {
                 uint256 mvAmount = totalMissingAmountForWithdraw;
                 if (depositPoolBalance < mvAmount) {
                     mvAmount = depositPoolBalance;
                 }
-                stafiUserDeposit.withdrawExcessBalanceForUserWithdraw(mvAmount);
+                userDeposit.withdrawExcessBalanceForUserWithdraw(mvAmount);
 
                 totalMissingAmountForWithdraw = totalMissingAmountForWithdraw - mvAmount;
 
@@ -310,12 +305,12 @@ contract UserWithdraw is IUserWithdraw, IProposalType {
     // check:
     // 1 cycle limit
     // 2 user limit
-    // burn reth from user
+    // burn lsdToken from user
     // return:
     // 1 eth withdraw amount
-    function _processWithdraw(uint256 _rEthAmount) private returns (uint256) {
-        require(_rEthAmount > 0, "reth amount zero");
-        uint256 ethAmount = IRToken(rTokenAddress).getEthValue(_rEthAmount);
+    function _processWithdraw(uint256 _lsdTokenAmount) private returns (uint256) {
+        require(_lsdTokenAmount > 0, "lsdToken amount zero");
+        uint256 ethAmount = ILsdToken(lsdTokenAddress).getEthValue(_lsdTokenAmount);
         require(ethAmount > 0, "eth amount zero");
         uint256 currentCycle = currentWithdrawCycle();
         require(totalWithdrawAmountAtCycle[currentCycle] + ethAmount <= withdrawLimitPerCycle, "reach cycle limit");
@@ -329,7 +324,7 @@ contract UserWithdraw is IUserWithdraw, IProposalType {
             userWithdrawAmountAtCycle[msg.sender][currentCycle] +
             ethAmount;
 
-        ERC20Burnable(rTokenAddress).burnFrom(msg.sender, _rEthAmount);
+        ERC20Burnable(lsdTokenAddress).burnFrom(msg.sender, _lsdTokenAmount);
 
         return ethAmount;
     }

@@ -57,10 +57,34 @@ contract NodeDeposit is INodeDeposit, IProposalType {
 
     // ------------ settings ------------
 
-    function setLightNodePubkeyStatus(bytes calldata _validatorPubkey, PubkeyStatus _status) public onlyAdmin {
+    function setNodePubkeyStatus(bytes calldata _validatorPubkey, PubkeyStatus _status) public onlyAdmin {
         require(pubkeyOf[_validatorPubkey]._status != PubkeyStatus.UnInitial, "pubkey not exist");
 
-        _setLightNodePubkeyStatus(_validatorPubkey, _status);
+        _setNodePubkeyStatus(_validatorPubkey, _status);
+    }
+
+    function setLightNodeDepositEnabled(bool _value) public onlyAdmin {
+        lightNodeDepositEnabled = _value;
+    }
+
+    function setSuperNodeDepositEnabled(bool _value) public onlyAdmin {
+        superNodeDepositEnabled = _value;
+    }
+
+    function setLightNodeDepositAmount(uint256 _amount) public onlyAdmin {
+        lightNodeDepositAmount = _amount;
+    }
+
+    function setWithdrawCredentials(bytes calldata _withdrawCredentials) public onlyAdmin {
+        withdrawCredentials = _withdrawCredentials;
+    }
+
+    function addSuperNode(address _superNodeAddress) public onlyAdmin {
+        isSuperNode[_superNodeAddress] = true;
+    }
+
+    function removeSuperNode(address _superNodeAddress) public onlyAdmin {
+        delete isSuperNode[_superNodeAddress];
     }
 
     // ------------ node ------------
@@ -81,11 +105,14 @@ contract NodeDeposit is INodeDeposit, IProposalType {
         uint256 nodeDepositAmount;
         if (isSuperNode[msg.sender]) {
             require(superNodeDepositEnabled, "super node deposits disabled");
+            require(msg.value == 0, "msg value not match");
+
             nodeType = NodeType.SuperNode;
             depositAmount = uint256(1 ether);
         } else {
             require(lightNodeDepositEnabled, "light node deposits disabled");
             require(msg.value == _validatorPubkeys.length * lightNodeDepositAmount, "msg value not match");
+
             nodeType = NodeType.LightNode;
             depositAmount = lightNodeDepositAmount;
             nodeDepositAmount = lightNodeDepositAmount;
@@ -131,7 +158,7 @@ contract NodeDeposit is INodeDeposit, IProposalType {
         require(pubkey._status == PubkeyStatus.Offboard, "pubkey status unmatch");
         require(msg.value == pubkey._nodeDepositAmount, "msg value not match");
 
-        _setLightNodePubkeyStatus(_validatorPubkey, PubkeyStatus.CanWithdraw);
+        _setNodePubkeyStatus(_validatorPubkey, PubkeyStatus.CanWithdraw);
     }
 
     function withdrawNodeDepositToken(bytes calldata _validatorPubkey) external override {
@@ -141,16 +168,27 @@ contract NodeDeposit is INodeDeposit, IProposalType {
         require(msg.sender == pubkey._owner, "not pubkey owner");
 
         // set pubkey status
-        _setLightNodePubkeyStatus(_validatorPubkey, PubkeyStatus.Withdrawed);
+        _setNodePubkeyStatus(_validatorPubkey, PubkeyStatus.Withdrawed);
 
         (bool success, ) = (msg.sender).call{value: pubkey._nodeDepositAmount}("");
         require(success, "transferr failed");
     }
 
+    // ------------ voter ------------
+
+    // Only accepts calls from trusted (oracle) nodes
+    function voteWithdrawCredentials(bytes[] calldata _pubkeys, bool[] calldata _matchs) external override onlyVoter {
+        require(_pubkeys.length == _matchs.length, "params len err");
+
+        for (uint256 i = 0; i < _pubkeys.length; i++) {
+            _voteWithdrawCredentials(_pubkeys[i], _matchs[i]);
+        }
+    }
+
     // ------------ network ------------
 
     // Deposit ETH from deposit pool
-    // Only accepts calls from the StafiUserDeposit contract
+    // Only accepts calls from the UserDeposit contract
     function depositEth() external payable override {
         // Emit ether deposited event
         emit EtherDeposited(msg.sender, msg.value, block.timestamp);
@@ -174,7 +212,7 @@ contract NodeDeposit is INodeDeposit, IProposalType {
             _depositDataRoot
         );
 
-        emit Deposited(msg.sender, _validatorPubkey, _validatorSignature, _depositAmount);
+        emit Deposited(msg.sender, _nodeType, _validatorPubkey, _validatorSignature, _depositAmount);
     }
 
     function _stake(
@@ -182,6 +220,8 @@ contract NodeDeposit is INodeDeposit, IProposalType {
         bytes calldata _validatorSignature,
         bytes32 _depositDataRoot
     ) private {
+        setAndCheckNodePubkeyInStake(_validatorPubkey);
+
         Pubkey memory pubkey = pubkeyOf[_validatorPubkey];
 
         uint256 willWithdrawAmount;
@@ -192,8 +232,6 @@ contract NodeDeposit is INodeDeposit, IProposalType {
         }
 
         IUserDeposit(userDepositAddress).withdrawExcessBalanceForNodeDeposit(willWithdrawAmount);
-
-        setAndCheckNodePubkeyInStake(_validatorPubkey);
 
         IDepositContract(ethDepositAddress).deposit{value: willWithdrawAmount}(
             _validatorPubkey,
@@ -230,7 +268,7 @@ contract NodeDeposit is INodeDeposit, IProposalType {
         require(pubkeyOf[_pubkey]._owner == msg.sender, "not pubkey owner");
 
         // set pubkey status
-        _setLightNodePubkeyStatus(_pubkey, PubkeyStatus.Staking);
+        _setNodePubkeyStatus(_pubkey, PubkeyStatus.Staking);
     }
 
     // Set and check a node's validator pubkey
@@ -242,16 +280,7 @@ contract NodeDeposit is INodeDeposit, IProposalType {
         require(pubkey._owner == msg.sender, "not pubkey owner");
 
         // set pubkey status
-        _setLightNodePubkeyStatus(_pubkey, PubkeyStatus.Offboard);
-    }
-
-    // Only accepts calls from trusted (oracle) nodes
-    function voteWithdrawCredentials(bytes[] calldata _pubkeys, bool[] calldata _matchs) external override onlyVoter {
-        require(_pubkeys.length == _matchs.length, "params len err");
-
-        for (uint256 i = 0; i < _pubkeys.length; i++) {
-            _voteWithdrawCredentials(_pubkeys[i], _matchs[i]);
-        }
+        _setNodePubkeyStatus(_pubkey, PubkeyStatus.Offboard);
     }
 
     function _voteWithdrawCredentials(bytes calldata _pubkey, bool _match) private {
@@ -262,7 +291,7 @@ contract NodeDeposit is INodeDeposit, IProposalType {
 
         // Finalize if Threshold has been reached
         if (proposal._yesVotesTotal >= threshold) {
-            _setLightNodePubkeyStatus(_pubkey, _match ? PubkeyStatus.Match : PubkeyStatus.UnMatch);
+            _setNodePubkeyStatus(_pubkey, _match ? PubkeyStatus.Match : PubkeyStatus.UnMatch);
 
             proposal._status = ProposalStatus.Executed;
             emit ProposalExecuted(proposalId);
@@ -272,7 +301,7 @@ contract NodeDeposit is INodeDeposit, IProposalType {
     }
 
     // Set a light node pubkey status
-    function _setLightNodePubkeyStatus(bytes calldata _validatorPubkey, PubkeyStatus _status) private {
+    function _setNodePubkeyStatus(bytes calldata _validatorPubkey, PubkeyStatus _status) private {
         pubkeyOf[_validatorPubkey]._status = _status;
 
         emit SetPubkeyStatus(_validatorPubkey, _status);

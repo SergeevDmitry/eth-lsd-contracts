@@ -13,7 +13,7 @@ contract NetworkBalances is INetworkBalances, IProposalType {
 
     uint256 public balanceBlock;
     uint256 public totalEthBalance;
-    uint256 public totalRTokenSupply;
+    uint256 public totalLsdTokenSupply;
     uint256 public stakingEthBalance;
 
     address public networkProposalAddress;
@@ -48,9 +48,9 @@ contract NetworkBalances is INetworkBalances, IProposalType {
         return stakingEthBalance;
     }
 
-    // The current network total rToken supply
-    function getTotalRTokenSupply() public view override returns (uint256) {
-        return totalRTokenSupply;
+    // The current network total lsdToken supply
+    function getTotalLsdTokenSupply() public view override returns (uint256) {
+        return totalLsdTokenSupply;
     }
 
     // Get the current network ETH staking rate as a fraction of 1 ETH
@@ -71,25 +71,23 @@ contract NetworkBalances is INetworkBalances, IProposalType {
         uint256 _block,
         uint256 _totalEth,
         uint256 _stakingEth,
-        uint256 _rethSupply
+        uint256 _lsdTokenSupply
     ) external override onlyVoter {
         require(submitBalancesEnabled, "submitting balances is disabled");
         require(_block > balanceBlock, "network balances for an equal or higher block are set");
         require(_stakingEth <= _totalEth, "invalid network balances");
 
-        bytes32 proposalId = keccak256(
-            abi.encodePacked("submitBalances", msg.sender, _block, _totalEth, _stakingEth, _rethSupply)
-        );
+        bytes32 proposalId = keccak256(abi.encodePacked("submitBalances", _block, _totalEth, _stakingEth, _lsdTokenSupply));
 
         INetworkProposal networkProposal = INetworkProposal(networkProposalAddress);
         (Proposal memory proposal, uint8 threshold) = networkProposal.checkProposal(proposalId);
 
         // Emit balances submitted event
-        emit BalancesSubmitted(msg.sender, _block, _totalEth, _stakingEth, _rethSupply, block.timestamp);
+        emit BalancesSubmitted(msg.sender, _block, _totalEth, _stakingEth, _lsdTokenSupply, block.timestamp);
 
         // Finalize if Threshold has been reached
         if (proposal._yesVotesTotal >= threshold) {
-            updateBalances(_block, _totalEth, _stakingEth, _rethSupply);
+            updateBalances(_block, _totalEth, _stakingEth, _lsdTokenSupply);
 
             proposal._status = ProposalStatus.Executed;
             emit ProposalExecuted(proposalId);
@@ -101,14 +99,14 @@ contract NetworkBalances is INetworkBalances, IProposalType {
     // ------------ helper ------------
 
     // Update network balances
-    function updateBalances(uint256 _block, uint256 _totalEth, uint256 _stakingEth, uint256 _rethSupply) private {
+    function updateBalances(uint256 _block, uint256 _totalEth, uint256 _stakingEth, uint256 _lsdTokenSupply) private {
         // Update balances
         balanceBlock = _block;
         totalEthBalance = _totalEth;
         stakingEthBalance = _stakingEth;
-        totalRTokenSupply = _rethSupply;
+        totalLsdTokenSupply = _lsdTokenSupply;
 
         // Emit balances updated event
-        emit BalancesUpdated(_block, _totalEth, _stakingEth, _rethSupply, block.timestamp);
+        emit BalancesUpdated(_block, _totalEth, _stakingEth, _lsdTokenSupply, block.timestamp);
     }
 }

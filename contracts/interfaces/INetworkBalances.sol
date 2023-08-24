@@ -9,10 +9,10 @@ interface INetworkBalances {
         uint256 block,
         uint256 totalEth,
         uint256 stakingEth,
-        uint256 rTokenSupply,
+        uint256 lsdTokenSupply,
         uint256 time
     );
-    event BalancesUpdated(uint256 block, uint256 totalEth, uint256 stakingEth, uint256 rTokenSupply, uint256 time);
+    event BalancesUpdated(uint256 block, uint256 totalEth, uint256 stakingEth, uint256 lsdTokenSupply, uint256 time);
 
     function getBalancesBlock() external view returns (uint256);
 
@@ -20,9 +20,9 @@ interface INetworkBalances {
 
     function getStakingETHBalance() external view returns (uint256);
 
-    function getTotalRTokenSupply() external view returns (uint256);
+    function getTotalLsdTokenSupply() external view returns (uint256);
 
     function getETHStakingRate() external view returns (uint256);
 
-    function submitBalances(uint256 _block, uint256 _total, uint256 _staking, uint256 _rTokenSupply) external;
+    function submitBalances(uint256 _block, uint256 _total, uint256 _staking, uint256 _lsdTokenSupply) external;
 }
