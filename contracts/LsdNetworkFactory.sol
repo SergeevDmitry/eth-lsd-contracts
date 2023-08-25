@@ -9,21 +9,11 @@ import "./interfaces/INetworkProposal.sol";
 import "./interfaces/INodeDeposit.sol";
 import "./interfaces/IUserDeposit.sol";
 import "./interfaces/IUserWithdraw.sol";
+import "./interfaces/ILsdNetworkFactory.sol";
 import "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 
-contract LsdNetworkFactory {
-    struct NetworkContracts {
-        address distributor;
-        address feePool;
-        address networkBalances;
-        address networkProposal;
-        address nodeDeposit;
-        address userDeposit;
-        address userWithdraw;
-        address lsdToken;
-    }
-
-    address public admin;
+contract LsdNetworkFactory is ILsdNetworkFactory {
+    address public factoryAdmin;
     address public ethDepositAddress;
 
     address public distributorLogicAddress;
@@ -34,15 +24,13 @@ contract LsdNetworkFactory {
     address public userDepositLogicAddress;
     address public userWithdrawLogicAddress;
 
-    event LsdNetwork(NetworkContracts _contracts);
-
-    modifier onlyAdmin() {
-        require(admin == msg.sender, "caller is not the admin");
+    modifier onlyFactoryAdmin() {
+        require(factoryAdmin == msg.sender, "caller is not the admin");
         _;
     }
 
     constructor(
-        address _admin,
+        address _factoryAdmin,
         address _ethDepositAddress,
         address _distributorLogicAddress,
         address _feePoolLogicAddress,
@@ -52,9 +40,9 @@ contract LsdNetworkFactory {
         address _userDepositLogicAddress,
         address _userWithdrawLogicAddress
     ) {
-        require(_admin != address(0), "not valid address");
+        require(_factoryAdmin != address(0), "not valid address");
 
-        admin = _admin;
+        factoryAdmin = _factoryAdmin;
         ethDepositAddress = _ethDepositAddress;
         distributorLogicAddress = _distributorLogicAddress;
         feePoolLogicAddress = _feePoolLogicAddress;
@@ -65,35 +53,39 @@ contract LsdNetworkFactory {
         userWithdrawLogicAddress = _userWithdrawLogicAddress;
     }
 
-    function transferOwnership(address _newAdmin) public onlyAdmin {
+    // ------------ settings ------------
+
+    function transferOwnership(address _newAdmin) public onlyFactoryAdmin {
         require(_newAdmin != address(0), "zero address");
 
-        admin = _newAdmin;
+        factoryAdmin = _newAdmin;
     }
 
-    function setDistributorLogicAddress(address _distributorLogicAddress) public onlyAdmin {
+    function setDistributorLogicAddress(address _distributorLogicAddress) public onlyFactoryAdmin {
         distributorLogicAddress = _distributorLogicAddress;
     }
 
-    function setNetworkBalancesLogicAddress(address _networkBalancesLogicAddress) public onlyAdmin {
+    function setNetworkBalancesLogicAddress(address _networkBalancesLogicAddress) public onlyFactoryAdmin {
         networkBalancesLogicAddress = _networkBalancesLogicAddress;
     }
 
-    function setNetworkProposalLogicAddress(address _networkProposalLogicAddress) public onlyAdmin {
+    function setNetworkProposalLogicAddress(address _networkProposalLogicAddress) public onlyFactoryAdmin {
         networkProposalLogicAddress = _networkProposalLogicAddress;
     }
 
-    function setNodeDepositLogicAddress(address _nodeDepositLogicAddress) public onlyAdmin {
+    function setNodeDepositLogicAddress(address _nodeDepositLogicAddress) public onlyFactoryAdmin {
         nodeDepositLogicAddress = _nodeDepositLogicAddress;
     }
 
-    function setUserDepositLogicAddress(address _userDepositLogicAddress) public onlyAdmin {
+    function setUserDepositLogicAddress(address _userDepositLogicAddress) public onlyFactoryAdmin {
         distributorLogicAddress = _userDepositLogicAddress;
     }
 
-    function setuserWithdrawLogicAddress(address _userWithdrawLogicAddress) public onlyAdmin {
+    function setuserWithdrawLogicAddress(address _userWithdrawLogicAddress) public onlyFactoryAdmin {
         userWithdrawLogicAddress = _userWithdrawLogicAddress;
     }
+
+    // ------------ user ------------
 
     function createLsdNetwork(
         string memory _lsdTokenName,
@@ -102,7 +94,7 @@ contract LsdNetworkFactory {
         address _networkAdmin,
         address[] memory _voters,
         uint256 _threshold
-    ) public onlyAdmin {
+    ) external override {
         require(_proxyAdmin != _networkAdmin, "admin must be different");
 
         bytes32 salt = keccak256(abi.encode(_lsdTokenName, _lsdTokenSymbol));
@@ -166,6 +158,8 @@ contract LsdNetworkFactory {
 
         emit LsdNetwork(contracts);
     }
+
+    // ------------ helper ------------
 
     function deploy(bytes32 salt, address _admin, address _logicAddress) private returns (address) {
         return address(new TransparentUpgradeableProxy{salt: salt}(_logicAddress, _admin, ""));
