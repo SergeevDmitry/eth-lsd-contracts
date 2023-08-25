@@ -31,7 +31,7 @@ contract UserDeposit is IUserDeposit {
         address _userWithdrawAddress,
         address _distributorAddress,
         address _networkProposalAddress
-    ) public {
+    ) external override {
         require(!initialized, "already initialized");
 
         depositEnabled = true;

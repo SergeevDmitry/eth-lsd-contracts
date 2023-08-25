@@ -23,15 +23,15 @@ contract NetworkProposal is INetworkProposal {
     }
 
     modifier onlyAdmin() {
-        require(admin == msg.sender, "caller is not the owner");
+        require(admin == msg.sender, "caller is not the admin");
         _;
     }
 
-    function init(address[] memory _voters, uint256 _initialThreshold, address adminAddress) public {
+    function init(address[] memory _voters, uint256 _initialThreshold, address _adminAddress) public {
         require(!initialized, "already initialized");
         require(_voters.length >= _initialThreshold && _initialThreshold > _voters.length / 2, "invalid threshold");
         require(_voters.length <= 16, "too much voters");
-        require(adminAddress != address(0), "not valid address");
+        require(_adminAddress != address(0), "not valid address");
 
         initialized = true;
         threshold = _initialThreshold.toUint8();
@@ -39,7 +39,7 @@ contract NetworkProposal is INetworkProposal {
         for (uint256 i; i < initialVoterCount; ++i) {
             voters.add(_voters[i]);
         }
-        admin = adminAddress;
+        admin = _adminAddress;
     }
 
     // ------------ getter ------------
@@ -71,10 +71,10 @@ contract NetworkProposal is INetworkProposal {
 
     // ------------ settings ------------
 
-    function transferOwnership(address _newOwner) public onlyAdmin {
-        require(_newOwner != address(0), "zero address");
+    function transferAdmin(address _newAdmin) public onlyAdmin {
+        require(_newAdmin != address(0), "zero address");
 
-        admin = _newOwner;
+        admin = _newAdmin;
     }
 
     function addVoter(address _voter) public onlyAdmin {

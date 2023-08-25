@@ -9,7 +9,7 @@ contract FeePool is IFeePool {
     bool public initialized;
     address public distributorAddress;
 
-    function init(address _distributorAddress) public {
+    function init(address _distributorAddress) external override {
         require(!initialized, "already initialized");
 
         initialized = true;

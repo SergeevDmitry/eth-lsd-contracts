@@ -23,5 +23,7 @@ interface IDistributor {
     event DistributeSlash(uint256 dealedHeight, uint256 slashAmount);
     event SetMerkleRoot(uint256 dealedEpoch, bytes32 merkleRoot);
 
+    function init(address _networkProposalAddress, address _feePoolAddress, address _userDepositAddress) external;
+
     function distributeWithdrawals() external payable;
 }

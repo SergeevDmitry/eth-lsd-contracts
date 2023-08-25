@@ -23,7 +23,7 @@ contract NetworkBalances is INetworkBalances, IProposalType {
         _;
     }
 
-    function init(address _networkProposalAddress) public {
+    function init(address _networkProposalAddress) external override {
         require(!initialized, "already initialized");
 
         initialized = true;
@@ -77,7 +77,9 @@ contract NetworkBalances is INetworkBalances, IProposalType {
         require(_block > balanceBlock, "network balances for an equal or higher block are set");
         require(_stakingEth <= _totalEth, "invalid network balances");
 
-        bytes32 proposalId = keccak256(abi.encodePacked("submitBalances", _block, _totalEth, _stakingEth, _lsdTokenSupply));
+        bytes32 proposalId = keccak256(
+            abi.encodePacked("submitBalances", _block, _totalEth, _stakingEth, _lsdTokenSupply)
+        );
 
         INetworkProposal networkProposal = INetworkProposal(networkProposalAddress);
         (Proposal memory proposal, uint8 threshold) = networkProposal.checkProposal(proposalId);

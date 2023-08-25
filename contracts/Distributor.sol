@@ -36,7 +36,11 @@ contract Distributor is IDistributor, IProposalType {
         _;
     }
 
-    function init(address _networkProposalAddress, address _feePoolAddress, address _userDepositAddress) public {
+    function init(
+        address _networkProposalAddress,
+        address _feePoolAddress,
+        address _userDepositAddress
+    ) external override {
         require(!initialized, "already initizlized");
 
         initialized = true;

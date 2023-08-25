@@ -4,6 +4,8 @@ pragma solidity 0.8.19;
 import "./IProposalType.sol";
 
 interface INetworkProposal is IProposalType {
+    function init(address[] memory _voters, uint256 _initialThreshold, address _adminAddress) external;
+
     function isVoter(address _sender) external view returns (bool);
 
     function isAdmin(address _sender) external view returns (bool);

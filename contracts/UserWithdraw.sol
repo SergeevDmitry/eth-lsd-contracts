@@ -45,18 +45,16 @@ contract UserWithdraw is IUserWithdraw, IProposalType {
     }
 
     function init(
-        uint256 _withdrawLimitPerCycle,
-        uint256 _userWithdrawLimitPerCycle,
         address _lsdTokenAddress,
         address _userDepositAddress,
         address _distributorAddress,
         address _networkProposalAddress
-    ) external {
+    ) external override {
         require(!initialized, "already initizlized");
 
         initialized = true;
-        withdrawLimitPerCycle = _withdrawLimitPerCycle;
-        userWithdrawLimitPerCycle = _userWithdrawLimitPerCycle;
+        withdrawLimitPerCycle = uint256(100 ether);
+        userWithdrawLimitPerCycle = uint256(100 ether);
 
         lsdTokenAddress = _lsdTokenAddress;
         userDepositAddress = _userDepositAddress;

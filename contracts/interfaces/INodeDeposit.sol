@@ -46,6 +46,13 @@ interface INodeDeposit {
         bytes32[] calldata _depositDataRoots
     ) external;
 
+    function init(
+        address _userDepositAddress,
+        address _ethDepositAddress,
+        address _networkProposalAddress,
+        bytes calldata _withdrawCredentials
+    ) external;
+
     function offBoard(bytes calldata _validatorPubkey) external;
 
     function provideNodeDepositToken(bytes calldata _validatorPubkey) external payable;

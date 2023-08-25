@@ -7,9 +7,15 @@ interface IUserWithdraw {
         address _address;
         uint256 _amount;
     }
-    
+
     event EtherDeposited(address indexed from, uint256 amount, uint256 time);
-    event Unstake(address indexed from, uint256 lsdTokenAmount, uint256 ethAmount, uint256 withdrawIndex, bool instantly);
+    event Unstake(
+        address indexed from,
+        uint256 lsdTokenAmount,
+        uint256 ethAmount,
+        uint256 withdrawIndex,
+        bool instantly
+    );
     event Withdraw(address indexed from, uint256[] withdrawIndexList);
     event NotifyValidatorExit(uint256 withdrawCycle, uint256 ejectedStartWithdrawCycle, uint256[] ejectedValidators);
     event DistributeWithdrawals(
@@ -23,6 +29,13 @@ interface IUserWithdraw {
     event ReserveEthForWithdraw(uint256 withdrawCycle, uint256 mvAmount);
     event SetWithdrawLimitPerCycle(uint256 withdrawLimitPerCycle);
     event SetUserWithdrawLimitPerCycle(uint256 userWithdrawLimitPerCycle);
+
+    function init(
+        address _lsdTokenAddress,
+        address _userDepositAddress,
+        address _distributorAddress,
+        address _networkProposalAddress
+    ) external;
 
     // user
     function unstake(uint256 _lsdTokenAmount) external;

@@ -42,7 +42,7 @@ contract NodeDeposit is INodeDeposit, IProposalType {
         address _ethDepositAddress,
         address _networkProposalAddress,
         bytes calldata _withdrawCredentials
-    ) external {
+    ) external override {
         require(!initialized, "already initizlized");
 
         initialized = true;

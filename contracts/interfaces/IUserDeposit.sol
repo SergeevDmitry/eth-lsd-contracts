@@ -7,6 +7,14 @@ interface IUserDeposit {
     event DepositRecycled(address indexed from, uint256 amount, uint256 time);
     event ExcessWithdrawn(address indexed to, uint256 amount, uint256 time);
 
+    function init(
+        address _lsdTokenAddress,
+        address _nodeDepositAddress,
+        address _userWithdrawAddress,
+        address _distributorAddress,
+        address _networkProposalAddress
+    ) external;
+
     function deposit() external payable;
 
     function withdrawExcessBalanceForNodeDeposit(uint256 _amount) external;
