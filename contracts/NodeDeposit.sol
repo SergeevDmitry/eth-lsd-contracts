@@ -13,6 +13,7 @@ contract NodeDeposit is INodeDeposit, IProposalType {
     using EnumerableSet for EnumerableSet.UintSet;
 
     bool public initialized;
+    uint8 public version;
     bool public lightNodeDepositEnabled;
     bool public superNodeDepositEnabled;
 
@@ -46,6 +47,7 @@ contract NodeDeposit is INodeDeposit, IProposalType {
         require(!initialized, "already initizlized");
 
         initialized = true;
+        version = 1;
         lightNodeDepositEnabled = true;
         superNodeDepositEnabled = true;
 

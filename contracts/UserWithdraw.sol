@@ -14,6 +14,7 @@ contract UserWithdraw is IUserWithdraw, IProposalType {
     using EnumerableSet for EnumerableSet.UintSet;
 
     bool public initialized;
+    uint8 public version;
 
     address public lsdTokenAddress;
     address public userDepositAddress;
@@ -25,8 +26,9 @@ contract UserWithdraw is IUserWithdraw, IProposalType {
     uint256 public ejectedStartCycle;
     uint256 public latestDistributeHeight;
     uint256 public totalMissingAmountForWithdraw;
-    uint256 public withdrawLimitPerCycle;
-    uint256 public userWithdrawLimitPerCycle;
+    uint256 public withdrawLimitAmountPerCycle;
+    uint256 public userWithdrawLimitAmountPerCycle;
+    uint256 public withdrawCycleSeconds;
 
     mapping(uint256 => Withdrawal) public withdrawalAtIndex;
     mapping(address => EnumerableSet.UintSet) internal unclaimedWithdrawalsOfUser;
@@ -53,8 +55,10 @@ contract UserWithdraw is IUserWithdraw, IProposalType {
         require(!initialized, "already initizlized");
 
         initialized = true;
-        withdrawLimitPerCycle = uint256(100 ether);
-        userWithdrawLimitPerCycle = uint256(100 ether);
+        version = 1;
+        withdrawLimitAmountPerCycle = uint256(100 ether);
+        userWithdrawLimitAmountPerCycle = uint256(100 ether);
+        withdrawCycleSeconds = 86400;
 
         lsdTokenAddress = _lsdTokenAddress;
         userDepositAddress = _userDepositAddress;
@@ -81,21 +85,27 @@ contract UserWithdraw is IUserWithdraw, IProposalType {
     }
 
     function currentWithdrawCycle() public view returns (uint256) {
-        return (block.timestamp - 28800) / 86400;
+        return (block.timestamp) / withdrawCycleSeconds;
     }
 
     // ------------ settings ------------
 
-    function setWithdrawLimitPerCycle(uint256 _withdrawLimitPerCycle) external onlyAdmin {
-        withdrawLimitPerCycle = _withdrawLimitPerCycle;
+    function setWithdrawLimitAmountPerCycle(uint256 _withdrawLimitPerCycle) external onlyAdmin {
+        withdrawLimitAmountPerCycle = _withdrawLimitPerCycle;
 
         emit SetWithdrawLimitPerCycle(_withdrawLimitPerCycle);
     }
 
-    function setUserWithdrawLimitPerCycle(uint256 _userWithdrawLimitPerCycle) external onlyAdmin {
-        userWithdrawLimitPerCycle = _userWithdrawLimitPerCycle;
+    function setUserWithdrawLimitAmountPerCycle(uint256 _userWithdrawLimitPerCycle) external onlyAdmin {
+        userWithdrawLimitAmountPerCycle = _userWithdrawLimitPerCycle;
 
         emit SetUserWithdrawLimitPerCycle(_userWithdrawLimitPerCycle);
+    }
+
+    function setWithdrawCycleSeconds(uint256 _withdrawCycleSeconds) external onlyAdmin {
+        withdrawCycleSeconds = _withdrawCycleSeconds;
+
+        emit SetWithdrawCycleSeconds(_withdrawCycleSeconds);
     }
 
     // ------------ user unstake ------------
@@ -263,7 +273,8 @@ contract UserWithdraw is IUserWithdraw, IProposalType {
         uint256[] calldata _validatorIndexList
     ) external override onlyVoter {
         require(
-            _validatorIndexList.length > 0 && _validatorIndexList.length <= (withdrawLimitPerCycle * 3) / 20 ether,
+            _validatorIndexList.length > 0 &&
+                _validatorIndexList.length <= (withdrawLimitAmountPerCycle * 3) / 20 ether,
             "length not match"
         );
         require(_ejectedStartCycle < _withdrawCycle && _withdrawCycle + 1 == currentWithdrawCycle(), "cycle not match");
@@ -311,9 +322,12 @@ contract UserWithdraw is IUserWithdraw, IProposalType {
         uint256 ethAmount = ILsdToken(lsdTokenAddress).getEthValue(_lsdTokenAmount);
         require(ethAmount > 0, "eth amount zero");
         uint256 currentCycle = currentWithdrawCycle();
-        require(totalWithdrawAmountAtCycle[currentCycle] + ethAmount <= withdrawLimitPerCycle, "reach cycle limit");
         require(
-            userWithdrawAmountAtCycle[msg.sender][currentCycle] + ethAmount <= userWithdrawLimitPerCycle,
+            totalWithdrawAmountAtCycle[currentCycle] + ethAmount <= withdrawLimitAmountPerCycle,
+            "reach cycle limit"
+        );
+        require(
+            userWithdrawAmountAtCycle[msg.sender][currentCycle] + ethAmount <= userWithdrawLimitAmountPerCycle,
             "reach user limit"
         );
 

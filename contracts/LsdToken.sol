@@ -8,6 +8,7 @@ import "./interfaces/ILsdToken.sol";
 import "./interfaces/IUserDeposit.sol";
 
 contract LsdToken is ILsdToken, ERC20Burnable {
+    uint8 public version;
     address public userDepositAddress;
     address public networkBalanceAddress;
 
@@ -18,6 +19,7 @@ contract LsdToken is ILsdToken, ERC20Burnable {
         string memory name,
         string memory symbol
     ) ERC20(name, symbol) {
+        version = 1;
         userDepositAddress = _userDepositAddress;
         networkBalanceAddress = _networkBalanceAddress;
     }

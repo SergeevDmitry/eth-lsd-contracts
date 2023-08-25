@@ -11,15 +11,14 @@ import "./interfaces/IProposalType.sol";
 // Distribute network validator priorityFees/withdrawals/slashs
 contract Distributor is IDistributor, IProposalType {
     bool public initialized;
+    uint8 public version;
 
     address public networkProposalAddress;
     address public feePoolAddress;
     address public userDepositAddress;
 
     uint256 public merkleDealedEpoch;
-    uint256 public distributeLightNodeFeeDealedHeight;
-    uint256 public distributeSuperNodeFeeDealedHeight;
-    uint256 public distributeSlashDealedHeight;
+    uint256 public distributePriorityFeeDealedHeight;
 
     bytes32 public merkleRoot;
 
@@ -44,42 +43,13 @@ contract Distributor is IDistributor, IProposalType {
         require(!initialized, "already initizlized");
 
         initialized = true;
+        version = 1;
         networkProposalAddress = _networkProposalAddress;
         feePoolAddress = _feePoolAddress;
         userDepositAddress = _userDepositAddress;
     }
 
     receive() external payable {}
-
-    // ------------ getter ------------
-
-    function getMerkleDealedEpoch() public view returns (uint256) {
-        return merkleDealedEpoch;
-    }
-
-    function getTotalClaimedReward(address _account) public view returns (uint256) {
-        return totalClaimedRewardOf[_account];
-    }
-
-    function getTotalClaimedDeposit(address _account) public view returns (uint256) {
-        return totalClaimedDepositOf[_account];
-    }
-
-    function getMerkleRoot() public view returns (bytes32) {
-        return merkleRoot;
-    }
-
-    function getDistributeLightNodeFeeDealedHeight() public view returns (uint256) {
-        return distributeLightNodeFeeDealedHeight;
-    }
-
-    function getDistributeSuperNodeFeeDealedHeight() public view returns (uint256) {
-        return distributeSuperNodeFeeDealedHeight;
-    }
-
-    function getDistributeSlashDealedHeight() public view returns (uint256) {
-        return distributeSlashDealedHeight;
-    }
 
     // ------------ settings ------------
 
@@ -89,10 +59,10 @@ contract Distributor is IDistributor, IProposalType {
 
     // ------------ vote ------------
 
-    // v1: platform = 10% node = 90%*(nodedeposit/32)+90%*(1- nodedeposit/32)*10%  user = 90%*(1- nodedeposit/32)*90%
-    // v2: platform = 5%  node = 5% + (90% * nodedeposit/32) user = 90%*(1-nodedeposit/32)
-    // distribute fee of feePool for user/node/platform
-    function distributeLightNodeFee(
+    // lightNode: platform = 5%  node = 5% + (90% * nodedeposit/32) user = 90%*(1-nodedeposit/32)
+    // superNode: platform = 5%  node = 5%  user = 90%
+    // distribute priority fee of feePool for user/node/platform
+    function distributePriorityFee(
         uint256 _dealedHeight,
         uint256 _userAmount,
         uint256 _nodeAmount,
@@ -101,7 +71,7 @@ contract Distributor is IDistributor, IProposalType {
         uint256 totalAmount = _userAmount + _nodeAmount + _platformAmount;
         require(totalAmount > 0, "zero amount");
 
-        require(_dealedHeight > distributeLightNodeFeeDealedHeight, "height already dealed");
+        require(_dealedHeight > distributePriorityFeeDealedHeight, "height already dealed");
 
         bytes32 proposalId = keccak256(
             abi.encodePacked("distributeLightNodeFee", _dealedHeight, _userAmount, _nodeAmount, _platformAmount)
@@ -121,80 +91,15 @@ contract Distributor is IDistributor, IProposalType {
                 userDeposit.recycleDistributorDeposit{value: _userAmount}();
             }
 
-            distributeLightNodeFeeDealedHeight = _dealedHeight;
+            distributePriorityFeeDealedHeight = _dealedHeight;
 
             emit DistributeFee(_dealedHeight, _userAmount, _nodeAmount, _platformAmount);
         }
         networkProposal.saveProposal(proposalId, proposal);
     }
 
-    // v1: platform = 10% node = 9%  user = 81%
-    // v2: platform = 5%  node = 5%  user = 90%
-    // distribute fee of superNode feePool for user/node/platform
-    function distributeSuperNodeFee(
-        uint256 _dealedHeight,
-        uint256 _userAmount,
-        uint256 _nodeAmount,
-        uint256 _platformAmount
-    ) external onlyVoter {
-        uint256 totalAmount = _userAmount + _nodeAmount + _platformAmount;
-        require(totalAmount > 0, "zero amount");
-
-        require(_dealedHeight > getDistributeSuperNodeFeeDealedHeight(), "height already dealed");
-
-        bytes32 proposalId = keccak256(
-            abi.encodePacked("distributeSuperNodeFee", _dealedHeight, _userAmount, _nodeAmount, _platformAmount)
-        );
-
-        INetworkProposal networkProposal = INetworkProposal(networkProposalAddress);
-        (Proposal memory proposal, uint8 threshold) = networkProposal.checkProposal(proposalId);
-
-        // Finalize if Threshold has been reached
-        if (proposal._yesVotesTotal >= threshold) {
-            IFeePool feePool = IFeePool(feePoolAddress);
-            IUserDeposit userDeposit = IUserDeposit(userDepositAddress);
-
-            feePool.withdrawEther(address(this), totalAmount);
-
-            if (_userAmount > 0) {
-                userDeposit.recycleDistributorDeposit{value: _userAmount}();
-            }
-
-            distributeSuperNodeFeeDealedHeight = _dealedHeight;
-
-            emit DistributeSuperNodeFee(_dealedHeight, _userAmount, _nodeAmount, _platformAmount);
-        }
-
-        networkProposal.saveProposal(proposalId, proposal);
-    }
-
-    // distribute slash amount for user
-    function distributeSlashAmount(uint256 _dealedHeight, uint256 _amount) external onlyVoter {
-        require(_amount > 0, "zero amount");
-
-        require(_dealedHeight > getDistributeSlashDealedHeight(), "height already dealed");
-
-        bytes32 proposalId = keccak256(abi.encodePacked("distributeSlashAmount", _dealedHeight, _amount));
-
-        INetworkProposal networkProposal = INetworkProposal(networkProposalAddress);
-        (Proposal memory proposal, uint8 threshold) = networkProposal.checkProposal(proposalId);
-
-        // Finalize if Threshold has been reached
-        if (proposal._yesVotesTotal >= threshold) {
-            IUserDeposit userDeposit = IUserDeposit(userDepositAddress);
-
-            userDeposit.recycleDistributorDeposit{value: _amount}();
-
-            distributeSlashDealedHeight = _dealedHeight;
-
-            emit DistributeSlash(_dealedHeight, _amount);
-        }
-        networkProposal.saveProposal(proposalId, proposal);
-    }
-
     function setMerkleRoot(uint256 _dealedEpoch, bytes32 _merkleRoot) external onlyVoter {
-        uint256 predealedEpoch = getMerkleDealedEpoch();
-        require(_dealedEpoch > predealedEpoch, "epoch already dealed");
+        require(_dealedEpoch > merkleDealedEpoch, "epoch already dealed");
 
         bytes32 proposalId = keccak256(abi.encodePacked("setMerkleRoot", _dealedEpoch, _merkleRoot));
 
@@ -221,12 +126,12 @@ contract Distributor is IDistributor, IProposalType {
         bytes32[] calldata _merkleProof,
         ClaimType _claimType
     ) external {
-        uint256 claimableReward = _totalRewardAmount - getTotalClaimedReward(_account);
-        uint256 claimableDeposit = _totalExitDepositAmount - getTotalClaimedDeposit(_account);
+        uint256 claimableReward = _totalRewardAmount - totalClaimedRewardOf[_account];
+        uint256 claimableDeposit = _totalExitDepositAmount - totalClaimedDepositOf[_account];
 
         // Verify the merkle proof.
         bytes32 node = keccak256(abi.encodePacked(_index, _account, _totalRewardAmount, _totalExitDepositAmount));
-        require(MerkleProof.verify(_merkleProof, getMerkleRoot(), node), "invalid proof");
+        require(MerkleProof.verify(_merkleProof, merkleRoot, node), "invalid proof");
 
         uint256 willClaimAmount;
         if (_claimType == ClaimType.ClaimReward) {

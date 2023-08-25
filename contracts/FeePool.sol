@@ -7,12 +7,15 @@ import "./interfaces/IFeePool.sol";
 // receive priority fee
 contract FeePool is IFeePool {
     bool public initialized;
+    uint8 public version;
+
     address public distributorAddress;
 
     function init(address _distributorAddress) external override {
         require(!initialized, "already initialized");
 
         initialized = true;
+        version = 1;
         distributorAddress = _distributorAddress;
     }
 

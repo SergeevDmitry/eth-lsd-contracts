@@ -9,9 +9,10 @@ import "./interfaces/IProposalType.sol";
 // Network balances
 contract NetworkBalances is INetworkBalances, IProposalType {
     bool public initialized;
+    uint8 public version;
     bool public submitBalancesEnabled;
 
-    uint256 public balanceBlock;
+    uint256 public balancesBlock;
     uint256 public totalEthBalance;
     uint256 public totalLsdTokenSupply;
     uint256 public stakingEthBalance;
@@ -27,6 +28,7 @@ contract NetworkBalances is INetworkBalances, IProposalType {
         require(!initialized, "already initialized");
 
         initialized = true;
+        version = 1;
         submitBalancesEnabled = true;
         networkProposalAddress = _networkProposalAddress;
     }
@@ -35,7 +37,7 @@ contract NetworkBalances is INetworkBalances, IProposalType {
 
     // The block number which balances are current for
     function getBalancesBlock() public view override returns (uint256) {
-        return balanceBlock;
+        return balancesBlock;
     }
 
     // The current network total ETH balance
@@ -74,7 +76,7 @@ contract NetworkBalances is INetworkBalances, IProposalType {
         uint256 _lsdTokenSupply
     ) external override onlyVoter {
         require(submitBalancesEnabled, "submitting balances is disabled");
-        require(_block > balanceBlock, "network balances for an equal or higher block are set");
+        require(_block > balancesBlock, "network balances for an equal or higher block are set");
         require(_stakingEth <= _totalEth, "invalid network balances");
 
         bytes32 proposalId = keccak256(
@@ -103,7 +105,7 @@ contract NetworkBalances is INetworkBalances, IProposalType {
     // Update network balances
     function updateBalances(uint256 _block, uint256 _totalEth, uint256 _stakingEth, uint256 _lsdTokenSupply) private {
         // Update balances
-        balanceBlock = _block;
+        balancesBlock = _block;
         totalEthBalance = _totalEth;
         stakingEthBalance = _stakingEth;
         totalLsdTokenSupply = _lsdTokenSupply;

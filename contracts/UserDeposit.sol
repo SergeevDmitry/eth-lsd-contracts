@@ -10,6 +10,7 @@ import "./interfaces/INetworkProposal.sol";
 
 contract UserDeposit is IUserDeposit {
     bool public initialized;
+    uint8 public version;
     bool public depositEnabled;
 
     uint256 public minDeposit;
@@ -34,8 +35,9 @@ contract UserDeposit is IUserDeposit {
     ) external override {
         require(!initialized, "already initialized");
 
-        depositEnabled = true;
         initialized = true;
+        version = 1;
+        depositEnabled = true;
         lsdTokenAddress = _lsdTokenAddress;
         nodeDepositAddress = _nodeDepositAddress;
         userWithdrawAddress = _userWithdrawAddress;

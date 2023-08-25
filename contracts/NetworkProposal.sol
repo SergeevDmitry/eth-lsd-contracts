@@ -11,6 +11,7 @@ contract NetworkProposal is INetworkProposal {
     using EnumerableSet for EnumerableSet.AddressSet;
 
     bool public initialized;
+    uint8 public version;
     uint8 public threshold;
     address public admin;
 
@@ -34,6 +35,7 @@ contract NetworkProposal is INetworkProposal {
         require(_adminAddress != address(0), "not valid address");
 
         initialized = true;
+        version = 1;
         threshold = _initialThreshold.toUint8();
         uint256 initialVoterCount = _voters.length;
         for (uint256 i; i < initialVoterCount; ++i) {
