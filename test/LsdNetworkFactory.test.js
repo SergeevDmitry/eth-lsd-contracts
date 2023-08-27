@@ -2,7 +2,7 @@
 const { ethers, web3 } = require("hardhat")
 const { expect } = require("chai")
 
-describe("StafiDeposit test", function () {
+describe("LsdNetwok test", function () {
     before(async function () {
         this.signers = await ethers.getSigners()
 
@@ -11,7 +11,7 @@ describe("StafiDeposit test", function () {
 
         this.AccountUser1 = this.signers[2]
         this.AccountLightNode1 = this.signers[3]
-        this.AccountSuperNode1 = this.signers[4]
+        this.AccountTrustNode1 = this.signers[4]
 
         this.AccountProxyAdmin1 = this.signers[5]
         this.AccountNetworkAdmin1 = this.signers[6]
@@ -20,7 +20,6 @@ describe("StafiDeposit test", function () {
 
 
 
-        this.FactoryDistributor = await ethers.getContractFactory("Distributor", this.AccountDeployer)
         this.FactoryFeePool = await ethers.getContractFactory("FeePool", this.AccountDeployer)
         this.FactoryLsdNetworkFactory = await ethers.getContractFactory("LsdNetworkFactory", this.AccountDeployer)
         this.FactoryLsdToken = await ethers.getContractFactory("LsdToken", this.AccountDeployer)
@@ -28,7 +27,7 @@ describe("StafiDeposit test", function () {
         this.FactoryNetworkProposal = await ethers.getContractFactory("NetworkProposal", this.AccountDeployer)
         this.FactoryNodeDeposit = await ethers.getContractFactory("NodeDeposit", this.AccountDeployer)
         this.FactoryUserDeposit = await ethers.getContractFactory("UserDeposit", this.AccountDeployer)
-        this.FactoryUserWithdraw = await ethers.getContractFactory("UserWithdraw", this.AccountDeployer)
+        this.FactoryNetworkWithdraw = await ethers.getContractFactory("NetworkWithdraw", this.AccountDeployer)
 
         this.FactoryDepositContract = await ethers.getContractFactory("DepositContract", this.AccountDeployer)
     })
@@ -41,10 +40,6 @@ describe("StafiDeposit test", function () {
         console.log("ContractDepositContract address: ", this.ContractDepositContract.address)
 
         // deploy logic contract
-
-        this.ContractDistributorLogic = await this.FactoryDistributor.deploy()
-        await this.ContractDistributorLogic.deployed()
-        console.log("ContractDistributorLogic address: ", this.ContractDistributorLogic.address)
 
         this.ContractFeePoolLogic = await this.FactoryFeePool.deploy()
         await this.ContractFeePoolLogic.deployed()
@@ -68,17 +63,17 @@ describe("StafiDeposit test", function () {
         await this.ContractUserDepositLogic.deployed()
         console.log("ContractUserDepositLogic address: ", this.ContractUserDepositLogic.address)
 
-        this.ContractUserWithdrawLogic = await this.FactoryUserWithdraw.deploy()
-        await this.ContractUserWithdrawLogic.deployed()
-        console.log("ContractUserWithdrawLogic address: ", this.ContractUserWithdrawLogic.address)
+        this.ContractNetworkWithdrawLogic = await this.FactoryNetworkWithdraw.deploy()
+        await this.ContractNetworkWithdrawLogic.deployed()
+        console.log("ContractNetworkWithdrawLogic address: ", this.ContractNetworkWithdrawLogic.address)
 
 
         // deploy factory
 
         this.ContractLsdNetworkFactory = await this.FactoryLsdNetworkFactory.deploy(this.AccountFactoryAdmin.address,
-            this.ContractDepositContract.address, this.ContractDistributorLogic.address, this.ContractFeePoolLogic.address,
-            this.ContractNetworkBalancesLogic.address, this.ContractNetworkProposalLogic.address, this.ContractNodeDepositLogic.address,
-            this.ContractUserDepositLogic.address, this.ContractUserWithdrawLogic.address)
+            this.ContractDepositContract.address, this.ContractFeePoolLogic.address, this.ContractNetworkBalancesLogic.address,
+            this.ContractNetworkProposalLogic.address, this.ContractNodeDepositLogic.address,
+            this.ContractUserDepositLogic.address, this.ContractNetworkWithdrawLogic.address)
 
         await this.ContractLsdNetworkFactory.deployed()
         console.log("ContractLsdNetworkFactory address: ", this.ContractLsdNetworkFactory.address)

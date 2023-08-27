@@ -3,14 +3,15 @@ pragma solidity 0.8.19;
 
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
-import "./interfaces/IUserWithdraw.sol";
+import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
+import "./interfaces/INetworkWithdraw.sol";
 import "./interfaces/ILsdToken.sol";
 import "./interfaces/INetworkProposal.sol";
-import "./interfaces/IDistributor.sol";
+import "./interfaces/INetworkBalances.sol";
 import "./interfaces/IUserDeposit.sol";
-import "./interfaces/IProposalType.sol";
+import "./interfaces/IFeePool.sol";
 
-contract UserWithdraw is IUserWithdraw, IProposalType {
+contract NetworkWithdraw is INetworkWithdraw {
     using EnumerableSet for EnumerableSet.UintSet;
 
     bool public initialized;
@@ -18,28 +19,33 @@ contract UserWithdraw is IUserWithdraw, IProposalType {
 
     address public lsdTokenAddress;
     address public userDepositAddress;
-    address public distributorAddress;
     address public networkProposalAddress;
+    address public networkBalancesAddress;
+    address public feePoolAddress;
+    address public factoryAddress;
 
     uint256 public nextWithdrawIndex;
     uint256 public maxClaimableWithdrawIndex;
     uint256 public ejectedStartCycle;
-    uint256 public latestDistributeHeight;
+    uint256 public latestDistributeWithdrawalsHeight;
+    uint256 public latestDistributePriorityFeeHeight;
     uint256 public totalMissingAmountForWithdraw;
     uint256 public withdrawLimitAmountPerCycle;
     uint256 public userWithdrawLimitAmountPerCycle;
     uint256 public withdrawCycleSeconds;
+    address public factoryCommissionRate;
+
+    uint256 public latestMerkleRootEpoch;
+    bytes32 public merkleRoot;
 
     mapping(uint256 => Withdrawal) public withdrawalAtIndex;
     mapping(address => EnumerableSet.UintSet) internal unclaimedWithdrawalsOfUser;
     mapping(uint256 => uint256) public totalWithdrawAmountAtCycle;
     mapping(address => mapping(uint256 => uint256)) public userWithdrawAmountAtCycle;
     mapping(uint256 => uint256[]) public ejectedValidatorsAtCycle;
+    mapping(address => uint256) public totalClaimedRewardOfNode;
+    mapping(address => uint256) public totalClaimedDepositOfNode;
 
-    modifier onlyVoter() {
-        require(INetworkProposal(networkProposalAddress).isVoter(msg.sender), "not voter");
-        _;
-    }
 
     modifier onlyAdmin() {
         require(INetworkProposal(networkProposalAddress).isAdmin(msg.sender), "not admin");
@@ -49,8 +55,9 @@ contract UserWithdraw is IUserWithdraw, IProposalType {
     function init(
         address _lsdTokenAddress,
         address _userDepositAddress,
-        address _distributorAddress,
-        address _networkProposalAddress
+        address _networkProposalAddress,
+        address _feePoolAddress,
+        address _factoryAddress
     ) external override {
         require(!initialized, "already initizlized");
 
@@ -62,8 +69,9 @@ contract UserWithdraw is IUserWithdraw, IProposalType {
 
         lsdTokenAddress = _lsdTokenAddress;
         userDepositAddress = _userDepositAddress;
-        distributorAddress = _distributorAddress;
         networkProposalAddress = _networkProposalAddress;
+        feePoolAddress = _feePoolAddress;
+        factoryAddress = _factoryAddress;
     }
 
     // Receive eth
@@ -108,6 +116,10 @@ contract UserWithdraw is IUserWithdraw, IProposalType {
         emit SetWithdrawCycleSeconds(_withdrawCycleSeconds);
     }
 
+    function updateMerkleRoot(bytes32 _merkleRoot) external onlyAdmin {
+        merkleRoot = _merkleRoot;
+    }
+
     // ------------ user unstake ------------
 
     function unstake(uint256 _lsdTokenAmount) external override {
@@ -121,7 +133,7 @@ contract UserWithdraw is IUserWithdraw, IProposalType {
             if (stakePoolBalance < mvAmount) {
                 mvAmount = stakePoolBalance;
             }
-            userDeposit.withdrawExcessBalanceForUserWithdraw(mvAmount);
+            userDeposit.withdrawExcessBalanceForNetworkWithdraw(mvAmount);
 
             totalMissingAmount = totalMissingAmount - mvAmount;
         }
@@ -165,22 +177,63 @@ contract UserWithdraw is IUserWithdraw, IProposalType {
         emit Withdraw(msg.sender, _withdrawIndexList);
     }
 
+    // ----- node claim --------------
+
+    function nodeClaim(
+        uint256 _index,
+        address _account,
+        uint256 _totalRewardAmount,
+        uint256 _totalExitDepositAmount,
+        bytes32[] calldata _merkleProof,
+        ClaimType _claimType
+    ) external {
+        uint256 claimableReward = _totalRewardAmount - totalClaimedRewardOfNode[_account];
+        uint256 claimableDeposit = _totalExitDepositAmount - totalClaimedDepositOfNode[_account];
+
+        // Verify the merkle proof.
+        bytes32 node = keccak256(abi.encodePacked(_index, _account, _totalRewardAmount, _totalExitDepositAmount));
+        require(MerkleProof.verify(_merkleProof, merkleRoot, node), "invalid proof");
+
+        uint256 willClaimAmount;
+        if (_claimType == ClaimType.ClaimReward) {
+            require(claimableReward > 0, "no claimable reward");
+
+            totalClaimedRewardOfNode[_account] = _totalRewardAmount;
+            willClaimAmount = claimableReward;
+        } else if (_claimType == ClaimType.ClaimDeposit) {
+            require(claimableDeposit > 0, "no claimable deposit");
+
+            totalClaimedDepositOfNode[_account] = _totalExitDepositAmount;
+            willClaimAmount = claimableDeposit;
+        } else if (_claimType == ClaimType.ClaimTotal) {
+            willClaimAmount = claimableReward + claimableDeposit;
+            require(willClaimAmount > 0, "no claimable amount");
+
+            totalClaimedRewardOfNode[_account] = _totalRewardAmount;
+            totalClaimedDepositOfNode[_account] = _totalExitDepositAmount;
+        } else {
+            revert("unknown claimType");
+        }
+
+        (bool success, ) = _account.call{value: willClaimAmount}("");
+        require(success, "failed to claim ETH");
+
+        emit NodeClaimed(_index, _account, claimableReward, claimableDeposit, _claimType);
+    }
+
     // ------------ voter ------------
 
-    function distributeWithdrawals(
+    function distributeRewards(
+        DistributeType _distributeType,
         uint256 _dealedHeight,
         uint256 _userAmount,
         uint256 _nodeAmount,
         uint256 _platformAmount,
         uint256 _maxClaimableWithdrawIndex
-    ) external override onlyVoter {
-        require(_dealedHeight > latestDistributeHeight, "height already dealed");
-        require(_maxClaimableWithdrawIndex < nextWithdrawIndex, "withdraw index over");
-        require(_userAmount + _nodeAmount + _platformAmount <= address(this).balance, "balance not enough");
-
+    ) external override {
         bytes32 proposalId = keccak256(
             abi.encodePacked(
-                "distributeWithdrawals",
+                _distributeType,
                 _dealedHeight,
                 _userAmount,
                 _nodeAmount,
@@ -188,17 +241,25 @@ contract UserWithdraw is IUserWithdraw, IProposalType {
                 _maxClaimableWithdrawIndex
             )
         );
-        (Proposal memory proposal, uint8 threshold) = INetworkProposal(networkProposalAddress).checkProposal(
-            proposalId
-        );
+        if (INetworkProposal(networkProposalAddress).shouldExecute(proposalId, msg.sender)) {
+            uint256 latestDistributeHeight;
+            if (_distributeType == DistributeType.DistributePriorityFee) {
+                latestDistributeHeight = latestDistributePriorityFeeHeight;
+                latestDistributePriorityFeeHeight = _dealedHeight;
+                IFeePool(feePoolAddress).withdrawEther(address(this), _userAmount + _nodeAmount + _platformAmount);
+            } else if (_distributeType == DistributeType.DistributeWithdrawals) {
+                latestDistributeHeight = latestDistributeWithdrawalsHeight;
+                latestDistributeWithdrawalsHeight = _dealedHeight;
+            } else {
+                revert("unknown distribute type");
+            }
+            require(_dealedHeight > latestDistributeHeight, "height already dealed");
+            require(_maxClaimableWithdrawIndex < nextWithdrawIndex, "withdraw index over");
+            require(_userAmount + _nodeAmount + _platformAmount <= address(this).balance, "balance not enough");
 
-        // Finalize if Threshold has been reached
-        if (proposal._yesVotesTotal >= threshold) {
             if (_maxClaimableWithdrawIndex > maxClaimableWithdrawIndex) {
                 maxClaimableWithdrawIndex = _maxClaimableWithdrawIndex;
             }
-
-            latestDistributeHeight = _dealedHeight;
 
             uint256 mvAmount = _userAmount;
             if (totalMissingAmountForWithdraw < _userAmount) {
@@ -210,18 +271,11 @@ contract UserWithdraw is IUserWithdraw, IProposalType {
             }
 
             if (mvAmount > 0) {
-                IUserDeposit userDeposit = IUserDeposit(userDepositAddress);
-                userDeposit.recycleWithdrawDeposit{value: mvAmount}();
+                IUserDeposit(userDepositAddress).recycleNetworkWithdrawDeposit{value: mvAmount}();
             }
 
-            // distribute withdrawals
-            IDistributor distributor = IDistributor(distributorAddress);
-            uint256 nodeAndPlatformAmount = _nodeAmount + _platformAmount;
-            if (nodeAndPlatformAmount > 0) {
-                distributor.distributeWithdrawals{value: nodeAndPlatformAmount}();
-            }
-
-            emit DistributeWithdrawals(
+            emit DistributeRewards(
+                _distributeType,
                 _dealedHeight,
                 _userAmount,
                 _nodeAmount,
@@ -229,49 +283,14 @@ contract UserWithdraw is IUserWithdraw, IProposalType {
                 _maxClaimableWithdrawIndex,
                 mvAmount
             );
-
-            proposal._status = ProposalStatus.Executed;
-            emit ProposalExecuted(proposalId);
         }
-        INetworkProposal(networkProposalAddress).saveProposal(proposalId, proposal);
-    }
-
-    function reserveEthForWithdraw(uint256 _withdrawCycle) external override onlyVoter {
-        bytes32 proposalId = keccak256(abi.encodePacked("reserveEthForWithdraw", _withdrawCycle));
-
-        (Proposal memory proposal, uint8 threshold) = INetworkProposal(networkProposalAddress).checkProposal(
-            proposalId
-        );
-
-        // Finalize if Threshold has been reached
-        if (proposal._yesVotesTotal >= threshold) {
-            IUserDeposit userDeposit = IUserDeposit(userDepositAddress);
-            uint256 depositPoolBalance = userDeposit.getBalance();
-
-            if (depositPoolBalance > 0 && totalMissingAmountForWithdraw > 0) {
-                uint256 mvAmount = totalMissingAmountForWithdraw;
-                if (depositPoolBalance < mvAmount) {
-                    mvAmount = depositPoolBalance;
-                }
-                userDeposit.withdrawExcessBalanceForUserWithdraw(mvAmount);
-
-                totalMissingAmountForWithdraw = totalMissingAmountForWithdraw - mvAmount;
-
-                emit ReserveEthForWithdraw(_withdrawCycle, mvAmount);
-            }
-
-            proposal._status = ProposalStatus.Executed;
-            emit ProposalExecuted(proposalId);
-        }
-
-        INetworkProposal(networkProposalAddress).saveProposal(proposalId, proposal);
     }
 
     function notifyValidatorExit(
         uint256 _withdrawCycle,
         uint256 _ejectedStartCycle,
         uint256[] calldata _validatorIndexList
-    ) external override onlyVoter {
+    ) external override {
         require(
             _validatorIndexList.length > 0 &&
                 _validatorIndexList.length <= (withdrawLimitAmountPerCycle * 3) / 20 ether,
@@ -283,24 +302,31 @@ contract UserWithdraw is IUserWithdraw, IProposalType {
         bytes32 proposalId = keccak256(
             abi.encodePacked("notifyValidatorExit", _withdrawCycle, _ejectedStartCycle, _validatorIndexList)
         );
-        (Proposal memory proposal, uint8 threshold) = INetworkProposal(networkProposalAddress).checkProposal(
-            proposalId
-        );
 
         // Finalize if Threshold has been reached
-        if (proposal._yesVotesTotal >= threshold) {
+        if (INetworkProposal(networkProposalAddress).shouldExecute(proposalId, msg.sender)) {
             ejectedValidatorsAtCycle[_withdrawCycle] = _validatorIndexList;
             ejectedStartCycle = _ejectedStartCycle;
 
             emit NotifyValidatorExit(_withdrawCycle, _ejectedStartCycle, _validatorIndexList);
-
-            proposal._status = ProposalStatus.Executed;
-            emit ProposalExecuted(proposalId);
         }
-        INetworkProposal(networkProposalAddress).saveProposal(proposalId, proposal);
     }
 
-    // ------------ network ------------
+    function setMerkleRoot(uint256 _dealedEpoch, bytes32 _merkleRoot) external {
+        require(_dealedEpoch > latestMerkleRootEpoch, "epoch already dealed");
+
+        bytes32 proposalId = keccak256(abi.encodePacked("setMerkleRoot", _dealedEpoch, _merkleRoot));
+
+        // Finalize if Threshold has been reached
+        if (INetworkProposal(networkProposalAddress).shouldExecute(proposalId, msg.sender)) {
+            merkleRoot = _merkleRoot;
+            latestMerkleRootEpoch = _dealedEpoch;
+
+            emit SetMerkleRoot(_dealedEpoch, _merkleRoot);
+        }
+    }
+
+    // ----- network --------------
 
     // Deposit ETH from deposit pool
     // Only accepts calls from the UserDeposit contract
@@ -319,7 +345,7 @@ contract UserWithdraw is IUserWithdraw, IProposalType {
     // 1 eth withdraw amount
     function _processWithdraw(uint256 _lsdTokenAmount) private returns (uint256) {
         require(_lsdTokenAmount > 0, "lsdToken amount zero");
-        uint256 ethAmount = ILsdToken(lsdTokenAddress).getEthValue(_lsdTokenAmount);
+        uint256 ethAmount = INetworkBalances(networkBalancesAddress).getEthValue(_lsdTokenAmount);
         require(ethAmount > 0, "eth amount zero");
         uint256 currentCycle = currentWithdrawCycle();
         require(

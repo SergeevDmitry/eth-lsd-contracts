@@ -1,16 +1,25 @@
 pragma solidity 0.8.19;
 
 // SPDX-License-Identifier: GPL-3.0-only
-import "./IProposalType.sol";
 
-interface INetworkProposal is IProposalType {
+interface INetworkProposal {
+    enum ProposalStatus {
+        Inactive,
+        Active,
+        Executed
+    }
+    struct Proposal {
+        ProposalStatus _status;
+        uint16 _yesVotes; // bitmap, 16 maximum votes
+        uint8 _yesVotesTotal;
+    }
+
+    event VoteProposal(bytes32 indexed proposalId, address voter);
+    event ProposalExecuted(bytes32 indexed proposalId);
+
     function init(address[] memory _voters, uint256 _initialThreshold, address _adminAddress) external;
-
-    function isVoter(address _sender) external view returns (bool);
 
     function isAdmin(address _sender) external view returns (bool);
 
-    function checkProposal(bytes32 _proposalId) external returns (Proposal memory proposal, uint8 threshold);
-
-    function saveProposal(bytes32 _proposalId, Proposal calldata _proposal) external;
+    function shouldExecute(bytes32 _proposalId, address _voter) external returns (bool);
 }

@@ -6,7 +6,7 @@ interface INodeDeposit {
     enum NodeType {
         Undefined,
         LightNode,
-        SuperNode
+        TrustNode
     }
 
     enum PubkeyStatus {
@@ -20,12 +20,19 @@ interface INodeDeposit {
         Withdrawed
     }
 
-    struct Pubkey {
+    struct PubkeyInfo {
         NodeType _nodeType;
         PubkeyStatus _status;
         address _owner;
         uint256 _nodeDepositAmount;
     }
+
+    struct NodeInfo {
+        NodeType _nodeType;
+        bool _removed;
+        uint256 _pubkeyNumber;
+    }
+
     event EtherDeposited(address indexed from, uint256 amount, uint256 time);
     event Deposited(address node, NodeType nodeType, bytes pubkey, bytes validatorSignature, uint256 amount);
     event Staked(address node, bytes pubkey);

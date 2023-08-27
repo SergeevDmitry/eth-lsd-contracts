@@ -4,14 +4,13 @@ pragma solidity 0.8.19;
 
 interface ILsdNetworkFactory {
     struct NetworkContracts {
-        address distributor;
-        address feePool;
-        address networkBalances;
-        address networkProposal;
-        address nodeDeposit;
-        address userDeposit;
-        address userWithdraw;
-        address lsdToken;
+        address _feePool;
+        address _networkBalances;
+        address _networkProposal;
+        address _nodeDeposit;
+        address _userDeposit;
+        address _networkWithdraw;
+        address _lsdToken;
     }
 
     event LsdNetwork(NetworkContracts _contracts);

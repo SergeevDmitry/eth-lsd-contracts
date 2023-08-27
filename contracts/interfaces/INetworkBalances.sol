@@ -16,6 +16,12 @@ interface INetworkBalances {
 
     function init(address _networkProposalAddress) external;
 
+    function getEthValue(uint256 _lsdTokenAmount) external view returns (uint256);
+
+    function getLsdTokenValue(uint256 _ethAmount) external view returns (uint256);
+
+    function getExchangeRate() external view returns (uint256);
+
     function getBalancesBlock() external view returns (uint256);
 
     function getTotalETHBalance() external view returns (uint256);

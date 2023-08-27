@@ -9,14 +9,14 @@ contract FeePool is IFeePool {
     bool public initialized;
     uint8 public version;
 
-    address public distributorAddress;
+    address public networkWithdrawAddress;
 
-    function init(address _distributorAddress) external override {
+    function init(address _networkWithdrawAddress) external override {
         require(!initialized, "already initialized");
 
         initialized = true;
         version = 1;
-        distributorAddress = _distributorAddress;
+        networkWithdrawAddress = _networkWithdrawAddress;
     }
 
     // Allow receiving ETH
@@ -26,9 +26,9 @@ contract FeePool is IFeePool {
     // Only accepts calls from network contracts
     function withdrawEther(address _to, uint256 _amount) external override {
         require(_amount > 0, "No valid amount of ETH given to withdraw");
-        require(msg.sender == distributorAddress, "not allowed sender");
+        require(msg.sender == networkWithdrawAddress, "not networkWithdrawAddress");
         // Send the ETH
-        (bool result, ) = distributorAddress.call{value: _amount}("");
+        (bool result, ) = networkWithdrawAddress.call{value: _amount}("");
 
         require(result, "Failed to withdraw ETH");
 

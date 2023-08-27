@@ -5,8 +5,9 @@ pragma solidity 0.8.19;
 import "./interfaces/INodeDeposit.sol";
 import "./interfaces/ILsdToken.sol";
 import "./interfaces/IUserDeposit.sol";
-import "./interfaces/IUserWithdraw.sol";
+import "./interfaces/INetworkWithdraw.sol";
 import "./interfaces/INetworkProposal.sol";
+import "./interfaces/INetworkBalances.sol";
 
 contract UserDeposit is IUserDeposit {
     bool public initialized;
@@ -17,9 +18,9 @@ contract UserDeposit is IUserDeposit {
 
     address public lsdTokenAddress;
     address public nodeDepositAddress;
-    address public userWithdrawAddress;
-    address public distributorAddress;
+    address public networkWithdrawAddress;
     address public networkProposalAddress;
+    address public networkBalancesAddress;
 
     modifier onlyAdmin() {
         require(INetworkProposal(networkProposalAddress).isAdmin(msg.sender), "not admin");
@@ -29,9 +30,9 @@ contract UserDeposit is IUserDeposit {
     function init(
         address _lsdTokenAddress,
         address _nodeDepositAddress,
-        address _userWithdrawAddress,
-        address _distributorAddress,
-        address _networkProposalAddress
+        address _networkWithdrawAddress,
+        address _networkProposalAddress,
+        address _networkBalancesAddress
     ) external override {
         require(!initialized, "already initialized");
 
@@ -40,15 +41,19 @@ contract UserDeposit is IUserDeposit {
         depositEnabled = true;
         lsdTokenAddress = _lsdTokenAddress;
         nodeDepositAddress = _nodeDepositAddress;
-        userWithdrawAddress = _userWithdrawAddress;
-        distributorAddress = _distributorAddress;
+        networkWithdrawAddress = _networkWithdrawAddress;
         networkProposalAddress = _networkProposalAddress;
+        networkBalancesAddress = _networkBalancesAddress;
     }
 
     // ------------ getter ------------
 
     function getBalance() public view returns (uint256) {
         return address(this).balance;
+    }
+
+    function getRate() external view returns (uint256) {
+        return INetworkBalances(networkBalancesAddress).getExchangeRate();
     }
 
     // ------------ settings ------------
@@ -67,7 +72,24 @@ contract UserDeposit is IUserDeposit {
         require(depositEnabled, "deposit  disabled");
         require(msg.value >= minDeposit, "deposit amount is less than the minimum deposit size");
 
-        ILsdToken(lsdTokenAddress).mint(msg.sender, msg.value);
+        uint256 lsdTokenAmount = INetworkBalances(networkBalancesAddress).getLsdTokenValue(msg.value);
+
+        ILsdToken(lsdTokenAddress).mint(msg.sender, lsdTokenAmount);
+
+        uint256 poolBalance = getBalance();
+        uint256 totalMissingAmountForWithdraw = INetworkWithdraw(networkWithdrawAddress)
+            .totalMissingAmountForWithdraw();
+
+        if (poolBalance > 0 && totalMissingAmountForWithdraw > 0) {
+            uint256 mvAmount = totalMissingAmountForWithdraw;
+            if (poolBalance < mvAmount) {
+                mvAmount = poolBalance;
+            }
+            INetworkWithdraw(networkWithdrawAddress).depositEth{value: mvAmount}();
+
+            // Emit excess withdrawn event
+            emit ExcessWithdrawn(networkWithdrawAddress, mvAmount, block.timestamp);
+        }
     }
 
     // ------------ network ------------
@@ -83,29 +105,20 @@ contract UserDeposit is IUserDeposit {
     }
 
     // Withdraw excess deposit pool balance for withdraw
-    function withdrawExcessBalanceForUserWithdraw(uint256 _amount) external override {
-        require(msg.sender == userWithdrawAddress, "not userWithdraw");
+    function withdrawExcessBalanceForNetworkWithdraw(uint256 _amount) external override {
+        require(msg.sender == networkWithdrawAddress, "not networkWithdraw");
         // Check amount
         require(_amount <= getBalance(), "insufficient balance for withdrawal");
         // Transfer to withdraw contract
-        IUserWithdraw(userWithdrawAddress).depositEth{value: _amount}();
+        INetworkWithdraw(networkWithdrawAddress).depositEth{value: _amount}();
         // Emit excess withdrawn event
         emit ExcessWithdrawn(msg.sender, _amount, block.timestamp);
     }
 
-    // Recycle a deposit from fee collector
-    // Only accepts calls from distributor
-    function recycleDistributorDeposit() external payable override {
-        require(msg.sender == distributorAddress, "not distributor");
-
-        // Emit deposit recycled event
-        emit DepositRecycled(msg.sender, msg.value, block.timestamp);
-    }
-
     // Recycle a deposit from withdraw
-    // Only accepts calls from  userWithdraw
-    function recycleWithdrawDeposit() external payable override {
-        require(msg.sender == userWithdrawAddress, "not userWithdraw");
+    // Only accepts calls from  networkWithdraw
+    function recycleNetworkWithdrawDeposit() external payable override {
+        require(msg.sender == networkWithdrawAddress, "not networkWithdraw");
         // Emit deposit recycled event
         emit DepositRecycled(msg.sender, msg.value, block.timestamp);
     }

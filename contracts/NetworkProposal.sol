@@ -63,12 +63,17 @@ contract NetworkProposal is INetworkProposal {
         return admin == _sender;
     }
 
-    function checkProposal(bytes32 _proposalId) external returns (Proposal memory, uint8) {
-        return (_checkProposal(_proposalId), threshold);
-    }
-
-    function saveProposal(bytes32 _proposalId, Proposal calldata proposal) external {
-        proposals[_proposalId] = proposal;
+    function shouldExecute(bytes32 _proposalId, address _voter) external override returns (bool) {
+        Proposal memory proposal = _checkProposal(_proposalId, _voter);
+        if (proposal._yesVotesTotal >= threshold) {
+            proposal._status = ProposalStatus.Executed;
+            proposals[_proposalId] = proposal;
+            emit ProposalExecuted(_proposalId);
+            return true;
+        } else {
+            proposals[_proposalId] = proposal;
+            return false;
+        }
     }
 
     // ------------ settings ------------
@@ -108,18 +113,19 @@ contract NetworkProposal is INetworkProposal {
         return (voterBit(_voter) & uint256(_proposal._yesVotes)) > 0;
     }
 
-    function _checkProposal(bytes32 _proposalId) internal returns (Proposal memory proposal) {
+    function _checkProposal(bytes32 _proposalId, address _voter) internal returns (Proposal memory proposal) {
         proposal = proposals[_proposalId];
 
+        require(voters.contains(_voter), "not voter");
         require(uint256(proposal._status) <= 1, "proposal already executed");
-        require(!_hasVoted(proposal, msg.sender), "already voted");
+        require(!_hasVoted(proposal, _voter), "already voted");
 
         if (proposal._status == ProposalStatus.Inactive) {
             proposal = Proposal({_status: ProposalStatus.Active, _yesVotes: 0, _yesVotesTotal: 0});
         }
-        proposal._yesVotes = (proposal._yesVotes | voterBit(msg.sender)).toUint16();
+        proposal._yesVotes = (proposal._yesVotes | voterBit(_voter)).toUint16();
         proposal._yesVotesTotal++;
 
-        emit VoteProposal(_proposalId, msg.sender);
+        emit VoteProposal(_proposalId, _voter);
     }
 }

@@ -4,10 +4,9 @@ pragma solidity 0.8.19;
 
 import "./interfaces/INetworkBalances.sol";
 import "./interfaces/INetworkProposal.sol";
-import "./interfaces/IProposalType.sol";
 
 // Network balances
-contract NetworkBalances is INetworkBalances, IProposalType {
+contract NetworkBalances is INetworkBalances {
     bool public initialized;
     uint8 public version;
     bool public submitBalancesEnabled;
@@ -18,11 +17,6 @@ contract NetworkBalances is INetworkBalances, IProposalType {
     uint256 public stakingEthBalance;
 
     address public networkProposalAddress;
-
-    modifier onlyVoter() {
-        require(INetworkProposal(networkProposalAddress).isVoter(msg.sender), "not voter");
-        _;
-    }
 
     function init(address _networkProposalAddress) external override {
         require(!initialized, "already initialized");
@@ -65,6 +59,34 @@ contract NetworkBalances is INetworkBalances, IProposalType {
         return (calcBase * stakingEthBalance) / totalEthBalance;
     }
 
+    // Calculate the amount of ETH backing an amount of lsdToken
+    function getEthValue(uint256 _lsdTokenAmount) public view override returns (uint256) {
+        // Use 1:1 ratio if no lsdToken is minted
+        if (totalLsdTokenSupply == 0) {
+            return _lsdTokenAmount;
+        }
+        // Calculate and return
+        return (_lsdTokenAmount * totalEthBalance) / totalLsdTokenSupply;
+    }
+
+    // Calculate the amount of lsdToken backed by an amount of ETH
+    function getLsdTokenValue(uint256 _ethAmount) public view override returns (uint256) {
+        // Use 1:1 ratio if no lsdToken is minted
+        if (totalLsdTokenSupply == 0) {
+            return _ethAmount;
+        }
+        // Check network ETH balance
+        require(totalEthBalance > 0, "Cannot calculate lsdToken token amount while total network balance is zero");
+        // Calculate and return
+        return (_ethAmount * totalLsdTokenSupply) / totalEthBalance;
+    }
+
+    // Get the current ETH : lsdToken exchange rate
+    // Returns the amount of ETH backing 1 lsdToken
+    function getExchangeRate() external view override returns (uint256) {
+        return getEthValue(1 ether);
+    }
+
     // ------------ voter ------------
 
     // Submit network balances for a block
@@ -74,7 +96,7 @@ contract NetworkBalances is INetworkBalances, IProposalType {
         uint256 _totalEth,
         uint256 _stakingEth,
         uint256 _lsdTokenSupply
-    ) external override onlyVoter {
+    ) external override {
         require(submitBalancesEnabled, "submitting balances is disabled");
         require(_block > balancesBlock, "network balances for an equal or higher block are set");
         require(_stakingEth <= _totalEth, "invalid network balances");
@@ -83,21 +105,13 @@ contract NetworkBalances is INetworkBalances, IProposalType {
             abi.encodePacked("submitBalances", _block, _totalEth, _stakingEth, _lsdTokenSupply)
         );
 
-        INetworkProposal networkProposal = INetworkProposal(networkProposalAddress);
-        (Proposal memory proposal, uint8 threshold) = networkProposal.checkProposal(proposalId);
-
         // Emit balances submitted event
         emit BalancesSubmitted(msg.sender, _block, _totalEth, _stakingEth, _lsdTokenSupply, block.timestamp);
 
         // Finalize if Threshold has been reached
-        if (proposal._yesVotesTotal >= threshold) {
+        if (INetworkProposal(networkProposalAddress).shouldExecute(proposalId, msg.sender)) {
             updateBalances(_block, _totalEth, _stakingEth, _lsdTokenSupply);
-
-            proposal._status = ProposalStatus.Executed;
-            emit ProposalExecuted(proposalId);
         }
-
-        networkProposal.saveProposal(proposalId, proposal);
     }
 
     // ------------ helper ------------
