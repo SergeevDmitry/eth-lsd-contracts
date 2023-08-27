@@ -117,7 +117,10 @@ contract NetworkProposal is INetworkProposal {
         proposal = proposals[_proposalId];
 
         require(voters.contains(_voter), "not voter");
-        require(uint256(proposal._status) <= 1, "proposal already executed");
+        require(
+            proposal._status == ProposalStatus.Inactive || proposal._status == ProposalStatus.Active,
+            "proposal already executed"
+        );
         require(!_hasVoted(proposal, _voter), "already voted");
 
         if (proposal._status == ProposalStatus.Inactive) {

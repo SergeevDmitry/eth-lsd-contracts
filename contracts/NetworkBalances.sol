@@ -97,10 +97,6 @@ contract NetworkBalances is INetworkBalances {
         uint256 _stakingEth,
         uint256 _lsdTokenSupply
     ) external override {
-        require(submitBalancesEnabled, "submitting balances is disabled");
-        require(_block > balancesBlock, "network balances for an equal or higher block are set");
-        require(_stakingEth <= _totalEth, "invalid network balances");
-
         bytes32 proposalId = keccak256(
             abi.encodePacked("submitBalances", _block, _totalEth, _stakingEth, _lsdTokenSupply)
         );
@@ -108,8 +104,11 @@ contract NetworkBalances is INetworkBalances {
         // Emit balances submitted event
         emit BalancesSubmitted(msg.sender, _block, _totalEth, _stakingEth, _lsdTokenSupply, block.timestamp);
 
-        // Finalize if Threshold has been reached
         if (INetworkProposal(networkProposalAddress).shouldExecute(proposalId, msg.sender)) {
+            require(submitBalancesEnabled, "submitting balances is disabled");
+            require(_block > balancesBlock, "network balances for an equal or higher block are set");
+            require(_stakingEth <= _totalEth, "invalid network balances");
+
             updateBalances(_block, _totalEth, _stakingEth, _lsdTokenSupply);
         }
     }

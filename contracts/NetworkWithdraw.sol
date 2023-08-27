@@ -33,8 +33,9 @@ contract NetworkWithdraw is INetworkWithdraw {
     uint256 public withdrawLimitAmountPerCycle;
     uint256 public userWithdrawLimitAmountPerCycle;
     uint256 public withdrawCycleSeconds;
-    address public factoryCommissionRate;
-
+    uint256 public factoryCommissionRate;
+    uint256 public totalPlatformCommission;
+    uint256 public totalPlatformClaimedAmount;
     uint256 public latestMerkleRootEpoch;
     bytes32 public merkleRoot;
 
@@ -45,7 +46,6 @@ contract NetworkWithdraw is INetworkWithdraw {
     mapping(uint256 => uint256[]) public ejectedValidatorsAtCycle;
     mapping(address => uint256) public totalClaimedRewardOfNode;
     mapping(address => uint256) public totalClaimedDepositOfNode;
-
 
     modifier onlyAdmin() {
         require(INetworkProposal(networkProposalAddress).isAdmin(msg.sender), "not admin");
@@ -66,6 +66,7 @@ contract NetworkWithdraw is INetworkWithdraw {
         withdrawLimitAmountPerCycle = uint256(100 ether);
         userWithdrawLimitAmountPerCycle = uint256(100 ether);
         withdrawCycleSeconds = 86400;
+        factoryCommissionRate = 1e17;
 
         lsdTokenAddress = _lsdTokenAddress;
         userDepositAddress = _userDepositAddress;
@@ -118,6 +119,13 @@ contract NetworkWithdraw is INetworkWithdraw {
 
     function updateMerkleRoot(bytes32 _merkleRoot) external onlyAdmin {
         merkleRoot = _merkleRoot;
+    }
+
+    function platformClaim(address _recipient) external onlyAdmin {
+        (bool success, ) = _recipient.call{value: totalPlatformCommission - totalPlatformClaimedAmount}("");
+        require(success, "failed to transfer");
+
+        totalPlatformClaimedAmount = totalPlatformCommission;
     }
 
     // ------------ user unstake ------------
@@ -246,6 +254,7 @@ contract NetworkWithdraw is INetworkWithdraw {
             if (_distributeType == DistributeType.DistributePriorityFee) {
                 latestDistributeHeight = latestDistributePriorityFeeHeight;
                 latestDistributePriorityFeeHeight = _dealedHeight;
+
                 IFeePool(feePoolAddress).withdrawEther(address(this), _userAmount + _nodeAmount + _platformAmount);
             } else if (_distributeType == DistributeType.DistributeWithdrawals) {
                 latestDistributeHeight = latestDistributeWithdrawalsHeight;
@@ -274,6 +283,8 @@ contract NetworkWithdraw is INetworkWithdraw {
                 IUserDeposit(userDepositAddress).recycleNetworkWithdrawDeposit{value: mvAmount}();
             }
 
+            distributeCommission(_platformAmount);
+
             emit DistributeRewards(
                 _distributeType,
                 _dealedHeight,
@@ -291,20 +302,23 @@ contract NetworkWithdraw is INetworkWithdraw {
         uint256 _ejectedStartCycle,
         uint256[] calldata _validatorIndexList
     ) external override {
-        require(
-            _validatorIndexList.length > 0 &&
-                _validatorIndexList.length <= (withdrawLimitAmountPerCycle * 3) / 20 ether,
-            "length not match"
-        );
-        require(_ejectedStartCycle < _withdrawCycle && _withdrawCycle + 1 == currentWithdrawCycle(), "cycle not match");
-        require(ejectedValidatorsAtCycle[_withdrawCycle].length == 0, "already dealed");
-
         bytes32 proposalId = keccak256(
             abi.encodePacked("notifyValidatorExit", _withdrawCycle, _ejectedStartCycle, _validatorIndexList)
         );
 
         // Finalize if Threshold has been reached
         if (INetworkProposal(networkProposalAddress).shouldExecute(proposalId, msg.sender)) {
+            require(
+                _validatorIndexList.length > 0 &&
+                    _validatorIndexList.length <= (withdrawLimitAmountPerCycle * 3) / 20 ether,
+                "length not match"
+            );
+            require(
+                _ejectedStartCycle < _withdrawCycle && _withdrawCycle + 1 == currentWithdrawCycle(),
+                "cycle not match"
+            );
+            require(ejectedValidatorsAtCycle[_withdrawCycle].length == 0, "already dealed");
+
             ejectedValidatorsAtCycle[_withdrawCycle] = _validatorIndexList;
             ejectedStartCycle = _ejectedStartCycle;
 
@@ -313,12 +327,12 @@ contract NetworkWithdraw is INetworkWithdraw {
     }
 
     function setMerkleRoot(uint256 _dealedEpoch, bytes32 _merkleRoot) external {
-        require(_dealedEpoch > latestMerkleRootEpoch, "epoch already dealed");
-
         bytes32 proposalId = keccak256(abi.encodePacked("setMerkleRoot", _dealedEpoch, _merkleRoot));
 
         // Finalize if Threshold has been reached
         if (INetworkProposal(networkProposalAddress).shouldExecute(proposalId, msg.sender)) {
+            require(_dealedEpoch > latestMerkleRootEpoch, "epoch already dealed");
+
             merkleRoot = _merkleRoot;
             latestMerkleRootEpoch = _dealedEpoch;
 
@@ -365,5 +379,14 @@ contract NetworkWithdraw is INetworkWithdraw {
         ERC20Burnable(lsdTokenAddress).burnFrom(msg.sender, _lsdTokenAmount);
 
         return ethAmount;
+    }
+
+    function distributeCommission(uint256 _amount) private {
+        uint256 factoryAmount = (_amount * factoryCommissionRate) / 1e18;
+        uint256 platformAmount = _amount - factoryAmount;
+        totalPlatformCommission += platformAmount;
+
+        (bool success, ) = factoryAddress.call{value: factoryAmount}("");
+        require(success, "failed to transfer");
     }
 }

@@ -51,6 +51,9 @@ contract LsdNetworkFactory is ILsdNetworkFactory {
         networkWithdrawLogicAddress = _networkWithdrawLogicAddress;
     }
 
+    // Receive eth
+    receive() external payable {}
+
     // ------------ settings ------------
 
     function transferOwnership(address _newAdmin) public onlyFactoryAdmin {
@@ -77,6 +80,11 @@ contract LsdNetworkFactory is ILsdNetworkFactory {
 
     function setuserWithdrawLogicAddress(address _networkWithdrawLogicAddress) public onlyFactoryAdmin {
         networkWithdrawLogicAddress = _networkWithdrawLogicAddress;
+    }
+
+    function factoryClaim(address _recipient) external onlyFactoryAdmin {
+        (bool success, ) = _recipient.call{value: address(this).balance}("");
+        require(success, "failed to transfer");
     }
 
     // ------------ user ------------

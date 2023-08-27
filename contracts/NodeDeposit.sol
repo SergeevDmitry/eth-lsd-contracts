@@ -6,11 +6,8 @@ import "./interfaces/INodeDeposit.sol";
 import "./interfaces/IUserDeposit.sol";
 import "./interfaces/IDepositContract.sol";
 import "./interfaces/INetworkProposal.sol";
-import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 
 contract NodeDeposit is INodeDeposit {
-    using EnumerableSet for EnumerableSet.AddressSet;
-
     bool public initialized;
     uint8 public version;
     bool public lightNodeDepositEnabled;
