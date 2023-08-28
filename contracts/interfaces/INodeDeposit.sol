@@ -21,7 +21,6 @@ interface INodeDeposit {
     }
 
     struct PubkeyInfo {
-        NodeType _nodeType;
         PubkeyStatus _status;
         address _owner;
         uint256 _nodeDepositAmount;

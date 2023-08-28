@@ -22,6 +22,7 @@ contract NodeDeposit is INodeDeposit {
 
     bytes public withdrawCredentials;
 
+    bytes[] public pubkeys;
     mapping(bytes => PubkeyInfo) public pubkeyInfoOf;
     mapping(address => NodeInfo) public nodeInfoOf; //light node and trust node are always mutually exclusive and cannot be converted to each other
 
@@ -48,6 +49,24 @@ contract NodeDeposit is INodeDeposit {
         ethDepositAddress = _ethDepositAddress;
         networkProposalAddress = _networkProposalAddress;
         withdrawCredentials = _withdrawCredentials;
+    }
+
+    // ------------ getter ------------
+
+    function getPubkeysLength() public view returns (uint256) {
+        return pubkeys.length;
+    }
+
+    function getPubkeys(uint256 _start, uint256 _end) public view returns (bytes[] memory pubkeyList) {
+        pubkeyList = new bytes[](_end - _start);
+        uint256 i = _start;
+        uint256 j;
+        for (; i < _end; ) {
+            pubkeyList[j] = pubkeys[j];
+            i++;
+            j++;
+        }
+        return pubkeyList;
     }
 
     // ------------ settings ------------
@@ -164,7 +183,14 @@ contract NodeDeposit is INodeDeposit {
     }
 
     function offBoard(bytes calldata _validatorPubkey) external override {
-        setAndCheckNodePubkeyInOffBoard(_validatorPubkey);
+        PubkeyInfo memory pubkey = pubkeyInfoOf[_validatorPubkey];
+
+        require(nodeInfoOf[pubkey._owner]._nodeType == NodeType.LightNode, "not light node");
+        require(pubkey._status == PubkeyStatus.Match, "pubkey status unmatch");
+        require(pubkey._owner == msg.sender, "not pubkey owner");
+
+        // set pubkey status
+        _setNodePubkeyStatus(_validatorPubkey, PubkeyStatus.Offboard);
 
         emit OffBoarded(msg.sender, _validatorPubkey);
     }
@@ -220,7 +246,15 @@ contract NodeDeposit is INodeDeposit {
         uint256 _nodeDepositAmount,
         uint256 _depositAmount
     ) private {
-        setAndCheckNodePubkeyInDeposit(_validatorPubkey, _nodeType, _nodeDepositAmount);
+        require(pubkeyInfoOf[_validatorPubkey]._status == PubkeyStatus.UnInitial, "pubkey already exists");
+        pubkeys.push(_validatorPubkey);
+
+        // add pubkey
+        pubkeyInfoOf[_validatorPubkey] = PubkeyInfo({
+            _status: PubkeyStatus.Initial,
+            _owner: msg.sender,
+            _nodeDepositAmount: _nodeDepositAmount
+        });
 
         IDepositContract(ethDepositAddress).deposit{value: _depositAmount}(
             _validatorPubkey,
@@ -237,15 +271,21 @@ contract NodeDeposit is INodeDeposit {
         bytes calldata _validatorSignature,
         bytes32 _depositDataRoot
     ) private {
-        setAndCheckNodePubkeyInStake(_validatorPubkey);
+        PubkeyInfo memory pubkeyInfo = pubkeyInfoOf[_validatorPubkey];
 
-        PubkeyInfo memory pubkey = pubkeyInfoOf[_validatorPubkey];
+        require(pubkeyInfo._status == PubkeyStatus.Match, "pubkey status unmatch");
+        require(pubkeyInfo._owner == msg.sender, "not pubkey owner");
+
+        _setNodePubkeyStatus(_validatorPubkey, PubkeyStatus.Staking);
 
         uint256 willWithdrawAmount;
-        if (pubkey._nodeType == NodeType.LightNode) {
-            willWithdrawAmount = uint256(32 ether) - pubkey._nodeDepositAmount;
-        } else {
+        NodeType nodeType = nodeInfoOf[pubkeyInfo._owner]._nodeType;
+        if (nodeType == NodeType.LightNode) {
+            willWithdrawAmount = uint256(32 ether) - pubkeyInfo._nodeDepositAmount;
+        } else if (nodeType == NodeType.TrustNode) {
             willWithdrawAmount = uint256(31 ether);
+        } else {
+            revert("unknown type");
         }
 
         IUserDeposit(userDepositAddress).withdrawExcessBalanceForNodeDeposit(willWithdrawAmount);
@@ -258,46 +298,6 @@ contract NodeDeposit is INodeDeposit {
         );
 
         emit Staked(msg.sender, _validatorPubkey);
-    }
-
-    // Set and check a node's validator pubkey
-    function setAndCheckNodePubkeyInDeposit(
-        bytes calldata _pubkey,
-        NodeType _nodeType,
-        uint256 _nodeDepositAmount
-    ) private {
-        require(pubkeyInfoOf[_pubkey]._status == PubkeyStatus.UnInitial, "pubkey already exists");
-
-        // add pubkey
-        pubkeyInfoOf[_pubkey] = PubkeyInfo({
-            _nodeType: _nodeType,
-            _status: PubkeyStatus.Initial,
-            _owner: msg.sender,
-            _nodeDepositAmount: _nodeDepositAmount
-        });
-    }
-
-    // Set and check a node's validator pubkey
-    function setAndCheckNodePubkeyInStake(bytes calldata _pubkey) private {
-        // check status
-        require(pubkeyInfoOf[_pubkey]._status == PubkeyStatus.Match, "pubkey status unmatch");
-        // check owner
-        require(pubkeyInfoOf[_pubkey]._owner == msg.sender, "not pubkey owner");
-
-        // set pubkey status
-        _setNodePubkeyStatus(_pubkey, PubkeyStatus.Staking);
-    }
-
-    // Set and check a node's validator pubkey
-    function setAndCheckNodePubkeyInOffBoard(bytes calldata _pubkey) private {
-        PubkeyInfo memory pubkey = pubkeyInfoOf[_pubkey];
-
-        require(pubkey._nodeType == NodeType.LightNode, "not light node");
-        require(pubkey._status == PubkeyStatus.Match, "pubkey status unmatch");
-        require(pubkey._owner == msg.sender, "not pubkey owner");
-
-        // set pubkey status
-        _setNodePubkeyStatus(_pubkey, PubkeyStatus.Offboard);
     }
 
     function _voteWithdrawCredentials(bytes calldata _pubkey, bool _match) private {

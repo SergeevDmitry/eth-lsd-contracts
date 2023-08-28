@@ -15,8 +15,14 @@ contract NetworkBalances is INetworkBalances {
     uint256 public totalEthBalance;
     uint256 public totalLsdTokenSupply;
     uint256 public stakingEthBalance;
+    uint256 public rateChangeLimit;
 
     address public networkProposalAddress;
+
+    modifier onlyAdmin() {
+        require(INetworkProposal(networkProposalAddress).isAdmin(msg.sender), "not admin");
+        _;
+    }
 
     function init(address _networkProposalAddress) external override {
         require(!initialized, "already initialized");
@@ -24,6 +30,7 @@ contract NetworkBalances is INetworkBalances {
         initialized = true;
         version = 1;
         submitBalancesEnabled = true;
+        rateChangeLimit = 11e14; //0.0011
         networkProposalAddress = _networkProposalAddress;
     }
 
@@ -83,8 +90,14 @@ contract NetworkBalances is INetworkBalances {
 
     // Get the current ETH : lsdToken exchange rate
     // Returns the amount of ETH backing 1 lsdToken
-    function getExchangeRate() external view override returns (uint256) {
+    function getExchangeRate() public view override returns (uint256) {
         return getEthValue(1 ether);
+    }
+
+    // ------------ settings ------------
+
+    function setRateChangeLimit(uint256 _value) public onlyAdmin {
+        rateChangeLimit = _value;
     }
 
     // ------------ voter ------------
@@ -109,7 +122,13 @@ contract NetworkBalances is INetworkBalances {
             require(_block > balancesBlock, "network balances for an equal or higher block are set");
             require(_stakingEth <= _totalEth, "invalid network balances");
 
+            uint256 oldRate = getExchangeRate();
+
             updateBalances(_block, _totalEth, _stakingEth, _lsdTokenSupply);
+
+            uint256 newRate = getExchangeRate();
+            uint256 rateChange = newRate > oldRate ? newRate - oldRate : oldRate - newRate;
+            require((rateChange * 1e18) / oldRate < rateChangeLimit, "rate change over limit");
         }
     }
 
