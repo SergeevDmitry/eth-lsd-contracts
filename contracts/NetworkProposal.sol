@@ -18,11 +18,6 @@ contract NetworkProposal is INetworkProposal {
     EnumerableSet.AddressSet voters;
     mapping(bytes32 => Proposal) public proposals;
 
-    modifier onlyVoter() {
-        require(voters.contains(msg.sender));
-        _;
-    }
-
     modifier onlyAdmin() {
         require(admin == msg.sender, "caller is not the admin");
         _;

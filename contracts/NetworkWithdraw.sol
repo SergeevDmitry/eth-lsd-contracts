@@ -34,6 +34,7 @@ contract NetworkWithdraw is INetworkWithdraw {
     uint256 public userWithdrawLimitAmountPerCycle;
     uint256 public withdrawCycleSeconds;
     uint256 public factoryCommissionRate;
+    uint256 public platformCommissionRate;
     uint256 public totalPlatformCommission;
     uint256 public totalPlatformClaimedAmount;
     uint256 public latestMerkleRootEpoch;
@@ -66,6 +67,7 @@ contract NetworkWithdraw is INetworkWithdraw {
         withdrawLimitAmountPerCycle = uint256(100 ether);
         userWithdrawLimitAmountPerCycle = uint256(100 ether);
         withdrawCycleSeconds = 86400;
+        platformCommissionRate = 1e17;
         factoryCommissionRate = 1e17;
 
         lsdTokenAddress = _lsdTokenAddress;
@@ -122,10 +124,11 @@ contract NetworkWithdraw is INetworkWithdraw {
     }
 
     function platformClaim(address _recipient) external onlyAdmin {
-        (bool success, ) = _recipient.call{value: totalPlatformCommission - totalPlatformClaimedAmount}("");
-        require(success, "failed to transfer");
-
+        uint256 shouldClaimAmount = totalPlatformCommission - totalPlatformClaimedAmount;
         totalPlatformClaimedAmount = totalPlatformCommission;
+
+        (bool success, ) = _recipient.call{value: shouldClaimAmount}("");
+        require(success, "failed to transfer");
     }
 
     // ------------ user unstake ------------
@@ -231,7 +234,7 @@ contract NetworkWithdraw is INetworkWithdraw {
 
     // ------------ voter ------------
 
-    function distributeRewards(
+    function distribute(
         DistributeType _distributeType,
         uint256 _dealedHeight,
         uint256 _userAmount,

@@ -81,7 +81,7 @@ interface INetworkWithdraw {
     ) external;
 
     // voter
-    function distributeRewards(
+    function distribute(
         DistributeType _distributeType,
         uint256 _dealedHeight,
         uint256 _userAmount,

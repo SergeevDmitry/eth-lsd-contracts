@@ -23,6 +23,8 @@ contract LsdNetworkFactory is ILsdNetworkFactory {
     address public userDepositLogicAddress;
     address public networkWithdrawLogicAddress;
 
+    mapping(address => NetworkContracts) public networkContractsOf;
+
     modifier onlyFactoryAdmin() {
         require(factoryAdmin == msg.sender, "caller is not the admin");
         _;
@@ -78,7 +80,7 @@ contract LsdNetworkFactory is ILsdNetworkFactory {
         userDepositLogicAddress = _userDepositLogicAddress;
     }
 
-    function setuserWithdrawLogicAddress(address _networkWithdrawLogicAddress) public onlyFactoryAdmin {
+    function setNetworkWithdrawLogicAddress(address _networkWithdrawLogicAddress) public onlyFactoryAdmin {
         networkWithdrawLogicAddress = _networkWithdrawLogicAddress;
     }
 
@@ -101,6 +103,7 @@ contract LsdNetworkFactory is ILsdNetworkFactory {
 
         bytes32 salt = keccak256(abi.encode(_lsdTokenName, _lsdTokenSymbol));
         NetworkContracts memory contracts = deployNetworkContracts(_lsdTokenName, _lsdTokenSymbol, salt, _proxyAdmin);
+        networkContractsOf[contracts._lsdToken] = contracts;
 
         (bool success, bytes memory data) = contracts._feePool.call(
             abi.encodeWithSelector(IFeePool.init.selector, contracts._networkWithdraw)
@@ -172,7 +175,7 @@ contract LsdNetworkFactory is ILsdNetworkFactory {
         address networkProposal = deploy(salt, _proxyAdmin, networkProposalLogicAddress);
         address nodeDeposit = deploy(salt, _proxyAdmin, nodeDepositLogicAddress);
         address userDeposit = deploy(salt, _proxyAdmin, userDepositLogicAddress);
-        address userWithdraw = deploy(salt, _proxyAdmin, networkWithdrawLogicAddress);
+        address networkWithdraw = deploy(salt, _proxyAdmin, networkWithdrawLogicAddress);
 
         address lsdToken = address(new LsdToken{salt: salt}(userDeposit, _lsdTokenName, _lsdTokenSymbol));
 
@@ -183,7 +186,7 @@ contract LsdNetworkFactory is ILsdNetworkFactory {
                 networkProposal,
                 nodeDeposit,
                 userDeposit,
-                userWithdraw,
+                networkWithdraw,
                 lsdToken
             );
     }
