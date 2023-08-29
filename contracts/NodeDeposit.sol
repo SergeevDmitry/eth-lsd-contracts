@@ -10,6 +10,7 @@ import "./interfaces/INetworkProposal.sol";
 contract NodeDeposit is INodeDeposit {
     bool public initialized;
     uint8 public version;
+
     bool public lightNodeDepositEnabled;
     bool public trustNodeDepositEnabled;
 
@@ -251,9 +252,10 @@ contract NodeDeposit is INodeDeposit {
 
         // add pubkey
         pubkeyInfoOf[_validatorPubkey] = PubkeyInfo({
-            _status: PubkeyStatus.Initial,
+            _status: PubkeyStatus.Deposited,
             _owner: msg.sender,
-            _nodeDepositAmount: _nodeDepositAmount
+            _nodeDepositAmount: _nodeDepositAmount,
+            _depositSignature: _validatorSignature
         });
 
         IDepositContract(ethDepositAddress).deposit{value: _depositAmount}(
@@ -276,7 +278,7 @@ contract NodeDeposit is INodeDeposit {
         require(pubkeyInfo._status == PubkeyStatus.Match, "pubkey status unmatch");
         require(pubkeyInfo._owner == msg.sender, "not pubkey owner");
 
-        _setNodePubkeyStatus(_validatorPubkey, PubkeyStatus.Staking);
+        _setNodePubkeyStatus(_validatorPubkey, PubkeyStatus.Staked);
 
         uint256 willWithdrawAmount;
         NodeType nodeType = nodeInfoOf[pubkeyInfo._owner]._nodeType;

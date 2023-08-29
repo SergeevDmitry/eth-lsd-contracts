@@ -11,19 +11,20 @@ interface INodeDeposit {
 
     enum PubkeyStatus {
         UnInitial,
-        Initial,
+        Deposited,
         Match,
-        Staking,
+        Staked,
         UnMatch,
-        Offboard,
-        CanWithdraw,
-        Withdrawed
+        Offboard, // light node
+        CanWithdraw, // light node
+        Withdrawed // light node
     }
 
     struct PubkeyInfo {
         PubkeyStatus _status;
         address _owner;
         uint256 _nodeDepositAmount;
+        bytes _depositSignature;
     }
 
     struct NodeInfo {
