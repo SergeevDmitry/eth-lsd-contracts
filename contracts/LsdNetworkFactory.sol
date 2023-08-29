@@ -187,7 +187,8 @@ contract LsdNetworkFactory is ILsdNetworkFactory {
                 nodeDeposit,
                 userDeposit,
                 networkWithdraw,
-                lsdToken
+                lsdToken,
+                block.number
             );
     }
 }

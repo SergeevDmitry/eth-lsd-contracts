@@ -24,7 +24,7 @@ contract FeePool is IFeePool {
 
     // Withdraws ETH to given address
     // Only accepts calls from network contracts
-    function withdrawEther(address _to, uint256 _amount) external override {
+    function withdrawEther(uint256 _amount) external override {
         require(_amount > 0, "No valid amount of ETH given to withdraw");
         require(msg.sender == networkWithdrawAddress, "not networkWithdrawAddress");
         // Send the ETH
@@ -33,6 +33,6 @@ contract FeePool is IFeePool {
         require(result, "Failed to withdraw ETH");
 
         // Emit ether withdrawn event
-        emit EtherWithdrawn(_to, _amount, block.timestamp);
+        emit EtherWithdrawn(_amount, block.timestamp);
     }
 }

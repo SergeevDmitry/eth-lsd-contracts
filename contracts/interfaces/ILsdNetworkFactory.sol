@@ -11,6 +11,7 @@ interface ILsdNetworkFactory {
         address _userDeposit;
         address _networkWithdraw;
         address _lsdToken;
+        uint256 _block;
     }
 
     event LsdNetwork(NetworkContracts _contracts);

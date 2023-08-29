@@ -189,7 +189,7 @@ contract NetworkWithdraw is INetworkWithdraw {
     }
 
     // ----- node claim --------------
-
+    // todo check totalRewardAmount
     function nodeClaim(
         uint256 _index,
         address _account,
@@ -202,8 +202,14 @@ contract NetworkWithdraw is INetworkWithdraw {
         uint256 claimableDeposit = _totalExitDepositAmount - totalClaimedDepositOfNode[_account];
 
         // Verify the merkle proof.
-        bytes32 node = keccak256(abi.encodePacked(_index, _account, _totalRewardAmount, _totalExitDepositAmount));
-        require(MerkleProof.verify(_merkleProof, merkleRoot, node), "invalid proof");
+        require(
+            MerkleProof.verify(
+                _merkleProof,
+                merkleRoot,
+                keccak256(abi.encodePacked(_index, _account, _totalRewardAmount, _totalExitDepositAmount))
+            ),
+            "invalid proof"
+        );
 
         uint256 willClaimAmount;
         if (_claimType == ClaimType.ClaimReward) {
@@ -258,7 +264,7 @@ contract NetworkWithdraw is INetworkWithdraw {
                 latestDistributeHeight = latestDistributePriorityFeeHeight;
                 latestDistributePriorityFeeHeight = _dealedHeight;
 
-                IFeePool(feePoolAddress).withdrawEther(address(this), _userAmount + _nodeAmount + _platformAmount);
+                IFeePool(feePoolAddress).withdrawEther(_userAmount + _nodeAmount + _platformAmount);
             } else if (_distributeType == DistributeType.DistributeWithdrawals) {
                 latestDistributeHeight = latestDistributeWithdrawalsHeight;
                 latestDistributeWithdrawalsHeight = _dealedHeight;
