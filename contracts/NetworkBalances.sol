@@ -14,7 +14,6 @@ contract NetworkBalances is INetworkBalances {
     uint256 public balancesBlock;
     uint256 public totalEthBalance;
     uint256 public totalLsdTokenSupply;
-    uint256 public stakingEthBalance;
     uint256 public rateChangeLimit;
 
     address public networkProposalAddress;
@@ -35,16 +34,6 @@ contract NetworkBalances is INetworkBalances {
     }
 
     // ------------ getter ------------
-
-    // Get the current network ETH staking rate as a fraction of 1 ETH
-    // Represents what % of the network's balance is actively earning rewards
-    function getETHStakingRate() public view override returns (uint256) {
-        uint256 calcBase = 1 ether;
-        if (totalEthBalance == 0) {
-            return calcBase;
-        }
-        return (calcBase * stakingEthBalance) / totalEthBalance;
-    }
 
     // Calculate the amount of ETH backing an amount of lsdToken
     function getEthValue(uint256 _lsdTokenAmount) public view override returns (uint256) {
@@ -84,27 +73,19 @@ contract NetworkBalances is INetworkBalances {
 
     // Submit network balances for a block
     // Only accepts calls from trusted (oracle) nodes
-    function submitBalances(
-        uint256 _block,
-        uint256 _totalEth,
-        uint256 _stakingEth,
-        uint256 _lsdTokenSupply
-    ) external override {
-        bytes32 proposalId = keccak256(
-            abi.encodePacked("submitBalances", _block, _totalEth, _stakingEth, _lsdTokenSupply)
-        );
+    function submitBalances(uint256 _block, uint256 _totalEth, uint256 _lsdTokenSupply) external override {
+        bytes32 proposalId = keccak256(abi.encodePacked("submitBalances", _block, _totalEth, _lsdTokenSupply));
 
         // Emit balances submitted event
-        emit BalancesSubmitted(msg.sender, _block, _totalEth, _stakingEth, _lsdTokenSupply, block.timestamp);
+        emit BalancesSubmitted(msg.sender, _block, _totalEth, _lsdTokenSupply, block.timestamp);
 
         if (INetworkProposal(networkProposalAddress).shouldExecute(proposalId, msg.sender)) {
             require(submitBalancesEnabled, "submitting balances is disabled");
             require(_block > balancesBlock, "network balances for an equal or higher block are set");
-            require(_stakingEth <= _totalEth, "invalid network balances");
 
             uint256 oldRate = getExchangeRate();
 
-            updateBalances(_block, _totalEth, _stakingEth, _lsdTokenSupply);
+            updateBalances(_block, _totalEth, _lsdTokenSupply);
 
             uint256 newRate = getExchangeRate();
             uint256 rateChange = newRate > oldRate ? newRate - oldRate : oldRate - newRate;
@@ -115,14 +96,13 @@ contract NetworkBalances is INetworkBalances {
     // ------------ helper ------------
 
     // Update network balances
-    function updateBalances(uint256 _block, uint256 _totalEth, uint256 _stakingEth, uint256 _lsdTokenSupply) private {
+    function updateBalances(uint256 _block, uint256 _totalEth, uint256 _lsdTokenSupply) private {
         // Update balances
         balancesBlock = _block;
         totalEthBalance = _totalEth;
-        stakingEthBalance = _stakingEth;
         totalLsdTokenSupply = _lsdTokenSupply;
 
         // Emit balances updated event
-        emit BalancesUpdated(_block, _totalEth, _stakingEth, _lsdTokenSupply, block.timestamp);
+        emit BalancesUpdated(_block, _totalEth, _lsdTokenSupply, block.timestamp);
     }
 }

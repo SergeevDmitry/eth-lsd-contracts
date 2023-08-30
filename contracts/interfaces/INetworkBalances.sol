@@ -8,11 +8,10 @@ interface INetworkBalances {
         address indexed from,
         uint256 block,
         uint256 totalEth,
-        uint256 stakingEth,
         uint256 lsdTokenSupply,
         uint256 time
     );
-    event BalancesUpdated(uint256 block, uint256 totalEth, uint256 stakingEth, uint256 lsdTokenSupply, uint256 time);
+    event BalancesUpdated(uint256 block, uint256 totalEth, uint256 lsdTokenSupply, uint256 time);
 
     function init(address _networkProposalAddress) external;
 
@@ -26,11 +25,7 @@ interface INetworkBalances {
 
     function totalEthBalance() external view returns (uint256);
 
-    function stakingEthBalance() external view returns (uint256);
-
     function totalLsdTokenSupply() external view returns (uint256);
 
-    function getETHStakingRate() external view returns (uint256);
-
-    function submitBalances(uint256 _block, uint256 _total, uint256 _staking, uint256 _lsdTokenSupply) external;
+    function submitBalances(uint256 _block, uint256 _totalEth, uint256 _lsdTokenSupply) external;
 }
