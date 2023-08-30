@@ -20,9 +20,7 @@ interface IUserDeposit is IRateProvider {
 
     function getBalance() external view returns (uint256);
 
-    function withdrawExcessBalanceForNodeDeposit(uint256 _amount) external;
-
-    function withdrawExcessBalanceForNetworkWithdraw(uint256 _amount) external;
+    function withdrawExcessBalance(uint256 _amount) external;
 
     function recycleNetworkWithdrawDeposit() external payable;
 }

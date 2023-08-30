@@ -144,13 +144,13 @@ contract NetworkWithdraw is INetworkWithdraw {
             if (stakePoolBalance < mvAmount) {
                 mvAmount = stakePoolBalance;
             }
-            userDeposit.withdrawExcessBalanceForNetworkWithdraw(mvAmount);
+            userDeposit.withdrawExcessBalance(mvAmount);
 
-            totalMissingAmount = totalMissingAmount - mvAmount;
+            totalMissingAmount -= mvAmount;
         }
         totalMissingAmountForWithdraw = totalMissingAmount;
 
-        bool unstakeInstantly = totalMissingAmountForWithdraw == 0;
+        bool unstakeInstantly = totalMissingAmount == 0;
         uint256 willUseWithdrawalIndex = nextWithdrawIndex;
 
         withdrawalAtIndex[willUseWithdrawalIndex] = Withdrawal({_address: msg.sender, _amount: ethAmount});
@@ -354,6 +354,14 @@ contract NetworkWithdraw is INetworkWithdraw {
     // Deposit ETH from deposit pool
     // Only accepts calls from the UserDeposit contract
     function depositEth() external payable override {
+        // Emit ether deposited event
+        emit EtherDeposited(msg.sender, msg.value, block.timestamp);
+    }
+
+    // Deposit ETH from deposit pool and update totalMissingAmountForWithdraw
+    // Only accepts calls from the UserDeposit contract
+    function depositEthAndUpdateTotalMissingAmount() external payable override {
+        totalMissingAmountForWithdraw -= msg.value;
         // Emit ether deposited event
         emit EtherDeposited(msg.sender, msg.value, block.timestamp);
     }

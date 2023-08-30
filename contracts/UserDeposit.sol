@@ -2,7 +2,7 @@ pragma solidity 0.8.19;
 
 // SPDX-License-Identifier: GPL-3.0-only
 
-import "./interfaces/INodeDeposit.sol";
+import "./interfaces/IDepositEth.sol";
 import "./interfaces/ILsdToken.sol";
 import "./interfaces/IUserDeposit.sol";
 import "./interfaces/INetworkWithdraw.sol";
@@ -85,7 +85,7 @@ contract UserDeposit is IUserDeposit {
             if (poolBalance < mvAmount) {
                 mvAmount = poolBalance;
             }
-            INetworkWithdraw(networkWithdrawAddress).depositEth{value: mvAmount}();
+            INetworkWithdraw(networkWithdrawAddress).depositEthAndUpdateTotalMissingAmount{value: mvAmount}();
 
             // Emit excess withdrawn event
             emit ExcessWithdrawn(networkWithdrawAddress, mvAmount, block.timestamp);
@@ -94,23 +94,12 @@ contract UserDeposit is IUserDeposit {
 
     // ------------ network ------------
 
-    // Withdraw excess deposit pool balance
-    function withdrawExcessBalanceForNodeDeposit(uint256 _amount) external override {
-        require(msg.sender == nodeDepositAddress, "not nodeDeposit");
+    // Withdraw excess balance
+    function withdrawExcessBalance(uint256 _amount) external override {
+        require(msg.sender == nodeDepositAddress || msg.sender == networkWithdrawAddress, "not allowed address");
         // Check amount
         require(_amount <= getBalance(), "insufficient balance for withdrawal");
-        INodeDeposit(nodeDepositAddress).depositEth{value: _amount}();
-        // Emit excess withdrawn event
-        emit ExcessWithdrawn(msg.sender, _amount, block.timestamp);
-    }
-
-    // Withdraw excess deposit pool balance for withdraw
-    function withdrawExcessBalanceForNetworkWithdraw(uint256 _amount) external override {
-        require(msg.sender == networkWithdrawAddress, "not networkWithdraw");
-        // Check amount
-        require(_amount <= getBalance(), "insufficient balance for withdrawal");
-        // Transfer to withdraw contract
-        INetworkWithdraw(networkWithdrawAddress).depositEth{value: _amount}();
+        IDepositEth(msg.sender).depositEth{value: _amount}();
         // Emit excess withdrawn event
         emit ExcessWithdrawn(msg.sender, _amount, block.timestamp);
     }

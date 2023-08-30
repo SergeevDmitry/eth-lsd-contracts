@@ -138,9 +138,7 @@ contract NodeDeposit is INodeDeposit {
 
             depositAmount = uint256(1 ether);
 
-            IUserDeposit(userDepositAddress).withdrawExcessBalanceForNodeDeposit(
-                depositAmount * _validatorPubkeys.length
-            );
+            IUserDeposit(userDepositAddress).withdrawExcessBalance(depositAmount * _validatorPubkeys.length);
         } else {
             require(lightNodeDepositEnabled, "light node deposits disabled");
             require(msg.value == _validatorPubkeys.length * lightNodeDepositAmount, "msg value not match");
@@ -256,7 +254,7 @@ contract NodeDeposit is INodeDeposit {
             revert("unknown type");
         }
 
-        IUserDeposit(userDepositAddress).withdrawExcessBalanceForNodeDeposit(willWithdrawAmount);
+        IUserDeposit(userDepositAddress).withdrawExcessBalance(willWithdrawAmount);
 
         IDepositContract(ethDepositAddress).deposit{value: willWithdrawAmount}(
             _validatorPubkey,

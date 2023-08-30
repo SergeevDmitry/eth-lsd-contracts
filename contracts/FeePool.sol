@@ -3,6 +3,7 @@ pragma solidity 0.8.19;
 // SPDX-License-Identifier: GPL-3.0-only
 
 import "./interfaces/IFeePool.sol";
+import "./interfaces/IDepositEth.sol";
 
 // receive priority fee
 contract FeePool is IFeePool {
@@ -27,10 +28,8 @@ contract FeePool is IFeePool {
     function withdrawEther(uint256 _amount) external override {
         require(_amount > 0, "No valid amount of ETH given to withdraw");
         require(msg.sender == networkWithdrawAddress, "not networkWithdrawAddress");
-        // Send the ETH
-        (bool result, ) = networkWithdrawAddress.call{value: _amount}("");
 
-        require(result, "Failed to withdraw ETH");
+        IDepositEth(msg.sender).depositEth{value: _amount}();
 
         // Emit ether withdrawn event
         emit EtherWithdrawn(_amount, block.timestamp);

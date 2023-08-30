@@ -1,8 +1,9 @@
 pragma solidity 0.8.19;
 
 // SPDX-License-Identifier: GPL-3.0-only
+import "./IDepositEth.sol";
 
-interface INodeDeposit {
+interface INodeDeposit is IDepositEth {
     enum NodeType {
         Undefined,
         LightNode,
@@ -34,10 +35,7 @@ interface INodeDeposit {
     event EtherDeposited(address indexed from, uint256 amount, uint256 time);
     event Deposited(address node, NodeType nodeType, bytes pubkey, bytes validatorSignature, uint256 amount);
     event Staked(address node, bytes pubkey);
-    event OffBoarded(address node, bytes pubkey);
     event SetPubkeyStatus(bytes pubkey, PubkeyStatus status);
-
-    function depositEth() external payable;
 
     function deposit(
         bytes[] calldata _validatorPubkeys,

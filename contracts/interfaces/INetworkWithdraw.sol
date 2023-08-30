@@ -2,7 +2,9 @@ pragma solidity 0.8.19;
 
 // SPDX-License-Identifier: GPL-3.0-only
 
-interface INetworkWithdraw {
+import "./IDepositEth.sol";
+
+interface INetworkWithdraw is IDepositEth {
     enum ClaimType {
         None,
         ClaimReward,
@@ -16,6 +18,11 @@ interface INetworkWithdraw {
         DistributePriorityFee
     }
 
+    struct Withdrawal {
+        address _address;
+        uint256 _amount;
+    }
+
     event NodeClaimed(
         uint256 index,
         address account,
@@ -23,12 +30,6 @@ interface INetworkWithdraw {
         uint256 claimableDeposit,
         ClaimType claimType
     );
-
-    struct Withdrawal {
-        address _address;
-        uint256 _amount;
-    }
-
     event SetWithdrawLimitPerCycle(uint256 _withdrawLimitPerCycle);
     event SetUserWithdrawLimitPerCycle(uint256 _userWithdrawLimitPerCycle);
     event SetWithdrawCycleSeconds(uint256 _seconds);
@@ -90,5 +91,5 @@ interface INetworkWithdraw {
         uint256 _maxClaimableWithdrawIndex
     ) external;
 
-    function depositEth() external payable;
+    function depositEthAndUpdateTotalMissingAmount() external payable;
 }
