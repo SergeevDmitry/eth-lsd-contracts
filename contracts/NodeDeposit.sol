@@ -255,6 +255,7 @@ contract NodeDeposit is INodeDeposit {
             _status: PubkeyStatus.Deposited,
             _owner: msg.sender,
             _nodeDepositAmount: _nodeDepositAmount,
+            _depositBlock: block.number,
             _depositSignature: _validatorSignature
         });
 

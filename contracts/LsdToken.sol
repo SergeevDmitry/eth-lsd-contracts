@@ -3,17 +3,14 @@ pragma solidity 0.8.19;
 // SPDX-License-Identifier: GPL-3.0-only
 
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
-import "./interfaces/INetworkBalances.sol";
 import "./interfaces/ILsdToken.sol";
 import "./interfaces/IUserDeposit.sol";
 
 contract LsdToken is ILsdToken, ERC20Burnable {
-    uint8 public version;
     address public userDepositAddress;
 
     // Construct
     constructor(address _userDepositAddress, string memory name, string memory symbol) ERC20(name, symbol) {
-        version = 1;
         userDepositAddress = _userDepositAddress;
     }
 

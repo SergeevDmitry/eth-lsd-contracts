@@ -24,6 +24,7 @@ interface INodeDeposit {
         PubkeyStatus _status;
         address _owner;
         uint256 _nodeDepositAmount;
+        uint256 _depositBlock;
         bytes _depositSignature;
     }
 
