@@ -22,13 +22,13 @@ interface INetworkBalances {
 
     function getExchangeRate() external view returns (uint256);
 
-    function getBalancesBlock() external view returns (uint256);
+    function balancesBlock() external view returns (uint256);
 
-    function getTotalETHBalance() external view returns (uint256);
+    function totalEthBalance() external view returns (uint256);
 
-    function getStakingETHBalance() external view returns (uint256);
+    function stakingEthBalance() external view returns (uint256);
 
-    function getTotalLsdTokenSupply() external view returns (uint256);
+    function totalLsdTokenSupply() external view returns (uint256);
 
     function getETHStakingRate() external view returns (uint256);
 

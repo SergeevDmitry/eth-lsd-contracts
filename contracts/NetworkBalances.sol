@@ -36,26 +36,6 @@ contract NetworkBalances is INetworkBalances {
 
     // ------------ getter ------------
 
-    // The block number which balances are current for
-    function getBalancesBlock() public view override returns (uint256) {
-        return balancesBlock;
-    }
-
-    // The current network total ETH balance
-    function getTotalETHBalance() public view override returns (uint256) {
-        return totalEthBalance;
-    }
-
-    // The current network staking ETH balance
-    function getStakingETHBalance() public view override returns (uint256) {
-        return stakingEthBalance;
-    }
-
-    // The current network total lsdToken supply
-    function getTotalLsdTokenSupply() public view override returns (uint256) {
-        return totalLsdTokenSupply;
-    }
-
     // Get the current network ETH staking rate as a fraction of 1 ETH
     // Represents what % of the network's balance is actively earning rewards
     function getETHStakingRate() public view override returns (uint256) {
