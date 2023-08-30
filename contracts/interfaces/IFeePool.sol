@@ -5,7 +5,7 @@ pragma solidity 0.8.19;
 interface IFeePool {
     event EtherWithdrawn(uint256 amount, uint256 time);
 
-    function init(address _distributorAddress) external;
+    function init(address _address) external;
 
     function withdrawEther(uint256 _amount) external;
 }

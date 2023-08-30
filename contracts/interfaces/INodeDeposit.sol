@@ -14,10 +14,7 @@ interface INodeDeposit {
         Deposited,
         Match,
         Staked,
-        UnMatch,
-        Offboard, // light node
-        CanWithdraw, // light node
-        Withdrawed // light node
+        UnMatch
     }
 
     struct PubkeyInfo {
@@ -60,12 +57,6 @@ interface INodeDeposit {
         address _networkProposalAddress,
         bytes calldata _withdrawCredentials
     ) external;
-
-    function offBoard(bytes calldata _validatorPubkey) external;
-
-    function provideNodeDepositToken(bytes calldata _validatorPubkey) external payable;
-
-    function withdrawNodeDepositToken(bytes calldata _validatorPubkey) external;
 
     function voteWithdrawCredentials(bytes[] calldata _pubkey, bool[] calldata _match) external;
 }

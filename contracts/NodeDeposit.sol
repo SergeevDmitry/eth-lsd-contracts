@@ -132,7 +132,7 @@ contract NodeDeposit is INodeDeposit {
         uint256 nodeDepositAmount;
         if (node._nodeType == NodeType.TrustNode) {
             require(!node._removed, "already removed");
-            require(trustNodeDepositEnabled, "super node deposits disabled");
+            require(trustNodeDepositEnabled, "trust node deposits disabled");
             require(msg.value == 0, "msg value not match");
             require(node._pubkeyNumber < trustNodePubkeyNumberLimit, "pubkey number limit");
 
@@ -149,7 +149,7 @@ contract NodeDeposit is INodeDeposit {
             nodeDepositAmount = lightNodeDepositAmount;
         }
 
-        node._pubkeyNumber++;
+        node._pubkeyNumber += _validatorPubkeys.length;
 
         // update node
         nodeInfoOf[msg.sender] = node;
@@ -181,41 +181,6 @@ contract NodeDeposit is INodeDeposit {
         for (uint256 i = 0; i < _validatorPubkeys.length; i++) {
             _stake(_validatorPubkeys[i], _validatorSignatures[i], _depositDataRoots[i]);
         }
-    }
-
-    function offBoard(bytes calldata _validatorPubkey) external override {
-        PubkeyInfo memory pubkey = pubkeyInfoOf[_validatorPubkey];
-
-        require(nodeInfoOf[pubkey._owner]._nodeType == NodeType.LightNode, "not light node");
-        require(pubkey._status == PubkeyStatus.Match, "pubkey status unmatch");
-        require(pubkey._owner == msg.sender, "not pubkey owner");
-
-        // set pubkey status
-        _setNodePubkeyStatus(_validatorPubkey, PubkeyStatus.Offboard);
-
-        emit OffBoarded(msg.sender, _validatorPubkey);
-    }
-
-    function provideNodeDepositToken(bytes calldata _validatorPubkey) external payable override {
-        PubkeyInfo memory pubkey = pubkeyInfoOf[_validatorPubkey];
-
-        require(pubkey._status == PubkeyStatus.Offboard, "pubkey status unmatch");
-        require(msg.value == pubkey._nodeDepositAmount, "msg value not match");
-
-        _setNodePubkeyStatus(_validatorPubkey, PubkeyStatus.CanWithdraw);
-    }
-
-    function withdrawNodeDepositToken(bytes calldata _validatorPubkey) external override {
-        PubkeyInfo memory pubkey = pubkeyInfoOf[_validatorPubkey];
-
-        require(pubkey._status == PubkeyStatus.CanWithdraw, "pubkey status unmatch");
-        require(msg.sender == pubkey._owner, "not pubkey owner");
-
-        // set pubkey status
-        _setNodePubkeyStatus(_validatorPubkey, PubkeyStatus.Withdrawed);
-
-        (bool success, ) = (msg.sender).call{value: pubkey._nodeDepositAmount}("");
-        require(success, "transferr failed");
     }
 
     // ------------ voter ------------
@@ -312,7 +277,7 @@ contract NodeDeposit is INodeDeposit {
         }
     }
 
-    // Set a light node pubkey status
+    // Set node pubkey status
     function _setNodePubkeyStatus(bytes calldata _validatorPubkey, PubkeyStatus _status) private {
         pubkeyInfoOf[_validatorPubkey]._status = _status;
 
