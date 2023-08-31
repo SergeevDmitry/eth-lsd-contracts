@@ -250,6 +250,7 @@ contract NetworkWithdraw is INetworkWithdraw {
     ) external override {
         bytes32 proposalId = keccak256(
             abi.encodePacked(
+                "distribute",
                 _distributeType,
                 _dealedHeight,
                 _userAmount,
