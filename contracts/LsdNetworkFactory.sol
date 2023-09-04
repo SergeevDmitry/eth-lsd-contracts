@@ -12,6 +12,7 @@ import "./interfaces/ILsdNetworkFactory.sol";
 import "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 
 contract LsdNetworkFactory is ILsdNetworkFactory {
+    bool public initialized;
     uint8 public version;
     address public factoryAdmin;
     address public ethDepositAddress;
@@ -41,7 +42,9 @@ contract LsdNetworkFactory is ILsdNetworkFactory {
         address _networkWithdrawLogicAddress
     ) public {
         require(_factoryAdmin != address(0), "not valid address");
+        require(!initialized, "already initialized");
 
+        initialized = true;
         version = 1;
         factoryAdmin = _factoryAdmin;
         ethDepositAddress = _ethDepositAddress;
