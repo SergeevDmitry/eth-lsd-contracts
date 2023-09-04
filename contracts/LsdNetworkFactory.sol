@@ -30,7 +30,7 @@ contract LsdNetworkFactory is ILsdNetworkFactory {
         _;
     }
 
-    constructor(
+    function init(
         address _factoryAdmin,
         address _ethDepositAddress,
         address _feePoolLogicAddress,
@@ -39,7 +39,7 @@ contract LsdNetworkFactory is ILsdNetworkFactory {
         address _nodeDepositLogicAddress,
         address _userDepositLogicAddress,
         address _networkWithdrawLogicAddress
-    ) {
+    ) public {
         require(_factoryAdmin != address(0), "not valid address");
 
         version = 1;
