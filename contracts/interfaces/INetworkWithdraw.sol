@@ -24,16 +24,16 @@ interface INetworkWithdraw is IDepositEth {
     }
 
     event NodeClaimed(
-        uint256 index,
-        address account,
-        uint256 claimableReward,
-        uint256 claimableDeposit,
-        ClaimType claimType
+        uint256 _index,
+        address _account,
+        uint256 _claimableReward,
+        uint256 _claimableDeposit,
+        ClaimType _claimType
     );
     event SetWithdrawLimitPerCycle(uint256 _withdrawLimitPerCycle);
     event SetUserWithdrawLimitPerCycle(uint256 _userWithdrawLimitPerCycle);
     event SetWithdrawCycleSeconds(uint256 _seconds);
-    event SetMerkleRoot(uint256 dealedEpoch, bytes32 merkleRoot);
+    event SetMerkleRoot(uint256 _dealedEpoch, bytes32 _merkleRoot, string _merkleTreeCid);
     event EtherDeposited(address indexed _from, uint256 _amount, uint256 _time);
     event Unstake(
         address indexed _from,

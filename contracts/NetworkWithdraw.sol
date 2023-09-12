@@ -39,6 +39,7 @@ contract NetworkWithdraw is INetworkWithdraw {
     uint256 public totalPlatformClaimedAmount;
     uint256 public latestMerkleRootEpoch;
     bytes32 public merkleRoot;
+    string public merkleTreeCid;
 
     mapping(uint256 => Withdrawal) public withdrawalAtIndex;
     mapping(address => EnumerableSet.UintSet) internal unclaimedWithdrawalsOfUser;
@@ -336,8 +337,8 @@ contract NetworkWithdraw is INetworkWithdraw {
         }
     }
 
-    function setMerkleRoot(uint256 _dealedEpoch, bytes32 _merkleRoot) external {
-        bytes32 proposalId = keccak256(abi.encodePacked("setMerkleRoot", _dealedEpoch, _merkleRoot));
+    function setMerkleRoot(uint256 _dealedEpoch, bytes32 _merkleRoot, string calldata _merkleTreeCid) external {
+        bytes32 proposalId = keccak256(abi.encodePacked("setMerkleRoot", _dealedEpoch, _merkleRoot, _merkleTreeCid));
 
         // Finalize if Threshold has been reached
         if (INetworkProposal(networkProposalAddress).shouldExecute(proposalId, msg.sender)) {
@@ -345,8 +346,9 @@ contract NetworkWithdraw is INetworkWithdraw {
 
             merkleRoot = _merkleRoot;
             latestMerkleRootEpoch = _dealedEpoch;
+            merkleTreeCid = _merkleTreeCid;
 
-            emit SetMerkleRoot(_dealedEpoch, _merkleRoot);
+            emit SetMerkleRoot(_dealedEpoch, _merkleRoot, _merkleTreeCid);
         }
     }
 
