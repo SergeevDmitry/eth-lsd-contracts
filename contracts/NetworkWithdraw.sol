@@ -70,6 +70,7 @@ contract NetworkWithdraw is INetworkWithdraw {
         withdrawCycleSeconds = 86400;
         platformCommissionRate = 1e17;
         factoryCommissionRate = 1e17;
+        nextWithdrawIndex = 1;
 
         lsdTokenAddress = _lsdTokenAddress;
         userDepositAddress = _userDepositAddress;
@@ -155,7 +156,7 @@ contract NetworkWithdraw is INetworkWithdraw {
         uint256 willUseWithdrawalIndex = nextWithdrawIndex;
 
         withdrawalAtIndex[willUseWithdrawalIndex] = Withdrawal({_address: msg.sender, _amount: ethAmount});
-        nextWithdrawIndex = willUseWithdrawalIndex - 1;
+        nextWithdrawIndex = willUseWithdrawalIndex + 1;
 
         emit Unstake(msg.sender, _lsdTokenAmount, ethAmount, willUseWithdrawalIndex, unstakeInstantly);
 
@@ -261,12 +262,15 @@ contract NetworkWithdraw is INetworkWithdraw {
             )
         );
         if (INetworkProposal(networkProposalAddress).shouldExecute(proposalId, msg.sender)) {
+            uint256 totalAmount = _userAmount + _nodeAmount + _platformAmount;
             uint256 latestDistributeHeight;
             if (_distributeType == DistributeType.DistributePriorityFee) {
                 latestDistributeHeight = latestDistributePriorityFeeHeight;
                 latestDistributePriorityFeeHeight = _dealedHeight;
 
-                IFeePool(feePoolAddress).withdrawEther(_userAmount + _nodeAmount + _platformAmount);
+                if (totalAmount > 0) {
+                    IFeePool(feePoolAddress).withdrawEther(totalAmount);
+                }
             } else if (_distributeType == DistributeType.DistributeWithdrawals) {
                 latestDistributeHeight = latestDistributeWithdrawalsHeight;
                 latestDistributeWithdrawalsHeight = _dealedHeight;
@@ -275,7 +279,7 @@ contract NetworkWithdraw is INetworkWithdraw {
             }
             require(_dealedHeight > latestDistributeHeight, "height already dealed");
             require(_maxClaimableWithdrawIndex < nextWithdrawIndex, "withdraw index over");
-            require(_userAmount + _nodeAmount + _platformAmount <= address(this).balance, "balance not enough");
+            require(totalAmount <= address(this).balance, "balance not enough");
 
             if (_maxClaimableWithdrawIndex > maxClaimableWithdrawIndex) {
                 maxClaimableWithdrawIndex = _maxClaimableWithdrawIndex;
@@ -404,6 +408,9 @@ contract NetworkWithdraw is INetworkWithdraw {
     }
 
     function distributeCommission(uint256 _amount) private {
+        if (_amount == 0) {
+            return;
+        }
         uint256 factoryAmount = (_amount * factoryCommissionRate) / 1e18;
         uint256 platformAmount = _amount - factoryAmount;
         totalPlatformCommission += platformAmount;
