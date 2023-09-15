@@ -23,7 +23,9 @@ contract UserDeposit is IUserDeposit {
     address public networkBalancesAddress;
 
     modifier onlyAdmin() {
-        require(INetworkProposal(networkProposalAddress).isAdmin(msg.sender), "not admin");
+        if (!INetworkProposal(networkProposalAddress).isAdmin(msg.sender)) {
+            revert NotNetworkAdmin();
+        }
         _;
     }
 
@@ -34,7 +36,9 @@ contract UserDeposit is IUserDeposit {
         address _networkProposalAddress,
         address _networkBalancesAddress
     ) external override {
-        require(!initialized, "already initialized");
+        if (initialized) {
+            revert AlreadyInitialized();
+        }
 
         initialized = true;
         version = 1;
@@ -69,8 +73,12 @@ contract UserDeposit is IUserDeposit {
     // ------------ user ------------
 
     function deposit() external payable override {
-        require(depositEnabled, "deposit  disabled");
-        require(msg.value >= minDeposit, "deposit amount is less than the minimum deposit size");
+        if (!depositEnabled) {
+            revert UserDepositDisabled();
+        }
+        if (msg.value < minDeposit) {
+            revert DepositAmountLTMinAmount();
+        }
 
         uint256 lsdTokenAmount = INetworkBalances(networkBalancesAddress).getLsdTokenValue(msg.value);
 
@@ -96,9 +104,13 @@ contract UserDeposit is IUserDeposit {
 
     // Withdraw excess balance
     function withdrawExcessBalance(uint256 _amount) external override {
-        require(msg.sender == nodeDepositAddress || msg.sender == networkWithdrawAddress, "not allowed address");
+        if (msg.sender != nodeDepositAddress && msg.sender != networkWithdrawAddress) {
+            revert CallerNotAllowed();
+        }
         // Check amount
-        require(_amount <= getBalance(), "insufficient balance for withdrawal");
+        if (_amount > getBalance()) {
+            revert BalanceNotEnough();
+        }
         IDepositEth(msg.sender).depositEth{value: _amount}();
         // Emit excess withdrawn event
         emit ExcessWithdrawn(msg.sender, _amount, block.timestamp);
@@ -107,7 +119,9 @@ contract UserDeposit is IUserDeposit {
     // Recycle a deposit from withdraw
     // Only accepts calls from  networkWithdraw
     function recycleNetworkWithdrawDeposit() external payable override {
-        require(msg.sender == networkWithdrawAddress, "not networkWithdraw");
+        if (msg.sender != networkWithdrawAddress) {
+            revert AddressNotAllowed();
+        }
         // Emit deposit recycled event
         emit DepositRecycled(msg.sender, msg.value, block.timestamp);
     }

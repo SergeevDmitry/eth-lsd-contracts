@@ -27,7 +27,9 @@ contract LsdNetworkFactory is ILsdNetworkFactory {
     mapping(address => NetworkContracts) public networkContractsOf;
 
     modifier onlyFactoryAdmin() {
-        require(factoryAdmin == msg.sender, "caller is not the admin");
+        if (msg.sender != factoryAdmin) {
+            revert NotFactoryAdmin();
+        }
         _;
     }
 
@@ -41,8 +43,12 @@ contract LsdNetworkFactory is ILsdNetworkFactory {
         address _userDepositLogicAddress,
         address _networkWithdrawLogicAddress
     ) public {
-        require(_factoryAdmin != address(0), "not valid address");
-        require(!initialized, "already initialized");
+        if (_factoryAdmin == address(0)) {
+            revert AddressNotAllowed();
+        }
+        if (initialized) {
+            revert AlreadyInitialized();
+        }
 
         initialized = true;
         version = 1;
@@ -62,7 +68,9 @@ contract LsdNetworkFactory is ILsdNetworkFactory {
     // ------------ settings ------------
 
     function transferOwnership(address _newAdmin) public onlyFactoryAdmin {
-        require(_newAdmin != address(0), "zero address");
+        if (_newAdmin == address(0)) {
+            revert AddressNotAllowed();
+        }
 
         factoryAdmin = _newAdmin;
     }
@@ -89,7 +97,9 @@ contract LsdNetworkFactory is ILsdNetworkFactory {
 
     function factoryClaim(address _recipient) external onlyFactoryAdmin {
         (bool success, ) = _recipient.call{value: address(this).balance}("");
-        require(success, "failed to transfer");
+        if (!success) {
+            revert FailedToTransfer();
+        }
     }
 
     // ------------ user ------------
@@ -102,7 +112,9 @@ contract LsdNetworkFactory is ILsdNetworkFactory {
         address[] memory _voters,
         uint256 _threshold
     ) external override {
-        require(_proxyAdmin != _networkAdmin, "admin must be different");
+        if (_proxyAdmin == _networkAdmin) {
+            revert AddressNotAllowed();
+        }
 
         bytes32 salt = keccak256(abi.encode(_lsdTokenName, _lsdTokenSymbol));
         NetworkContracts memory contracts = deployNetworkContracts(_lsdTokenName, _lsdTokenSymbol, salt, _proxyAdmin);
@@ -111,17 +123,23 @@ contract LsdNetworkFactory is ILsdNetworkFactory {
         (bool success, bytes memory data) = contracts._feePool.call(
             abi.encodeWithSelector(IFeePool.init.selector, contracts._networkWithdraw)
         );
-        require(success, string(data));
+        if (!success) {
+            revert FailedToCall();
+        }
 
         (success, data) = contracts._networkBalances.call(
             abi.encodeWithSelector(INetworkBalances.init.selector, contracts._networkProposal)
         );
-        require(success, string(data));
+        if (!success) {
+            revert FailedToCall();
+        }
 
         (success, data) = contracts._networkProposal.call(
             abi.encodeWithSelector(INetworkProposal.init.selector, _voters, _threshold, _networkAdmin)
         );
-        require(success, string(data));
+        if (!success) {
+            revert FailedToCall();
+        }
 
         (success, data) = contracts._nodeDeposit.call(
             abi.encodeWithSelector(
@@ -132,7 +150,9 @@ contract LsdNetworkFactory is ILsdNetworkFactory {
                 bytes.concat(bytes1(0x01), bytes11(0), bytes20(contracts._networkWithdraw))
             )
         );
-        require(success, string(data));
+        if (!success) {
+            revert FailedToCall();
+        }
 
         (success, data) = contracts._userDeposit.call(
             abi.encodeWithSelector(
@@ -144,7 +164,9 @@ contract LsdNetworkFactory is ILsdNetworkFactory {
                 contracts._networkBalances
             )
         );
-        require(success, string(data));
+        if (!success) {
+            revert FailedToCall();
+        }
 
         (success, data) = contracts._networkWithdraw.call(
             abi.encodeWithSelector(
@@ -156,7 +178,9 @@ contract LsdNetworkFactory is ILsdNetworkFactory {
                 address(this)
             )
         );
-        require(success, string(data));
+        if (!success) {
+            revert FailedToCall();
+        }
 
         emit LsdNetwork(contracts);
     }

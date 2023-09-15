@@ -13,7 +13,9 @@ contract FeePool is IFeePool {
     address public networkWithdrawAddress;
 
     function init(address _networkWithdrawAddress) external override {
-        require(!initialized, "already initialized");
+        if (initialized) {
+            revert AlreadyInitialized();
+        }
 
         initialized = true;
         version = 1;
@@ -26,8 +28,12 @@ contract FeePool is IFeePool {
     // Withdraws ETH to given address
     // Only accepts calls from network contracts
     function withdrawEther(uint256 _amount) external override {
-        require(_amount > 0, "No valid amount of ETH given to withdraw");
-        require(msg.sender == networkWithdrawAddress, "not networkWithdrawAddress");
+        if (_amount == 0) {
+            revert AmountZero();
+        }
+        if (msg.sender != networkWithdrawAddress) {
+            revert CallerNotAllowed();
+        }
 
         IDepositEth(msg.sender).depositEth{value: _amount}();
 

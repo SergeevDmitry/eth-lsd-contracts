@@ -50,7 +50,9 @@ contract NetworkWithdraw is INetworkWithdraw {
     mapping(address => uint256) public totalClaimedDepositOfNode;
 
     modifier onlyAdmin() {
-        require(INetworkProposal(networkProposalAddress).isAdmin(msg.sender), "not admin");
+        if (!INetworkProposal(networkProposalAddress).isAdmin(msg.sender)) {
+            revert NotNetworkAdmin();
+        }
         _;
     }
 
@@ -61,7 +63,9 @@ contract NetworkWithdraw is INetworkWithdraw {
         address _feePoolAddress,
         address _factoryAddress
     ) external override {
-        require(!initialized, "already initizlized");
+        if (initialized) {
+            revert AlreadyInitialized();
+        }
 
         initialized = true;
         version = 1;
@@ -130,7 +134,9 @@ contract NetworkWithdraw is INetworkWithdraw {
         totalPlatformClaimedAmount = totalPlatformCommission;
 
         (bool success, ) = _recipient.call{value: shouldClaimAmount}("");
-        require(success, "failed to transfer");
+        if (!success) {
+            revert FailedToCall();
+        }
     }
 
     // ------------ user unstake ------------
@@ -163,28 +169,37 @@ contract NetworkWithdraw is INetworkWithdraw {
         if (unstakeInstantly) {
             maxClaimableWithdrawIndex = willUseWithdrawalIndex;
 
-            (bool result, ) = msg.sender.call{value: ethAmount}("");
-            require(result, "Failed to unstake ETH");
+            (bool success, ) = msg.sender.call{value: ethAmount}("");
+            if (!success) {
+                revert FailedToCall();
+            }
         } else {
             unclaimedWithdrawalsOfUser[msg.sender].add(willUseWithdrawalIndex);
         }
     }
 
     function withdraw(uint256[] calldata _withdrawIndexList) external override {
-        require(_withdrawIndexList.length > 0, "index list empty");
+        if (_withdrawIndexList.length == 0) {
+            revert WithdrawIndexEmpty();
+        }
 
         uint256 totalAmount;
         for (uint256 i = 0; i < _withdrawIndexList.length; i++) {
             uint256 withdrawIndex = _withdrawIndexList[i];
-            require(withdrawIndex <= maxClaimableWithdrawIndex, "not claimable");
-            require(unclaimedWithdrawalsOfUser[msg.sender].remove(withdrawIndex), "already claimed");
-
+            if (withdrawIndex > maxClaimableWithdrawIndex) {
+                revert NotClaimable();
+            }
+            if (!unclaimedWithdrawalsOfUser[msg.sender].remove(withdrawIndex)) {
+                revert AlreadyClaimed();
+            }
             totalAmount = totalAmount - withdrawalAtIndex[withdrawIndex]._amount;
         }
 
         if (totalAmount > 0) {
-            (bool result, ) = msg.sender.call{value: totalAmount}("");
-            require(result, "user failed to claim ETH");
+            (bool success, ) = msg.sender.call{value: totalAmount}("");
+            if (!success) {
+                revert FailedToCall();
+            }
         }
 
         emit Withdraw(msg.sender, _withdrawIndexList);
@@ -204,29 +219,36 @@ contract NetworkWithdraw is INetworkWithdraw {
         uint256 claimableDeposit = _totalExitDepositAmount - totalClaimedDepositOfNode[_account];
 
         // Verify the merkle proof.
-        require(
-            MerkleProof.verify(
+        if (
+            !MerkleProof.verify(
                 _merkleProof,
                 merkleRoot,
                 keccak256(abi.encodePacked(_index, _account, _totalRewardAmount, _totalExitDepositAmount))
-            ),
-            "invalid proof"
-        );
+            )
+        ) {
+            revert InvalidMerkleProof();
+        }
 
         uint256 willClaimAmount;
         if (_claimType == ClaimType.ClaimReward) {
-            require(claimableReward > 0, "no claimable reward");
+            if (claimableReward == 0) {
+                revert ClaimableRewardZero();
+            }
 
             totalClaimedRewardOfNode[_account] = _totalRewardAmount;
             willClaimAmount = claimableReward;
         } else if (_claimType == ClaimType.ClaimDeposit) {
-            require(claimableDeposit > 0, "no claimable deposit");
+            if (claimableDeposit == 0) {
+                revert ClaimableDepositZero();
+            }
 
             totalClaimedDepositOfNode[_account] = _totalExitDepositAmount;
             willClaimAmount = claimableDeposit;
         } else if (_claimType == ClaimType.ClaimTotal) {
             willClaimAmount = claimableReward + claimableDeposit;
-            require(willClaimAmount > 0, "no claimable amount");
+            if (willClaimAmount == 0) {
+                revert ClaimableAmountZero();
+            }
 
             totalClaimedRewardOfNode[_account] = _totalRewardAmount;
             totalClaimedDepositOfNode[_account] = _totalExitDepositAmount;
@@ -235,7 +257,9 @@ contract NetworkWithdraw is INetworkWithdraw {
         }
 
         (bool success, ) = _account.call{value: willClaimAmount}("");
-        require(success, "failed to claim ETH");
+        if (!success) {
+            revert FailedToCall();
+        }
 
         emit NodeClaimed(_index, _account, claimableReward, claimableDeposit, _claimType);
     }
@@ -277,9 +301,16 @@ contract NetworkWithdraw is INetworkWithdraw {
             } else {
                 revert("unknown distribute type");
             }
-            require(_dealedHeight > latestDistributeHeight, "height already dealed");
-            require(_maxClaimableWithdrawIndex < nextWithdrawIndex, "withdraw index over");
-            require(totalAmount <= address(this).balance, "balance not enough");
+
+            if (_dealedHeight <= latestDistributeHeight) {
+                revert AlreadyDealedHeight();
+            }
+            if (_maxClaimableWithdrawIndex >= nextWithdrawIndex) {
+                revert WithdrawIndexOver();
+            }
+            if (totalAmount > address(this).balance) {
+                revert BalanceNotEnough();
+            }
 
             if (_maxClaimableWithdrawIndex > maxClaimableWithdrawIndex) {
                 maxClaimableWithdrawIndex = _maxClaimableWithdrawIndex;
@@ -323,16 +354,18 @@ contract NetworkWithdraw is INetworkWithdraw {
 
         // Finalize if Threshold has been reached
         if (INetworkProposal(networkProposalAddress).shouldExecute(proposalId, msg.sender)) {
-            require(
-                _validatorIndexList.length > 0 &&
-                    _validatorIndexList.length <= (withdrawLimitAmountPerCycle * 3) / 20 ether,
-                "length not match"
-            );
-            require(
-                _ejectedStartCycle < _withdrawCycle && _withdrawCycle + 1 == currentWithdrawCycle(),
-                "cycle not match"
-            );
-            require(ejectedValidatorsAtCycle[_withdrawCycle].length == 0, "already dealed");
+            if (
+                _validatorIndexList.length == 0 ||
+                _validatorIndexList.length > (withdrawLimitAmountPerCycle * 3) / 20 ether
+            ) {
+                revert LengthNotMatch();
+            }
+            if (_ejectedStartCycle >= _withdrawCycle || _withdrawCycle + 1 != currentWithdrawCycle()) {
+                revert CycleNotMatch();
+            }
+            if (ejectedValidatorsAtCycle[_withdrawCycle].length > 0) {
+                revert AlreadyNotifyCycle();
+            }
 
             ejectedValidatorsAtCycle[_withdrawCycle] = _validatorIndexList;
             ejectedStartCycle = _ejectedStartCycle;
@@ -348,7 +381,9 @@ contract NetworkWithdraw is INetworkWithdraw {
 
         // Finalize if Threshold has been reached
         if (INetworkProposal(networkProposalAddress).shouldExecute(proposalId, msg.sender)) {
-            require(_dealedEpoch > latestMerkleRootEpoch, "epoch already dealed");
+            if (_dealedEpoch <= latestMerkleRootEpoch) {
+                revert AlreadyDealedEpoch();
+            }
 
             merkleRoot = _merkleRoot;
             latestMerkleRootEpoch = _dealedEpoch;
@@ -384,18 +419,20 @@ contract NetworkWithdraw is INetworkWithdraw {
     // return:
     // 1 eth withdraw amount
     function _processWithdraw(uint256 _lsdTokenAmount) private returns (uint256) {
-        require(_lsdTokenAmount > 0, "lsdToken amount zero");
+        if (_lsdTokenAmount == 0) {
+            revert LsdTokenAmountZero();
+        }
         uint256 ethAmount = INetworkBalances(networkBalancesAddress).getEthValue(_lsdTokenAmount);
-        require(ethAmount > 0, "eth amount zero");
+        if (ethAmount == 0) {
+            revert EthAmountZero();
+        }
         uint256 currentCycle = currentWithdrawCycle();
-        require(
-            totalWithdrawAmountAtCycle[currentCycle] + ethAmount <= withdrawLimitAmountPerCycle,
-            "reach cycle limit"
-        );
-        require(
-            userWithdrawAmountAtCycle[msg.sender][currentCycle] + ethAmount <= userWithdrawLimitAmountPerCycle,
-            "reach user limit"
-        );
+        if (totalWithdrawAmountAtCycle[currentCycle] + ethAmount > withdrawLimitAmountPerCycle) {
+            revert ReachCycleWithdrawLimit();
+        }
+        if (userWithdrawAmountAtCycle[msg.sender][currentCycle] + ethAmount > userWithdrawLimitAmountPerCycle) {
+            revert ReachUserWithdrawLimit();
+        }
 
         totalWithdrawAmountAtCycle[currentCycle] = totalWithdrawAmountAtCycle[currentCycle] + ethAmount;
         userWithdrawAmountAtCycle[msg.sender][currentCycle] =
@@ -416,6 +453,8 @@ contract NetworkWithdraw is INetworkWithdraw {
         totalPlatformCommission += platformAmount;
 
         (bool success, ) = factoryAddress.call{value: factoryAmount}("");
-        require(success, "failed to transfer");
+        if (!success) {
+            revert FailedToCall();
+        }
     }
 }

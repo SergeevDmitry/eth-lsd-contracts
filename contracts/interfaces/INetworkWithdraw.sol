@@ -3,8 +3,9 @@ pragma solidity 0.8.19;
 // SPDX-License-Identifier: GPL-3.0-only
 
 import "./IDepositEth.sol";
+import "./Errors.sol";
 
-interface INetworkWithdraw is IDepositEth {
+interface INetworkWithdraw is IDepositEth, Errors {
     enum ClaimType {
         None,
         ClaimReward,

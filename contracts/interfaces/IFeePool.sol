@@ -1,8 +1,9 @@
 pragma solidity 0.8.19;
 
 // SPDX-License-Identifier: GPL-3.0-only
+import "./Errors.sol";
 
-interface IFeePool {
+interface IFeePool is Errors {
     event EtherWithdrawn(uint256 amount, uint256 time);
 
     function init(address _address) external;

@@ -19,15 +19,25 @@ contract NetworkProposal is INetworkProposal {
     mapping(bytes32 => Proposal) public proposals;
 
     modifier onlyAdmin() {
-        require(admin == msg.sender, "caller is not the admin");
+        if (msg.sender != admin) {
+            revert NotNetworkAdmin();
+        }
         _;
     }
 
     function init(address[] memory _voters, uint256 _initialThreshold, address _adminAddress) public {
-        require(!initialized, "already initialized");
-        require(_voters.length >= _initialThreshold && _initialThreshold > _voters.length / 2, "invalid threshold");
-        require(_voters.length <= 16, "too much voters");
-        require(_adminAddress != address(0), "not valid address");
+        if (initialized) {
+            revert AlreadyInitialized();
+        }
+        if (_voters.length < _initialThreshold || _initialThreshold <= _voters.length / 2) {
+            revert InvalidThreshold();
+        }
+        if (_voters.length > 16) {
+            revert VoterNumberOverLimit();
+        }
+        if (_adminAddress == address(0)) {
+            revert AddressNotAllowed();
+        }
 
         initialized = true;
         version = 1;
@@ -74,26 +84,36 @@ contract NetworkProposal is INetworkProposal {
     // ------------ settings ------------
 
     function transferAdmin(address _newAdmin) public onlyAdmin {
-        require(_newAdmin != address(0), "zero address");
+        if (_newAdmin == address(0)) {
+            revert AddressNotAllowed();
+        }
 
         admin = _newAdmin;
     }
 
     function addVoter(address _voter) public onlyAdmin {
-        require(voters.length() < 16, "too much voters");
-        require(threshold > (voters.length() + 1) / 2, "invalid threshold");
+        if (voters.length() >= 16) {
+            revert VoterNumberOverLimit();
+        }
+        if (threshold <= (voters.length() + 1) / 2) {
+            revert InvalidThreshold();
+        }
 
         voters.add(_voter);
     }
 
     function removeVoter(address _voter) public onlyAdmin {
-        require(voters.length() > threshold, "voters not enough");
+        if (voters.length() <= threshold) {
+            revert VotersNotEnough();
+        }
 
         voters.remove(_voter);
     }
 
     function changeThreshold(uint256 _newThreshold) external onlyAdmin {
-        require(voters.length() >= _newThreshold && _newThreshold > voters.length() / 2, "invalid threshold");
+        if (voters.length() < _newThreshold || _newThreshold <= voters.length() / 2) {
+            revert InvalidThreshold();
+        }
 
         threshold = _newThreshold.toUint8();
     }
@@ -111,12 +131,15 @@ contract NetworkProposal is INetworkProposal {
     function _checkProposal(bytes32 _proposalId, address _voter) internal returns (Proposal memory proposal) {
         proposal = proposals[_proposalId];
 
-        require(voters.contains(_voter), "not voter");
-        require(
-            proposal._status == ProposalStatus.Inactive || proposal._status == ProposalStatus.Active,
-            "proposal already executed"
-        );
-        require(!_hasVoted(proposal, _voter), "already voted");
+        if (!voters.contains(_voter)) {
+            revert CallerNotAllowed();
+        }
+        if (proposal._status != ProposalStatus.Inactive && proposal._status != ProposalStatus.Active) {
+            revert ProposalAlreadyExecuted();
+        }
+        if (_hasVoted(proposal, _voter)) {
+            revert AlreadyVoted();
+        }
 
         if (proposal._status == ProposalStatus.Inactive) {
             proposal = Proposal({_status: ProposalStatus.Active, _yesVotes: 0, _yesVotesTotal: 0});

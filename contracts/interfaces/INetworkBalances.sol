@@ -1,8 +1,9 @@
 pragma solidity 0.8.19;
 
 // SPDX-License-Identifier: GPL-3.0-only
+import "./Errors.sol";
 
-interface INetworkBalances {
+interface INetworkBalances is Errors {
     // Events
     event BalancesSubmitted(
         address indexed from,

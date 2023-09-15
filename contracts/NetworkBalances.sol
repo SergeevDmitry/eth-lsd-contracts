@@ -19,12 +19,16 @@ contract NetworkBalances is INetworkBalances {
     address public networkProposalAddress;
 
     modifier onlyAdmin() {
-        require(INetworkProposal(networkProposalAddress).isAdmin(msg.sender), "not admin");
+        if (!INetworkProposal(networkProposalAddress).isAdmin(msg.sender)) {
+            revert NotNetworkAdmin();
+        }
         _;
     }
 
     function init(address _networkProposalAddress) external override {
-        require(!initialized, "already initialized");
+        if (initialized) {
+            revert AlreadyInitialized();
+        }
 
         initialized = true;
         version = 1;
@@ -51,8 +55,9 @@ contract NetworkBalances is INetworkBalances {
         if (totalLsdTokenSupply == 0) {
             return _ethAmount;
         }
-        // Check network ETH balance
-        require(totalEthBalance > 0, "Cannot calculate lsdToken token amount while total network balance is zero");
+        if (totalEthBalance == 0) {
+            revert AmountZero();
+        }
         // Calculate and return
         return (_ethAmount * totalLsdTokenSupply) / totalEthBalance;
     }
@@ -80,8 +85,12 @@ contract NetworkBalances is INetworkBalances {
         emit BalancesSubmitted(msg.sender, _block, _totalEth, _lsdTokenSupply, block.timestamp);
 
         if (INetworkProposal(networkProposalAddress).shouldExecute(proposalId, msg.sender)) {
-            require(submitBalancesEnabled, "submitting balances is disabled");
-            require(_block > balancesBlock, "network balances for an equal or higher block are set");
+            if (!submitBalancesEnabled) {
+                revert SubmitBalancesDisable();
+            }
+            if (_block <= balancesBlock) {
+                revert BlockNotMatch();
+            }
 
             uint256 oldRate = getExchangeRate();
 
@@ -89,7 +98,9 @@ contract NetworkBalances is INetworkBalances {
 
             uint256 newRate = getExchangeRate();
             uint256 rateChange = newRate > oldRate ? newRate - oldRate : oldRate - newRate;
-            require((rateChange * 1e18) / oldRate < rateChangeLimit, "rate change over limit");
+            if ((rateChange * 1e18) / oldRate > rateChangeLimit) {
+                revert RateChangeOverLimit();
+            }
         }
     }
 

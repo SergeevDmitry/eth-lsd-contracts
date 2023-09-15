@@ -2,8 +2,9 @@ pragma solidity 0.8.19;
 
 // SPDX-License-Identifier: GPL-3.0-only
 import "./IDepositEth.sol";
+import "./Errors.sol";
 
-interface INodeDeposit is IDepositEth {
+interface INodeDeposit is IDepositEth, Errors {
     enum NodeType {
         Undefined,
         LightNode,

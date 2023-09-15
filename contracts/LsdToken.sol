@@ -21,10 +21,13 @@ contract LsdToken is ILsdToken, ERC20Burnable {
     // Mint lsdToken
     // Only accepts calls from the UserDeposit contract
     function mint(address _to, uint256 _lsdTokenAmount) external {
-        require(msg.sender == userDepositAddress, "not userDeposit");
-
+        if (msg.sender != userDepositAddress) {
+            revert CallerNotAllowed();
+        }
         // Check lsdToken amount
-        require(_lsdTokenAmount > 0, "Invalid token mint amount");
+        if (_lsdTokenAmount == 0) {
+            revert AmountZero();
+        }
         // Update balance & supply
         _mint(_to, _lsdTokenAmount);
     }

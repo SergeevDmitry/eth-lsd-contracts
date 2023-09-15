@@ -28,7 +28,9 @@ contract NodeDeposit is INodeDeposit {
     mapping(address => NodeInfo) public nodeInfoOf; //light node and trust node are always mutually exclusive and cannot be converted to each other
 
     modifier onlyAdmin() {
-        require(INetworkProposal(networkProposalAddress).isAdmin(msg.sender), "not admin");
+        if (!INetworkProposal(networkProposalAddress).isAdmin(msg.sender)) {
+            revert NotNetworkAdmin();
+        }
         _;
     }
 
@@ -38,7 +40,9 @@ contract NodeDeposit is INodeDeposit {
         address _networkProposalAddress,
         bytes calldata _withdrawCredentials
     ) external override {
-        require(!initialized, "already initizlized");
+        if (initialized) {
+            revert AlreadyInitialized();
+        }
 
         initialized = true;
         version = 1;
@@ -73,7 +77,9 @@ contract NodeDeposit is INodeDeposit {
     // ------------ settings ------------
 
     function setNodePubkeyStatus(bytes calldata _validatorPubkey, PubkeyStatus _status) public onlyAdmin {
-        require(pubkeyInfoOf[_validatorPubkey]._status != PubkeyStatus.UnInitial, "pubkey not exist");
+        if (pubkeyInfoOf[_validatorPubkey]._status == PubkeyStatus.UnInitial) {
+            revert PubkeyNotExist();
+        }
 
         _setNodePubkeyStatus(_validatorPubkey, _status);
     }
@@ -99,13 +105,17 @@ contract NodeDeposit is INodeDeposit {
     }
 
     function addTrustNode(address _trustNodeAddress) public onlyAdmin {
-        require(nodeInfoOf[_trustNodeAddress]._nodeType == NodeType.Undefined, "already exist");
+        if (nodeInfoOf[_trustNodeAddress]._nodeType != NodeType.Undefined) {
+            revert NodeAlreadyExist();
+        }
 
         nodeInfoOf[_trustNodeAddress] = NodeInfo({_nodeType: NodeType.TrustNode, _removed: false, _pubkeyNumber: 0});
     }
 
     function removeTrustNode(address _trustNodeAddress) public onlyAdmin {
-        require(nodeInfoOf[_trustNodeAddress]._nodeType == NodeType.TrustNode, "already exist");
+        if (nodeInfoOf[_trustNodeAddress]._nodeType != NodeType.TrustNode) {
+            revert NotTrustNode();
+        }
 
         nodeInfoOf[_trustNodeAddress]._removed = true;
     }
@@ -117,11 +127,12 @@ contract NodeDeposit is INodeDeposit {
         bytes[] calldata _validatorSignatures,
         bytes32[] calldata _depositDataRoots
     ) external payable override {
-        require(
-            _validatorPubkeys.length == _validatorSignatures.length &&
-                _validatorPubkeys.length == _depositDataRoots.length,
-            "params len err"
-        );
+        if (
+            _validatorPubkeys.length != _validatorSignatures.length ||
+            _validatorPubkeys.length != _depositDataRoots.length
+        ) {
+            revert LengthNotMatch();
+        }
 
         NodeInfo memory node = nodeInfoOf[msg.sender];
         if (node._nodeType == NodeType.Undefined) {
@@ -131,17 +142,29 @@ contract NodeDeposit is INodeDeposit {
         uint256 depositAmount;
         uint256 nodeDepositAmount;
         if (node._nodeType == NodeType.TrustNode) {
-            require(!node._removed, "already removed");
-            require(trustNodeDepositEnabled, "trust node deposits disabled");
-            require(msg.value == 0, "msg value not match");
-            require(node._pubkeyNumber < trustNodePubkeyNumberLimit, "pubkey number limit");
+            if (node._removed) {
+                revert NodeAlreadyRemoved();
+            }
+            if (!trustNodeDepositEnabled) {
+                revert TrustNodeDepositDisabled();
+            }
+            if (msg.value > 0) {
+                revert AmountNotZero();
+            }
+            if (node._pubkeyNumber >= trustNodePubkeyNumberLimit) {
+                revert ReachPubkeyNumberLimit();
+            }
 
             depositAmount = uint256(1 ether);
 
             IUserDeposit(userDepositAddress).withdrawExcessBalance(depositAmount * _validatorPubkeys.length);
         } else {
-            require(lightNodeDepositEnabled, "light node deposits disabled");
-            require(msg.value == _validatorPubkeys.length * lightNodeDepositAmount, "msg value not match");
+            if (!lightNodeDepositEnabled) {
+                revert LightNodeDepositDisabled();
+            }
+            if (msg.value != _validatorPubkeys.length * lightNodeDepositAmount) {
+                revert AmountUnmatch();
+            }
 
             depositAmount = lightNodeDepositAmount;
             nodeDepositAmount = lightNodeDepositAmount;
@@ -170,11 +193,12 @@ contract NodeDeposit is INodeDeposit {
         bytes[] calldata _validatorSignatures,
         bytes32[] calldata _depositDataRoots
     ) external override {
-        require(
-            _validatorPubkeys.length == _validatorSignatures.length &&
-                _validatorPubkeys.length == _depositDataRoots.length,
-            "params len err"
-        );
+        if (
+            _validatorPubkeys.length != _validatorSignatures.length ||
+            _validatorPubkeys.length != _depositDataRoots.length
+        ) {
+            revert LengthNotMatch();
+        }
 
         for (uint256 i = 0; i < _validatorPubkeys.length; i++) {
             _stake(_validatorPubkeys[i], _validatorSignatures[i], _depositDataRoots[i]);
@@ -185,7 +209,9 @@ contract NodeDeposit is INodeDeposit {
 
     // Only accepts calls from trusted (oracle) nodes
     function voteWithdrawCredentials(bytes[] calldata _pubkeys, bool[] calldata _matchs) external override {
-        require(_pubkeys.length == _matchs.length, "params len err");
+        if (_pubkeys.length != _matchs.length) {
+            revert LengthNotMatch();
+        }
 
         for (uint256 i = 0; i < _pubkeys.length; i++) {
             _voteWithdrawCredentials(_pubkeys[i], _matchs[i]);
@@ -210,7 +236,10 @@ contract NodeDeposit is INodeDeposit {
         uint256 _nodeDepositAmount,
         uint256 _depositAmount
     ) private {
-        require(pubkeyInfoOf[_validatorPubkey]._status == PubkeyStatus.UnInitial, "pubkey already exists");
+        if (pubkeyInfoOf[_validatorPubkey]._status != PubkeyStatus.UnInitial) {
+            revert PubkeyAlreadyExist();
+        }
+
         pubkeys.push(_validatorPubkey);
 
         // add pubkey
@@ -239,8 +268,12 @@ contract NodeDeposit is INodeDeposit {
     ) private {
         PubkeyInfo memory pubkeyInfo = pubkeyInfoOf[_validatorPubkey];
 
-        require(pubkeyInfo._status == PubkeyStatus.Match, "pubkey status unmatch");
-        require(pubkeyInfo._owner == msg.sender, "not pubkey owner");
+        if (pubkeyInfo._status != PubkeyStatus.Match) {
+            revert PubkeyStatusUnmatch();
+        }
+        if (msg.sender != pubkeyInfo._owner) {
+            revert NotPubkeyOwner();
+        }
 
         _setNodePubkeyStatus(_validatorPubkey, PubkeyStatus.Staked);
 
