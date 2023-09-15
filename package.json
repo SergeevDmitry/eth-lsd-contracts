@@ -3,11 +3,12 @@
     "compile": "hardhat compile",
     "size": "hardhat size-contracts",
     "test": "hardhat test ./test/LsdNetworkFactory.test.js",
-    "clean": "rm -rf ./node_modules ./artifacts ./cache"
+    "clean": "rm -rf ./node_modules ./artifacts ./cache",
+    "deploy": "hardhat run ./script/deploy_on_testnet.js --network goerli"
   },
   "license": "GPL-3.0-only",
   "devDependencies": {
-    "@openzeppelin/contracts": "^4.9.2",
+    "@openzeppelin/contracts": "4.9.3",
     "@chainsafe/lodestar-types": "^0.10.0",
     "@chainsafe/ssz": "^0.6.1",
     "@nomiclabs/hardhat-ethers": "^2.1.1",
