@@ -24,6 +24,8 @@ interface Errors {
     error InvalidThreshold();
     error VoterNumberOverLimit();
     error VotersNotEnough();
+    error VotersDuplicate();
+    error VotersNotExist();
     error ProposalAlreadyExecuted();
     error AlreadyVoted();
 

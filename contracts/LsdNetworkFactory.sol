@@ -25,7 +25,7 @@ contract LsdNetworkFactory is ILsdNetworkFactory {
     address public networkWithdrawLogicAddress;
 
     mapping(address => NetworkContracts) public networkContractsOfLsdToken;
-    mapping(address => address[]) public lsdTokensOfCreater;
+    mapping(address => address[]) private lsdTokensOf;
 
     modifier onlyFactoryAdmin() {
         if (msg.sender != factoryAdmin) {
@@ -65,6 +65,17 @@ contract LsdNetworkFactory is ILsdNetworkFactory {
 
     // Receive eth
     receive() external payable {}
+
+    // ------------ getter ------------
+
+    function lsdTokensOfCreater(address _creater) public view returns (address[] memory) {
+        uint256 length = lsdTokensOf[_creater].length;
+        address[] memory list = new address[](length);
+        for (uint256 i = 0; i < length; i++) {
+            list[i] = lsdTokensOf[_creater][i];
+        }
+        return list;
+    }
 
     // ------------ settings ------------
 
@@ -120,7 +131,7 @@ contract LsdNetworkFactory is ILsdNetworkFactory {
         bytes32 salt = keccak256(abi.encode(msg.sender, block.number, _lsdTokenName, _lsdTokenSymbol));
         NetworkContracts memory contracts = deployNetworkContracts(_lsdTokenName, _lsdTokenSymbol, salt, _proxyAdmin);
         networkContractsOfLsdToken[contracts._lsdToken] = contracts;
-        lsdTokensOfCreater[msg.sender].push(contracts._lsdToken);
+        lsdTokensOf[msg.sender].push(contracts._lsdToken);
 
         (bool success, bytes memory data) = contracts._feePool.call(
             abi.encodeWithSelector(IFeePool.init.selector, contracts._networkWithdraw)

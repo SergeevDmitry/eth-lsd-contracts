@@ -44,7 +44,9 @@ contract NetworkProposal is INetworkProposal {
         threshold = _initialThreshold.toUint8();
         uint256 initialVoterCount = _voters.length;
         for (uint256 i; i < initialVoterCount; ++i) {
-            voters.add(_voters[i]);
+            if (!voters.add(_voters[i])) {
+                revert VotersDuplicate();
+            }
         }
         admin = _adminAddress;
     }
@@ -99,7 +101,9 @@ contract NetworkProposal is INetworkProposal {
             revert InvalidThreshold();
         }
 
-        voters.add(_voter);
+        if (!voters.add(_voter)) {
+            revert VotersDuplicate();
+        }
     }
 
     function removeVoter(address _voter) public onlyAdmin {
@@ -107,7 +111,9 @@ contract NetworkProposal is INetworkProposal {
             revert VotersNotEnough();
         }
 
-        voters.remove(_voter);
+        if (!voters.remove(_voter)) {
+            revert VotersNotExist();
+        }
     }
 
     function changeThreshold(uint256 _newThreshold) external onlyAdmin {
