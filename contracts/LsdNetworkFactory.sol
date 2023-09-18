@@ -24,7 +24,8 @@ contract LsdNetworkFactory is ILsdNetworkFactory {
     address public userDepositLogicAddress;
     address public networkWithdrawLogicAddress;
 
-    mapping(address => NetworkContracts) public networkContractsOf;
+    mapping(address => NetworkContracts) public networkContractsOfLsdToken;
+    mapping(address => address[]) public lsdTokensOfCreater;
 
     modifier onlyFactoryAdmin() {
         if (msg.sender != factoryAdmin) {
@@ -116,9 +117,10 @@ contract LsdNetworkFactory is ILsdNetworkFactory {
             revert AddressNotAllowed();
         }
 
-        bytes32 salt = keccak256(abi.encode(_lsdTokenName, _lsdTokenSymbol));
+        bytes32 salt = keccak256(abi.encode(msg.sender, block.number, _lsdTokenName, _lsdTokenSymbol));
         NetworkContracts memory contracts = deployNetworkContracts(_lsdTokenName, _lsdTokenSymbol, salt, _proxyAdmin);
-        networkContractsOf[contracts._lsdToken] = contracts;
+        networkContractsOfLsdToken[contracts._lsdToken] = contracts;
+        lsdTokensOfCreater[msg.sender].push(contracts._lsdToken);
 
         (bool success, bytes memory data) = contracts._feePool.call(
             abi.encodeWithSelector(IFeePool.init.selector, contracts._networkWithdraw)
