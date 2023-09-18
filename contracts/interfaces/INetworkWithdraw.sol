@@ -64,9 +64,9 @@ interface INetworkWithdraw is IDepositEth, Errors {
     ) external;
 
     // getter
-    function getUnclaimedWithdrawalsOfUser(address user) external view returns (uint256[] memory);
+    function getUnclaimedWithdrawalsOfUser(address _user) external view returns (uint256[] memory);
 
-    function getEjectedValidatorsAtCycle(uint256 cycle) external view returns (uint256[] memory);
+    function getEjectedValidatorsAtCycle(uint256 _cycle) external view returns (uint256[] memory);
 
     function totalMissingAmountForWithdraw() external view returns (uint256);
 

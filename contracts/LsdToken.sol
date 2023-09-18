@@ -10,7 +10,7 @@ contract LsdToken is ILsdToken, ERC20Burnable {
     address public userDepositAddress;
 
     // Construct
-    constructor(address _userDepositAddress, string memory name, string memory symbol) ERC20(name, symbol) {
+    constructor(address _userDepositAddress, string memory _name, string memory _symbol) ERC20(_name, _symbol) {
         userDepositAddress = _userDepositAddress;
     }
 
