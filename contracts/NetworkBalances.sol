@@ -15,8 +15,8 @@ contract NetworkBalances is INetworkBalances {
     uint256 public totalEthBalance;
     uint256 public totalLsdTokenSupply;
     uint256 public rateChangeLimit;
-
     address public networkProposalAddress;
+    uint256 public updateBalancesEpochs;
 
     modifier onlyAdmin() {
         if (!INetworkProposal(networkProposalAddress).isAdmin(msg.sender)) {
@@ -35,6 +35,7 @@ contract NetworkBalances is INetworkBalances {
         submitBalancesEnabled = true;
         rateChangeLimit = 11e14; //0.0011
         networkProposalAddress = _networkProposalAddress;
+        updateBalancesEpochs = 225;
     }
 
     // ------------ getter ------------
@@ -72,6 +73,10 @@ contract NetworkBalances is INetworkBalances {
 
     function setRateChangeLimit(uint256 _value) public onlyAdmin {
         rateChangeLimit = _value;
+    }
+
+    function setUpdateBalancesEpochs(uint256 _value) public onlyAdmin {
+        updateBalancesEpochs = _value;
     }
 
     // ------------ voter ------------
