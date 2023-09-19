@@ -60,6 +60,7 @@ contract NetworkWithdraw is INetworkWithdraw {
         address _lsdTokenAddress,
         address _userDepositAddress,
         address _networkProposalAddress,
+        address _networkBalancesAddress,
         address _feePoolAddress,
         address _factoryAddress
     ) external override {
@@ -79,6 +80,7 @@ contract NetworkWithdraw is INetworkWithdraw {
         lsdTokenAddress = _lsdTokenAddress;
         userDepositAddress = _userDepositAddress;
         networkProposalAddress = _networkProposalAddress;
+        networkBalancesAddress = _networkBalancesAddress;
         feePoolAddress = _feePoolAddress;
         factoryAddress = _factoryAddress;
     }

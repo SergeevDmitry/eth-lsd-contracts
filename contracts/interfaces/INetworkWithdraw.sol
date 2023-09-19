@@ -59,6 +59,7 @@ interface INetworkWithdraw is IDepositEth, Errors {
         address _lsdTokenAddress,
         address _userDepositAddress,
         address _networkProposalAddress,
+        address _networkBalancesAddress,
         address _feePoolAddress,
         address _factoryAddress
     ) external;

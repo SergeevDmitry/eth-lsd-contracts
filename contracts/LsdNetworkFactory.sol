@@ -187,6 +187,7 @@ contract LsdNetworkFactory is ILsdNetworkFactory {
                 contracts._lsdToken,
                 contracts._userDeposit,
                 contracts._networkProposal,
+                contracts._networkBalances,
                 contracts._feePool,
                 address(this)
             )
