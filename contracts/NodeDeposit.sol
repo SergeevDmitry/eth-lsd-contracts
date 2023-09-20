@@ -11,10 +11,10 @@ contract NodeDeposit is INodeDeposit {
     bool public initialized;
     uint8 public version;
 
-    bool public lightNodeDepositEnabled;
+    bool public soloNodeDepositEnabled;
     bool public trustNodeDepositEnabled;
 
-    uint256 public lightNodeDepositAmount;
+    uint256 public soloNodeDepositAmount;
     uint256 public trustNodePubkeyNumberLimit;
 
     address public userDepositAddress;
@@ -25,7 +25,7 @@ contract NodeDeposit is INodeDeposit {
 
     bytes[] public pubkeys;
     mapping(bytes => PubkeyInfo) public pubkeyInfoOf;
-    mapping(address => NodeInfo) public nodeInfoOf; //light node and trust node are always mutually exclusive and cannot be converted to each other
+    mapping(address => NodeInfo) public nodeInfoOf; //solo node and trust node are always mutually exclusive and cannot be converted to each other
 
     modifier onlyAdmin() {
         if (!INetworkProposal(networkProposalAddress).isAdmin(msg.sender)) {
@@ -46,7 +46,7 @@ contract NodeDeposit is INodeDeposit {
 
         initialized = true;
         version = 1;
-        lightNodeDepositEnabled = true;
+        soloNodeDepositEnabled = true;
         trustNodeDepositEnabled = true;
         trustNodePubkeyNumberLimit = 100;
 
@@ -84,16 +84,16 @@ contract NodeDeposit is INodeDeposit {
         _setNodePubkeyStatus(_validatorPubkey, _status);
     }
 
-    function setLightNodeDepositEnabled(bool _value) public onlyAdmin {
-        lightNodeDepositEnabled = _value;
+    function setSoloNodeDepositEnabled(bool _value) public onlyAdmin {
+        soloNodeDepositEnabled = _value;
     }
 
     function setTrustNodeDepositEnabled(bool _value) public onlyAdmin {
         trustNodeDepositEnabled = _value;
     }
 
-    function setLightNodeDepositAmount(uint256 _amount) public onlyAdmin {
-        lightNodeDepositAmount = _amount;
+    function setSoloNodeDepositAmount(uint256 _amount) public onlyAdmin {
+        soloNodeDepositAmount = _amount;
     }
 
     function setTrustNodePubkeyLimit(uint256 _value) public onlyAdmin {
@@ -136,7 +136,7 @@ contract NodeDeposit is INodeDeposit {
 
         NodeInfo memory node = nodeInfoOf[msg.sender];
         if (node._nodeType == NodeType.Undefined) {
-            node._nodeType = NodeType.LightNode;
+            node._nodeType = NodeType.SoloNode;
         }
 
         uint256 depositAmount;
@@ -159,15 +159,15 @@ contract NodeDeposit is INodeDeposit {
 
             IUserDeposit(userDepositAddress).withdrawExcessBalance(depositAmount * _validatorPubkeys.length);
         } else {
-            if (!lightNodeDepositEnabled) {
-                revert LightNodeDepositDisabled();
+            if (!soloNodeDepositEnabled) {
+                revert SoloNodeDepositDisabled();
             }
-            if (msg.value != _validatorPubkeys.length * lightNodeDepositAmount) {
+            if (msg.value != _validatorPubkeys.length * soloNodeDepositAmount) {
                 revert AmountUnmatch();
             }
 
-            depositAmount = lightNodeDepositAmount;
-            nodeDepositAmount = lightNodeDepositAmount;
+            depositAmount = soloNodeDepositAmount;
+            nodeDepositAmount = soloNodeDepositAmount;
         }
 
         node._pubkeyNumber += _validatorPubkeys.length;
@@ -279,7 +279,7 @@ contract NodeDeposit is INodeDeposit {
 
         uint256 willWithdrawAmount;
         NodeType nodeType = nodeInfoOf[pubkeyInfo._owner]._nodeType;
-        if (nodeType == NodeType.LightNode) {
+        if (nodeType == NodeType.SoloNode) {
             willWithdrawAmount = uint256(32 ether) - pubkeyInfo._nodeDepositAmount;
         } else if (nodeType == NodeType.TrustNode) {
             willWithdrawAmount = uint256(31 ether);

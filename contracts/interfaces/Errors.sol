@@ -47,6 +47,8 @@ interface Errors {
     error EthAmountZero();
     error ReachCycleWithdrawLimit();
     error ReachUserWithdrawLimit();
+    error SecondsZero();
+    error NodeNotClaimable();
 
     error PubkeyNotExist();
     error PubkeyAlreadyExist();
@@ -55,7 +57,7 @@ interface Errors {
     error NotTrustNode();
     error NodeAlreadyRemoved();
     error TrustNodeDepositDisabled();
-    error LightNodeDepositDisabled();
+    error SoloNodeDepositDisabled();
     error ReachPubkeyNumberLimit();
     error NotPubkeyOwner();
 

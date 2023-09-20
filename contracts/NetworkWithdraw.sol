@@ -40,6 +40,7 @@ contract NetworkWithdraw is INetworkWithdraw {
     uint256 public latestMerkleRootEpoch;
     bytes32 public merkleRoot;
     string public nodeRewardsFileCid;
+    bool public nodeClaimEnabled;
 
     mapping(uint256 => Withdrawal) public withdrawalAtIndex;
     mapping(address => EnumerableSet.UintSet) internal unclaimedWithdrawalsOfUser;
@@ -76,6 +77,7 @@ contract NetworkWithdraw is INetworkWithdraw {
         platformCommissionRate = 1e17;
         factoryCommissionRate = 1e17;
         nextWithdrawIndex = 1;
+        nodeClaimEnabled = true;
 
         lsdTokenAddress = _lsdTokenAddress;
         userDepositAddress = _userDepositAddress;
@@ -122,13 +124,16 @@ contract NetworkWithdraw is INetworkWithdraw {
     }
 
     function setWithdrawCycleSeconds(uint256 _withdrawCycleSeconds) external onlyAdmin {
+        if (_withdrawCycleSeconds == 0) {
+            revert SecondsZero();
+        }
         withdrawCycleSeconds = _withdrawCycleSeconds;
 
         emit SetWithdrawCycleSeconds(_withdrawCycleSeconds);
     }
 
-    function updateMerkleRoot(bytes32 _merkleRoot) external onlyAdmin {
-        merkleRoot = _merkleRoot;
+    function setNodeClaimEnabled(bool _value) external onlyAdmin {
+        nodeClaimEnabled = _value;
     }
 
     function platformClaim(address _recipient) external onlyAdmin {
@@ -208,7 +213,6 @@ contract NetworkWithdraw is INetworkWithdraw {
     }
 
     // ----- node claim --------------
-    // todo check totalRewardAmount
     function nodeClaim(
         uint256 _index,
         address _account,
@@ -217,6 +221,9 @@ contract NetworkWithdraw is INetworkWithdraw {
         bytes32[] calldata _merkleProof,
         ClaimType _claimType
     ) external {
+        if (!nodeClaimEnabled) {
+            revert NodeNotClaimable();
+        }
         uint256 claimableReward = _totalRewardAmount - totalClaimedRewardOfNode[_account];
         uint256 claimableDeposit = _totalExitDepositAmount - totalClaimedDepositOfNode[_account];
 

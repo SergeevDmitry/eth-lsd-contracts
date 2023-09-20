@@ -25,35 +25,35 @@ interface INetworkWithdraw is IDepositEth, Errors {
     }
 
     event NodeClaimed(
-        uint256 _index,
-        address _account,
-        uint256 _claimableReward,
-        uint256 _claimableDeposit,
-        ClaimType _claimType
+        uint256 index,
+        address account,
+        uint256 claimableReward,
+        uint256 claimableDeposit,
+        ClaimType claimType
     );
-    event SetWithdrawLimitPerCycle(uint256 _withdrawLimitPerCycle);
-    event SetUserWithdrawLimitPerCycle(uint256 _userWithdrawLimitPerCycle);
-    event SetWithdrawCycleSeconds(uint256 _seconds);
-    event SetMerkleRoot(uint256 indexed _dealedEpoch, bytes32 _merkleRoot, string _nodeRewardsFileCid);
-    event EtherDeposited(address indexed _from, uint256 _amount, uint256 _time);
+    event SetWithdrawLimitPerCycle(uint256 withdrawLimitPerCycle);
+    event SetUserWithdrawLimitPerCycle(uint256 userWithdrawLimitPerCycle);
+    event SetWithdrawCycleSeconds(uint256 cycleSeconds);
+    event SetMerkleRoot(uint256 indexed dealedEpoch, bytes32 merkleRoot, string nodeRewardsFileCid);
+    event EtherDeposited(address indexed from, uint256 amount, uint256 time);
     event Unstake(
-        address indexed _from,
-        uint256 _lsdTokenAmount,
-        uint256 _ethAmount,
-        uint256 _withdrawIndex,
-        bool _instantly
+        address indexed from,
+        uint256 lsdTokenAmount,
+        uint256 ethAmount,
+        uint256 withdrawIndex,
+        bool instantly
     );
-    event Withdraw(address indexed _from, uint256[] _withdrawIndexList);
+    event Withdraw(address indexed from, uint256[] withdrawIndexList);
     event DistributeRewards(
-        DistributeType _distributeType,
-        uint256 _dealedHeight,
-        uint256 _userAmount,
-        uint256 _nodeAmount,
-        uint256 _platformAmount,
-        uint256 _maxClaimableWithdrawIndex,
-        uint256 _mvAmount
+        DistributeType distributeType,
+        uint256 dealedHeight,
+        uint256 userAmount,
+        uint256 nodeAmount,
+        uint256 platformAmount,
+        uint256 maxClaimableWithdrawIndex,
+        uint256 mvAmount
     );
-    event NotifyValidatorExit(uint256 _withdrawCycle, uint256 _ejectedStartWithdrawCycle, uint256[] _ejectedValidators);
+    event NotifyValidatorExit(uint256 withdrawCycle, uint256 ejectedStartWithdrawCycle, uint256[] ejectedValidators);
 
     function init(
         address _lsdTokenAddress,

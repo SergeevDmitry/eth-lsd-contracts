@@ -15,7 +15,7 @@ interface ILsdNetworkFactory is Errors {
         uint256 _block;
     }
 
-    event LsdNetwork(NetworkContracts _contracts);
+    event LsdNetwork(NetworkContracts contracts);
 
     function createLsdNetwork(
         string memory _lsdTokenName,

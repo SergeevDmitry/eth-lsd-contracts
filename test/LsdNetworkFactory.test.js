@@ -10,7 +10,7 @@ describe("LsdNetwok test", function () {
         this.AccountFactoryAdmin = this.signers[1]
 
         this.AccountUser1 = this.signers[2]
-        this.AccountLightNode1 = this.signers[3]
+        this.AccountSoloNode1 = this.signers[3]
         this.AccountTrustNode1 = this.signers[4]
 
         this.AccountProxyAdmin1 = this.signers[5]

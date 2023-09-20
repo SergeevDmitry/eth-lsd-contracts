@@ -7,7 +7,7 @@ import "./Errors.sol";
 interface INodeDeposit is IDepositEth, Errors {
     enum NodeType {
         Undefined,
-        LightNode,
+        SoloNode,
         TrustNode
     }
 
