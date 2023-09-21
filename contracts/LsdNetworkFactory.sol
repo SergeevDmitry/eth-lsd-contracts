@@ -11,6 +11,7 @@ import "./interfaces/INetworkWithdraw.sol";
 import "./interfaces/ILsdNetworkFactory.sol";
 import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import "./Timelock.sol";
 
 contract LsdNetworkFactory is UUPSUpgradeable, ILsdNetworkFactory {
     bool public initialized;
@@ -126,8 +127,31 @@ contract LsdNetworkFactory is UUPSUpgradeable, ILsdNetworkFactory {
         address[] memory _voters,
         uint256 _threshold
     ) external override {
-        bytes32 salt = keccak256(abi.encode(msg.sender, block.number, _lsdTokenName, _lsdTokenSymbol));
-        NetworkContracts memory contracts = deployNetworkContracts(_lsdTokenName, _lsdTokenSymbol, salt);
+        _createLsdNetwork(_lsdTokenName, _lsdTokenSymbol, _networkAdmin, _voters, _threshold);
+    }
+
+    function createLsdNetworkWithTimelock(
+        string memory _lsdTokenName,
+        string memory _lsdTokenSymbol,
+        address[] memory _voters,
+        uint256 _threshold,
+        uint256 minDelay,
+        address[] memory proposers
+    ) external override {
+        address networkAdmin = address(new Timelock(minDelay, proposers, proposers, msg.sender));
+        _createLsdNetwork(_lsdTokenName, _lsdTokenSymbol, networkAdmin, _voters, _threshold);
+    }
+
+    // ------------ helper ------------
+
+    function _createLsdNetwork(
+        string memory _lsdTokenName,
+        string memory _lsdTokenSymbol,
+        address _networkAdmin,
+        address[] memory _voters,
+        uint256 _threshold
+    ) private {
+        NetworkContracts memory contracts = deployNetworkContracts(_lsdTokenName, _lsdTokenSymbol);
         networkContractsOfLsdToken[contracts._lsdToken] = contracts;
         lsdTokensOf[msg.sender].push(contracts._lsdToken);
 
@@ -197,25 +221,22 @@ contract LsdNetworkFactory is UUPSUpgradeable, ILsdNetworkFactory {
         emit LsdNetwork(contracts);
     }
 
-    // ------------ helper ------------
-
-    function deploy(bytes32 salt, address _logicAddress) private returns (address) {
-        return address(new ERC1967Proxy{salt: salt}(_logicAddress, ""));
+    function deploy(address _logicAddress) private returns (address) {
+        return address(new ERC1967Proxy(_logicAddress, ""));
     }
 
     function deployNetworkContracts(
         string memory _lsdTokenName,
-        string memory _lsdTokenSymbol,
-        bytes32 salt
+        string memory _lsdTokenSymbol
     ) private returns (NetworkContracts memory) {
-        address feePool = deploy(salt, feePoolLogicAddress);
-        address networkBalances = deploy(salt, networkBalancesLogicAddress);
-        address networkProposal = deploy(salt, networkProposalLogicAddress);
-        address nodeDeposit = deploy(salt, nodeDepositLogicAddress);
-        address userDeposit = deploy(salt, userDepositLogicAddress);
-        address networkWithdraw = deploy(salt, networkWithdrawLogicAddress);
+        address feePool = deploy(feePoolLogicAddress);
+        address networkBalances = deploy(networkBalancesLogicAddress);
+        address networkProposal = deploy(networkProposalLogicAddress);
+        address nodeDeposit = deploy(nodeDepositLogicAddress);
+        address userDeposit = deploy(userDepositLogicAddress);
+        address networkWithdraw = deploy(networkWithdrawLogicAddress);
 
-        address lsdToken = address(new LsdToken{salt: salt}(userDeposit, _lsdTokenName, _lsdTokenSymbol));
+        address lsdToken = address(new LsdToken(userDeposit, _lsdTokenName, _lsdTokenSymbol));
 
         return
             NetworkContracts(

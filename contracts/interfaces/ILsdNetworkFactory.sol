@@ -24,4 +24,13 @@ interface ILsdNetworkFactory is Errors {
         address[] memory _voters,
         uint256 _threshold
     ) external;
+
+    function createLsdNetworkWithTimelock(
+        string memory _lsdTokenName,
+        string memory _lsdTokenSymbol,
+        address[] memory _voters,
+        uint256 _threshold,
+        uint256 minDelay,
+        address[] memory proposers
+    ) external;
 }

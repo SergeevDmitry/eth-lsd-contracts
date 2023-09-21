@@ -88,13 +88,18 @@ describe("LsdNetwok test", function () {
     })
 
     it("should createLsdNetwork success", async function () {
-
         let createLsdNetworkTx = await this.ContractLsdNetworkFactory.connect(this.AccountUser1).createLsdNetwork(
             "test lsdEth", "lsdEth", this.AccountNetworkAdmin1.address,
             [this.AccountVoters1.address, this.AccountVoters2.address], 2)
 
         let createLsdNetworkTxRecipient = await createLsdNetworkTx.wait()
         console.log("createLsdNetworkTx gas: ", createLsdNetworkTxRecipient.gasUsed.toString())
+
+        let createLsdNetworkWithTimelockTx = await this.ContractLsdNetworkFactory.connect(this.AccountUser1).createLsdNetworkWithTimelock(
+            "test lsdEth", "lsdEth", [this.AccountVoters1.address, this.AccountVoters2.address], 2, 1000, [this.AccountVoters1.address, this.AccountVoters2.address])
+
+        let createLsdNetworkWithTimelockTxRecipient = await createLsdNetworkWithTimelockTx.wait()
+        console.log("createLsdNetworkWithTimelockTx gas: ", createLsdNetworkWithTimelockTxRecipient.gasUsed.toString())
     })
 
 })
