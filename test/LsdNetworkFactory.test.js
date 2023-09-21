@@ -95,6 +95,13 @@ describe("LsdNetwok test", function () {
         let createLsdNetworkTxRecipient = await createLsdNetworkTx.wait()
         console.log("createLsdNetworkTx gas: ", createLsdNetworkTxRecipient.gasUsed.toString())
 
+        let createLsdNetworkTx2 = await this.ContractLsdNetworkFactory.connect(this.AccountUser1).createLsdNetwork(
+            "test lsdEth", "lsdEth", this.AccountNetworkAdmin1.address,
+            [this.AccountVoters1.address, this.AccountVoters2.address], 2)
+
+        let createLsdNetworkTxRecipient2 = await createLsdNetworkTx2.wait()
+        console.log("createLsdNetworkTx2 gas: ", createLsdNetworkTxRecipient2.gasUsed.toString())
+
         let createLsdNetworkWithTimelockTx = await this.ContractLsdNetworkFactory.connect(this.AccountUser1).createLsdNetworkWithTimelock(
             "test lsdEth", "lsdEth", [this.AccountVoters1.address, this.AccountVoters2.address], 2, 1000, [this.AccountVoters1.address, this.AccountVoters2.address])
 

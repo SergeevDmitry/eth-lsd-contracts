@@ -36,6 +36,7 @@ contract NetworkWithdraw is UUPSUpgradeable, INetworkWithdraw {
     uint256 public withdrawCycleSeconds;
     uint256 public factoryCommissionRate;
     uint256 public platformCommissionRate;
+    uint256 public nodeCommissionRate;
     uint256 public totalPlatformCommission;
     uint256 public totalPlatformClaimedAmount;
     uint256 public latestMerkleRootEpoch;
@@ -75,8 +76,9 @@ contract NetworkWithdraw is UUPSUpgradeable, INetworkWithdraw {
         withdrawLimitAmountPerCycle = uint256(100 ether);
         userWithdrawLimitAmountPerCycle = uint256(100 ether);
         withdrawCycleSeconds = 86400;
-        platformCommissionRate = 1e17;
         factoryCommissionRate = 1e17;
+        platformCommissionRate = 1e17;
+        nodeCommissionRate = 1e17;
         nextWithdrawIndex = 1;
         nodeClaimEnabled = true;
 
