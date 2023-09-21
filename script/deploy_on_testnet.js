@@ -20,7 +20,7 @@ async function main() {
     this.FactoryUserDeposit = await ethers.getContractFactory("UserDeposit", this.AccountDeployer)
     this.FactoryNetworkWithdraw = await ethers.getContractFactory("NetworkWithdraw", this.AccountDeployer)
 
-    this.FactoryTransparentUpgradeableProxy = await ethers.getContractFactory("TransparentUpgradeableProxy", this.AccountDeployer)
+    this.FactoryERC1967Proxy = await ethers.getContractFactory("ERC1967Proxy", this.AccountDeployer)
 
 
 
@@ -60,8 +60,8 @@ async function main() {
     console.log("ContractLsdNetworkFactoryLogic address: ", this.ContractLsdNetworkFactoryLogic.address)
 
     // deploy factory proxy contract
-    this.ContractTransparentUpgradeableProxy = await this.FactoryTransparentUpgradeableProxy.deploy(this.ContractLsdNetworkFactoryLogic.address, this.FactoryProxyAdmin.address, "0x")
-    await this.ContractTransparentUpgradeableProxy.deployed()
+    this.ContractERC1967Proxy = await this.FactoryERC1967Proxy.deploy(this.ContractLsdNetworkFactoryLogic.address, "0x")
+    await this.ContractERC1967Proxy.deployed()
 
     this.ContractLsdNetworkFactory = await ethers.getContractAt("LsdNetworkFactory", this.ContractTransparentUpgradeableProxy.address)
 

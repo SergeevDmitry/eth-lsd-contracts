@@ -8,8 +8,9 @@ import "./interfaces/IUserDeposit.sol";
 import "./interfaces/INetworkWithdraw.sol";
 import "./interfaces/INetworkProposal.sol";
 import "./interfaces/INetworkBalances.sol";
+import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 
-contract UserDeposit is IUserDeposit {
+contract UserDeposit is UUPSUpgradeable, IUserDeposit {
     bool public initialized;
     uint8 public version;
     bool public depositEnabled;
@@ -49,6 +50,8 @@ contract UserDeposit is IUserDeposit {
         networkProposalAddress = _networkProposalAddress;
         networkBalancesAddress = _networkBalancesAddress;
     }
+
+    function _authorizeUpgrade(address newImplementation) internal override onlyAdmin {}
 
     // ------------ getter ------------
 

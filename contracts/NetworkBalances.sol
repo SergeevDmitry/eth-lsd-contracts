@@ -4,9 +4,10 @@ pragma solidity 0.8.19;
 
 import "./interfaces/INetworkBalances.sol";
 import "./interfaces/INetworkProposal.sol";
+import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 
 // Network balances
-contract NetworkBalances is INetworkBalances {
+contract NetworkBalances is UUPSUpgradeable, INetworkBalances {
     bool public initialized;
     uint8 public version;
     bool public submitBalancesEnabled;
@@ -37,6 +38,8 @@ contract NetworkBalances is INetworkBalances {
         networkProposalAddress = _networkProposalAddress;
         updateBalancesEpochs = 225;
     }
+
+    function _authorizeUpgrade(address newImplementation) internal override onlyAdmin {}
 
     // ------------ getter ------------
 

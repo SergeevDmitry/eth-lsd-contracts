@@ -4,15 +4,25 @@ pragma solidity 0.8.19;
 
 import "./interfaces/IFeePool.sol";
 import "./interfaces/IDepositEth.sol";
+import "./interfaces/INetworkProposal.sol";
+import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 
 // receive priority fee
-contract FeePool is IFeePool {
+contract FeePool is UUPSUpgradeable, IFeePool {
     bool public initialized;
     uint8 public version;
 
     address public networkWithdrawAddress;
+    address public networkProposalAddress;
 
-    function init(address _networkWithdrawAddress) external override {
+    modifier onlyAdmin() {
+        if (!INetworkProposal(networkProposalAddress).isAdmin(msg.sender)) {
+            revert NotNetworkAdmin();
+        }
+        _;
+    }
+
+    function init(address _networkWithdrawAddress, address _networkProposalAddress) external override {
         if (initialized) {
             revert AlreadyInitialized();
         }
@@ -20,7 +30,10 @@ contract FeePool is IFeePool {
         initialized = true;
         version = 1;
         networkWithdrawAddress = _networkWithdrawAddress;
+        networkProposalAddress = _networkProposalAddress;
     }
+
+    function _authorizeUpgrade(address newImplementation) internal override {}
 
     // Allow receiving ETH
     receive() external payable {}

@@ -6,8 +6,9 @@ import "./interfaces/INodeDeposit.sol";
 import "./interfaces/IUserDeposit.sol";
 import "./interfaces/IDepositContract.sol";
 import "./interfaces/INetworkProposal.sol";
+import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 
-contract NodeDeposit is INodeDeposit {
+contract NodeDeposit is UUPSUpgradeable, INodeDeposit {
     bool public initialized;
     uint8 public version;
 
@@ -55,6 +56,8 @@ contract NodeDeposit is INodeDeposit {
         networkProposalAddress = _networkProposalAddress;
         withdrawCredentials = _withdrawCredentials;
     }
+
+    function _authorizeUpgrade(address newImplementation) internal override onlyAdmin {}
 
     // ------------ getter ------------
 

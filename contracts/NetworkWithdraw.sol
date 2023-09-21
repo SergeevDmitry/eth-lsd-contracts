@@ -10,8 +10,9 @@ import "./interfaces/INetworkProposal.sol";
 import "./interfaces/INetworkBalances.sol";
 import "./interfaces/IUserDeposit.sol";
 import "./interfaces/IFeePool.sol";
+import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 
-contract NetworkWithdraw is INetworkWithdraw {
+contract NetworkWithdraw is UUPSUpgradeable, INetworkWithdraw {
     using EnumerableSet for EnumerableSet.UintSet;
 
     bool public initialized;
@@ -86,6 +87,8 @@ contract NetworkWithdraw is INetworkWithdraw {
         feePoolAddress = _feePoolAddress;
         factoryAddress = _factoryAddress;
     }
+
+    function _authorizeUpgrade(address newImplementation) internal override onlyAdmin {}
 
     // Receive eth
     receive() external payable {}

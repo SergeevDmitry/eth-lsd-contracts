@@ -9,9 +9,10 @@ import "./interfaces/INodeDeposit.sol";
 import "./interfaces/IUserDeposit.sol";
 import "./interfaces/INetworkWithdraw.sol";
 import "./interfaces/ILsdNetworkFactory.sol";
-import "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
+import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
-contract LsdNetworkFactory is ILsdNetworkFactory {
+contract LsdNetworkFactory is UUPSUpgradeable, ILsdNetworkFactory {
     bool public initialized;
     uint8 public version;
     address public factoryAdmin;
@@ -62,6 +63,8 @@ contract LsdNetworkFactory is ILsdNetworkFactory {
         userDepositLogicAddress = _userDepositLogicAddress;
         networkWithdrawLogicAddress = _networkWithdrawLogicAddress;
     }
+
+    function _authorizeUpgrade(address newImplementation) internal override onlyFactoryAdmin {}
 
     // Receive eth
     receive() external payable {}
@@ -119,22 +122,17 @@ contract LsdNetworkFactory is ILsdNetworkFactory {
     function createLsdNetwork(
         string memory _lsdTokenName,
         string memory _lsdTokenSymbol,
-        address _proxyAdmin,
         address _networkAdmin,
         address[] memory _voters,
         uint256 _threshold
     ) external override {
-        if (_proxyAdmin == _networkAdmin) {
-            revert AddressNotAllowed();
-        }
-
         bytes32 salt = keccak256(abi.encode(msg.sender, block.number, _lsdTokenName, _lsdTokenSymbol));
-        NetworkContracts memory contracts = deployNetworkContracts(_lsdTokenName, _lsdTokenSymbol, salt, _proxyAdmin);
+        NetworkContracts memory contracts = deployNetworkContracts(_lsdTokenName, _lsdTokenSymbol, salt);
         networkContractsOfLsdToken[contracts._lsdToken] = contracts;
         lsdTokensOf[msg.sender].push(contracts._lsdToken);
 
         (bool success, bytes memory data) = contracts._feePool.call(
-            abi.encodeWithSelector(IFeePool.init.selector, contracts._networkWithdraw)
+            abi.encodeWithSelector(IFeePool.init.selector, contracts._networkWithdraw, contracts._networkProposal)
         );
         if (!success) {
             revert FailedToCall();
@@ -201,22 +199,21 @@ contract LsdNetworkFactory is ILsdNetworkFactory {
 
     // ------------ helper ------------
 
-    function deploy(bytes32 salt, address _admin, address _logicAddress) private returns (address) {
-        return address(new TransparentUpgradeableProxy{salt: salt}(_logicAddress, _admin, ""));
+    function deploy(bytes32 salt, address _logicAddress) private returns (address) {
+        return address(new ERC1967Proxy{salt: salt}(_logicAddress, ""));
     }
 
     function deployNetworkContracts(
         string memory _lsdTokenName,
         string memory _lsdTokenSymbol,
-        bytes32 salt,
-        address _proxyAdmin
+        bytes32 salt
     ) private returns (NetworkContracts memory) {
-        address feePool = deploy(salt, _proxyAdmin, feePoolLogicAddress);
-        address networkBalances = deploy(salt, _proxyAdmin, networkBalancesLogicAddress);
-        address networkProposal = deploy(salt, _proxyAdmin, networkProposalLogicAddress);
-        address nodeDeposit = deploy(salt, _proxyAdmin, nodeDepositLogicAddress);
-        address userDeposit = deploy(salt, _proxyAdmin, userDepositLogicAddress);
-        address networkWithdraw = deploy(salt, _proxyAdmin, networkWithdrawLogicAddress);
+        address feePool = deploy(salt, feePoolLogicAddress);
+        address networkBalances = deploy(salt, networkBalancesLogicAddress);
+        address networkProposal = deploy(salt, networkProposalLogicAddress);
+        address nodeDeposit = deploy(salt, nodeDepositLogicAddress);
+        address userDeposit = deploy(salt, userDepositLogicAddress);
+        address networkWithdraw = deploy(salt, networkWithdrawLogicAddress);
 
         address lsdToken = address(new LsdToken{salt: salt}(userDeposit, _lsdTokenName, _lsdTokenSymbol));
 

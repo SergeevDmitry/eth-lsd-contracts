@@ -90,7 +90,7 @@ describe("LsdNetwok test", function () {
     it("should createLsdNetwork success", async function () {
 
         let createLsdNetworkTx = await this.ContractLsdNetworkFactory.connect(this.AccountUser1).createLsdNetwork(
-            "test lsdEth", "lsdEth", this.AccountProxyAdmin1.address, this.AccountNetworkAdmin1.address,
+            "test lsdEth", "lsdEth", this.AccountNetworkAdmin1.address,
             [this.AccountVoters1.address, this.AccountVoters2.address], 2)
 
         let createLsdNetworkTxRecipient = await createLsdNetworkTx.wait()

@@ -5,8 +5,9 @@ pragma solidity 0.8.19;
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import "./interfaces/INetworkProposal.sol";
+import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 
-contract NetworkProposal is INetworkProposal {
+contract NetworkProposal is UUPSUpgradeable, INetworkProposal {
     using SafeCast for *;
     using EnumerableSet for EnumerableSet.AddressSet;
 
@@ -50,6 +51,8 @@ contract NetworkProposal is INetworkProposal {
         }
         admin = _adminAddress;
     }
+
+    function _authorizeUpgrade(address newImplementation) internal override onlyAdmin {}
 
     // ------------ getter ------------
 

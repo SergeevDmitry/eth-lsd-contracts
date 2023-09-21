@@ -20,7 +20,6 @@ interface ILsdNetworkFactory is Errors {
     function createLsdNetwork(
         string memory _lsdTokenName,
         string memory _lsdTokenSymbol,
-        address _proxyAdmin,
         address _networkAdmin,
         address[] memory _voters,
         uint256 _threshold
