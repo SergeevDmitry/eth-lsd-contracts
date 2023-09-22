@@ -88,7 +88,7 @@ contract NetworkProposal is UUPSUpgradeable, INetworkProposal {
 
     // ------------ settings ------------
 
-    function transferAdmin(address _newAdmin) public onlyAdmin {
+    function transferAdmin(address _newAdmin) external onlyAdmin {
         if (_newAdmin == address(0)) {
             revert AddressNotAllowed();
         }
@@ -96,7 +96,7 @@ contract NetworkProposal is UUPSUpgradeable, INetworkProposal {
         admin = _newAdmin;
     }
 
-    function addVoter(address _voter) public onlyAdmin {
+    function addVoter(address _voter) external onlyAdmin {
         if (voters.length() >= 16) {
             revert VoterNumberOverLimit();
         }
@@ -109,7 +109,7 @@ contract NetworkProposal is UUPSUpgradeable, INetworkProposal {
         }
     }
 
-    function removeVoter(address _voter) public onlyAdmin {
+    function removeVoter(address _voter) external onlyAdmin {
         if (voters.length() <= threshold) {
             revert VotersNotEnough();
         }

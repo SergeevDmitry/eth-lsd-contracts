@@ -76,9 +76,9 @@ contract NetworkWithdraw is UUPSUpgradeable, INetworkWithdraw {
         withdrawLimitAmountPerCycle = uint256(100 ether);
         userWithdrawLimitAmountPerCycle = uint256(100 ether);
         withdrawCycleSeconds = 86400;
-        factoryCommissionRate = 1e17;
-        platformCommissionRate = 1e17;
-        nodeCommissionRate = 1e17;
+        factoryCommissionRate = 10e16; //10%
+        platformCommissionRate = 5e16; //5%
+        nodeCommissionRate = 5e16; //5%
         nextWithdrawIndex = 1;
         nodeClaimEnabled = true;
 
@@ -149,6 +149,24 @@ contract NetworkWithdraw is UUPSUpgradeable, INetworkWithdraw {
         if (!success) {
             revert FailedToCall();
         }
+    }
+
+    function setFactoryCommissionRate(uint256 _factoryCommissionRate) external onlyAdmin {
+        if (_factoryCommissionRate > 1e18) {
+            revert RateValueUnmatch();
+        }
+        factoryCommissionRate = _factoryCommissionRate;
+    }
+
+    function setPlatformAndNodeCommissionRate(
+        uint256 _platformCommissionRate,
+        uint256 _nodeCommissionRate
+    ) external onlyAdmin {
+        if (_platformCommissionRate + _nodeCommissionRate > 1e18) {
+            revert RateValueUnmatch();
+        }
+        platformCommissionRate = _platformCommissionRate;
+        nodeCommissionRate = _nodeCommissionRate;
     }
 
     // ------------ user unstake ------------

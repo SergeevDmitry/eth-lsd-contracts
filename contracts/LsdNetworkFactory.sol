@@ -45,7 +45,7 @@ contract LsdNetworkFactory is UUPSUpgradeable, ILsdNetworkFactory {
         address _nodeDepositLogicAddress,
         address _userDepositLogicAddress,
         address _networkWithdrawLogicAddress
-    ) public {
+    ) external {
         if (_factoryAdmin == address(0)) {
             revert AddressNotAllowed();
         }

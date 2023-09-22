@@ -74,11 +74,11 @@ contract NetworkBalances is UUPSUpgradeable, INetworkBalances {
 
     // ------------ settings ------------
 
-    function setRateChangeLimit(uint256 _value) public onlyAdmin {
+    function setRateChangeLimit(uint256 _value) external onlyAdmin {
         rateChangeLimit = _value;
     }
 
-    function setUpdateBalancesEpochs(uint256 _value) public onlyAdmin {
+    function setUpdateBalancesEpochs(uint256 _value) external onlyAdmin {
         updateBalancesEpochs = _value;
     }
 

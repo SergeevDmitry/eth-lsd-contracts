@@ -65,11 +65,11 @@ contract UserDeposit is UUPSUpgradeable, IUserDeposit {
 
     // ------------ settings ------------
 
-    function setDepositEnabled(bool _value) public onlyAdmin {
+    function setDepositEnabled(bool _value) external onlyAdmin {
         depositEnabled = _value;
     }
 
-    function setMinimumDeposit(uint256 _value) public onlyAdmin {
+    function setMinimumDeposit(uint256 _value) external onlyAdmin {
         minDeposit = _value;
     }
 

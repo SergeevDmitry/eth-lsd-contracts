@@ -79,7 +79,7 @@ contract NodeDeposit is UUPSUpgradeable, INodeDeposit {
 
     // ------------ settings ------------
 
-    function setNodePubkeyStatus(bytes calldata _validatorPubkey, PubkeyStatus _status) public onlyAdmin {
+    function setNodePubkeyStatus(bytes calldata _validatorPubkey, PubkeyStatus _status) external onlyAdmin {
         if (pubkeyInfoOf[_validatorPubkey]._status == PubkeyStatus.UnInitial) {
             revert PubkeyNotExist();
         }
@@ -87,27 +87,27 @@ contract NodeDeposit is UUPSUpgradeable, INodeDeposit {
         _setNodePubkeyStatus(_validatorPubkey, _status);
     }
 
-    function setSoloNodeDepositEnabled(bool _value) public onlyAdmin {
+    function setSoloNodeDepositEnabled(bool _value) external onlyAdmin {
         soloNodeDepositEnabled = _value;
     }
 
-    function setTrustNodeDepositEnabled(bool _value) public onlyAdmin {
+    function setTrustNodeDepositEnabled(bool _value) external onlyAdmin {
         trustNodeDepositEnabled = _value;
     }
 
-    function setSoloNodeDepositAmount(uint256 _amount) public onlyAdmin {
+    function setSoloNodeDepositAmount(uint256 _amount) external onlyAdmin {
         soloNodeDepositAmount = _amount;
     }
 
-    function setTrustNodePubkeyLimit(uint256 _value) public onlyAdmin {
+    function setTrustNodePubkeyLimit(uint256 _value) external onlyAdmin {
         trustNodePubkeyNumberLimit = _value;
     }
 
-    function setWithdrawCredentials(bytes calldata _withdrawCredentials) public onlyAdmin {
+    function setWithdrawCredentials(bytes calldata _withdrawCredentials) external onlyAdmin {
         withdrawCredentials = _withdrawCredentials;
     }
 
-    function addTrustNode(address _trustNodeAddress) public onlyAdmin {
+    function addTrustNode(address _trustNodeAddress) external onlyAdmin {
         if (nodeInfoOf[_trustNodeAddress]._nodeType != NodeType.Undefined) {
             revert NodeAlreadyExist();
         }
@@ -115,7 +115,7 @@ contract NodeDeposit is UUPSUpgradeable, INodeDeposit {
         nodeInfoOf[_trustNodeAddress] = NodeInfo({_nodeType: NodeType.TrustNode, _removed: false, _pubkeyNumber: 0});
     }
 
-    function removeTrustNode(address _trustNodeAddress) public onlyAdmin {
+    function removeTrustNode(address _trustNodeAddress) external onlyAdmin {
         if (nodeInfoOf[_trustNodeAddress]._nodeType != NodeType.TrustNode) {
             revert NotTrustNode();
         }

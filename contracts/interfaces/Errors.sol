@@ -49,6 +49,7 @@ interface Errors {
     error ReachUserWithdrawLimit();
     error SecondsZero();
     error NodeNotClaimable();
+    error RateValueUnmatch();
 
     error PubkeyNotExist();
     error PubkeyAlreadyExist();
