@@ -33,7 +33,7 @@ contract FeePool is UUPSUpgradeable, IFeePool {
         networkProposalAddress = _networkProposalAddress;
     }
 
-    function _authorizeUpgrade(address newImplementation) internal override {}
+    function _authorizeUpgrade(address newImplementation) internal override onlyAdmin {}
 
     // Allow receiving ETH
     receive() external payable {}
