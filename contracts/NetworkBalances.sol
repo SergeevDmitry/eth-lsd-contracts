@@ -5,19 +5,17 @@ pragma solidity 0.8.19;
 import "./interfaces/INetworkBalances.sol";
 import "./interfaces/INetworkProposal.sol";
 import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
+import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 
 // Network balances
-contract NetworkBalances is UUPSUpgradeable, INetworkBalances {
-    bool public initialized;
-    uint8 public version;
+contract NetworkBalances is Initializable, UUPSUpgradeable, INetworkBalances {
     bool public submitBalancesEnabled;
-
     uint256 public balancesBlock;
     uint256 public totalEthBalance;
     uint256 public totalLsdTokenSupply;
     uint256 public rateChangeLimit;
-    address public networkProposalAddress;
     uint256 public updateBalancesEpochs;
+    address public networkProposalAddress;
 
     modifier onlyAdmin() {
         if (!INetworkProposal(networkProposalAddress).isAdmin(msg.sender)) {
@@ -26,17 +24,25 @@ contract NetworkBalances is UUPSUpgradeable, INetworkBalances {
         _;
     }
 
-    function init(address _networkProposalAddress) external override {
-        if (initialized) {
-            revert AlreadyInitialized();
-        }
+    constructor() {
+        _disableInitializers();
+    }
 
-        initialized = true;
-        version = 1;
+    function init(address _networkProposalAddress) public virtual override initializer {
+        networkProposalAddress = _networkProposalAddress;
         submitBalancesEnabled = true;
         rateChangeLimit = 11e14; //0.0011
-        networkProposalAddress = _networkProposalAddress;
         updateBalancesEpochs = 225;
+    }
+
+    function reinit() public virtual override reinitializer(1) {
+        _reinit();
+    }
+
+    function _reinit() internal virtual {}
+
+    function version() external view override returns (uint8) {
+        return _getInitializedVersion();
     }
 
     function _authorizeUpgrade(address newImplementation) internal override onlyAdmin {}

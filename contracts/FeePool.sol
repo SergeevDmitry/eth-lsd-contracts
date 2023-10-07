@@ -6,12 +6,10 @@ import "./interfaces/IFeePool.sol";
 import "./interfaces/IDepositEth.sol";
 import "./interfaces/INetworkProposal.sol";
 import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
+import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 
 // receive priority fee
-contract FeePool is UUPSUpgradeable, IFeePool {
-    bool public initialized;
-    uint8 public version;
-
+contract FeePool is Initializable, UUPSUpgradeable, IFeePool {
     address public networkWithdrawAddress;
     address public networkProposalAddress;
 
@@ -22,15 +20,26 @@ contract FeePool is UUPSUpgradeable, IFeePool {
         _;
     }
 
-    function init(address _networkWithdrawAddress, address _networkProposalAddress) external override {
-        if (initialized) {
-            revert AlreadyInitialized();
-        }
+    constructor() {
+        _disableInitializers();
+    }
 
-        initialized = true;
-        version = 1;
+    function init(
+        address _networkWithdrawAddress,
+        address _networkProposalAddress
+    ) public virtual override initializer {
         networkWithdrawAddress = _networkWithdrawAddress;
         networkProposalAddress = _networkProposalAddress;
+    }
+
+    function reinit() public virtual override reinitializer(1) {
+        _reinit();
+    }
+
+    function _reinit() internal virtual {}
+
+    function version() external view override returns (uint8) {
+        return _getInitializedVersion();
     }
 
     function _authorizeUpgrade(address newImplementation) internal override onlyAdmin {}

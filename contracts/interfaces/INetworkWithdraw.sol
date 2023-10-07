@@ -4,8 +4,9 @@ pragma solidity 0.8.19;
 
 import "./IDepositEth.sol";
 import "./Errors.sol";
+import "./Common.sol";
 
-interface INetworkWithdraw is IDepositEth, Errors {
+interface INetworkWithdraw is IDepositEth, Errors,Common {
     enum ClaimType {
         None,
         ClaimReward,

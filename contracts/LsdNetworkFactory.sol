@@ -10,15 +10,13 @@ import "./interfaces/IUserDeposit.sol";
 import "./interfaces/INetworkWithdraw.sol";
 import "./interfaces/ILsdNetworkFactory.sol";
 import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
+import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import "./Timelock.sol";
 
-contract LsdNetworkFactory is UUPSUpgradeable, ILsdNetworkFactory {
-    bool public initialized;
-    uint8 public version;
+contract LsdNetworkFactory is Initializable, UUPSUpgradeable, ILsdNetworkFactory {
     address public factoryAdmin;
     address public ethDepositAddress;
-
     address public feePoolLogicAddress;
     address public networkBalancesLogicAddress;
     address public networkProposalLogicAddress;
@@ -36,6 +34,10 @@ contract LsdNetworkFactory is UUPSUpgradeable, ILsdNetworkFactory {
         _;
     }
 
+    constructor() {
+        _disableInitializers();
+    }
+
     function init(
         address _factoryAdmin,
         address _ethDepositAddress,
@@ -45,16 +47,10 @@ contract LsdNetworkFactory is UUPSUpgradeable, ILsdNetworkFactory {
         address _nodeDepositLogicAddress,
         address _userDepositLogicAddress,
         address _networkWithdrawLogicAddress
-    ) external {
+    ) public virtual initializer {
         if (_factoryAdmin == address(0)) {
             revert AddressNotAllowed();
         }
-        if (initialized) {
-            revert AlreadyInitialized();
-        }
-
-        initialized = true;
-        version = 1;
         factoryAdmin = _factoryAdmin;
         ethDepositAddress = _ethDepositAddress;
         feePoolLogicAddress = _feePoolLogicAddress;
@@ -63,6 +59,16 @@ contract LsdNetworkFactory is UUPSUpgradeable, ILsdNetworkFactory {
         nodeDepositLogicAddress = _nodeDepositLogicAddress;
         userDepositLogicAddress = _userDepositLogicAddress;
         networkWithdrawLogicAddress = _networkWithdrawLogicAddress;
+    }
+
+    function reinit() public virtual override reinitializer(1) {
+        _reinit();
+    }
+
+    function _reinit() internal virtual {}
+
+    function version() external view override returns (uint8) {
+        return _getInitializedVersion();
     }
 
     function _authorizeUpgrade(address newImplementation) internal override onlyFactoryAdmin {}

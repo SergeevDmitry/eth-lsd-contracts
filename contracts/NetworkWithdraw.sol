@@ -11,12 +11,10 @@ import "./interfaces/INetworkBalances.sol";
 import "./interfaces/IUserDeposit.sol";
 import "./interfaces/IFeePool.sol";
 import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
+import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 
-contract NetworkWithdraw is UUPSUpgradeable, INetworkWithdraw {
+contract NetworkWithdraw is Initializable, UUPSUpgradeable, INetworkWithdraw {
     using EnumerableSet for EnumerableSet.UintSet;
-
-    bool public initialized;
-    uint8 public version;
 
     address public lsdTokenAddress;
     address public userDepositAddress;
@@ -59,6 +57,10 @@ contract NetworkWithdraw is UUPSUpgradeable, INetworkWithdraw {
         _;
     }
 
+    constructor() {
+        _disableInitializers();
+    }
+
     function init(
         address _lsdTokenAddress,
         address _userDepositAddress,
@@ -66,13 +68,7 @@ contract NetworkWithdraw is UUPSUpgradeable, INetworkWithdraw {
         address _networkBalancesAddress,
         address _feePoolAddress,
         address _factoryAddress
-    ) external override {
-        if (initialized) {
-            revert AlreadyInitialized();
-        }
-
-        initialized = true;
-        version = 1;
+    ) public virtual override initializer {
         withdrawLimitAmountPerCycle = uint256(100 ether);
         userWithdrawLimitAmountPerCycle = uint256(100 ether);
         withdrawCycleSeconds = 86400;
@@ -88,6 +84,16 @@ contract NetworkWithdraw is UUPSUpgradeable, INetworkWithdraw {
         networkBalancesAddress = _networkBalancesAddress;
         feePoolAddress = _feePoolAddress;
         factoryAddress = _factoryAddress;
+    }
+
+    function reinit() public virtual override reinitializer(1) {
+        _reinit();
+    }
+
+    function _reinit() internal virtual {}
+
+    function version() external view override returns (uint8) {
+        return _getInitializedVersion();
     }
 
     function _authorizeUpgrade(address newImplementation) internal override onlyAdmin {}

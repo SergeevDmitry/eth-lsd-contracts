@@ -9,14 +9,11 @@ import "./interfaces/INetworkWithdraw.sol";
 import "./interfaces/INetworkProposal.sol";
 import "./interfaces/INetworkBalances.sol";
 import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
+import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 
-contract UserDeposit is UUPSUpgradeable, IUserDeposit {
-    bool public initialized;
-    uint8 public version;
+contract UserDeposit is Initializable, UUPSUpgradeable, IUserDeposit {
     bool public depositEnabled;
-
     uint256 public minDeposit;
-
     address public lsdTokenAddress;
     address public nodeDepositAddress;
     address public networkWithdrawAddress;
@@ -30,25 +27,33 @@ contract UserDeposit is UUPSUpgradeable, IUserDeposit {
         _;
     }
 
+    constructor() {
+        _disableInitializers();
+    }
+
     function init(
         address _lsdTokenAddress,
         address _nodeDepositAddress,
         address _networkWithdrawAddress,
         address _networkProposalAddress,
         address _networkBalancesAddress
-    ) external override {
-        if (initialized) {
-            revert AlreadyInitialized();
-        }
-
-        initialized = true;
-        version = 1;
+    ) public virtual override initializer {
         depositEnabled = true;
         lsdTokenAddress = _lsdTokenAddress;
         nodeDepositAddress = _nodeDepositAddress;
         networkWithdrawAddress = _networkWithdrawAddress;
         networkProposalAddress = _networkProposalAddress;
         networkBalancesAddress = _networkBalancesAddress;
+    }
+
+    function reinit() public virtual override reinitializer(1) {
+        _reinit();
+    }
+
+    function _reinit() internal virtual {}
+
+    function version() external view override returns (uint8) {
+        return _getInitializedVersion();
     }
 
     function _authorizeUpgrade(address newImplementation) internal override onlyAdmin {}

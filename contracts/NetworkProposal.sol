@@ -6,13 +6,12 @@ import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import "./interfaces/INetworkProposal.sol";
 import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
+import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 
-contract NetworkProposal is UUPSUpgradeable, INetworkProposal {
+contract NetworkProposal is Initializable, UUPSUpgradeable, INetworkProposal {
     using SafeCast for *;
     using EnumerableSet for EnumerableSet.AddressSet;
 
-    bool public initialized;
-    uint8 public version;
     uint8 public threshold;
     address public admin;
 
@@ -26,10 +25,15 @@ contract NetworkProposal is UUPSUpgradeable, INetworkProposal {
         _;
     }
 
-    function init(address[] memory _voters, uint256 _initialThreshold, address _adminAddress) public {
-        if (initialized) {
-            revert AlreadyInitialized();
-        }
+    constructor() {
+        _disableInitializers();
+    }
+
+    function init(
+        address[] memory _voters,
+        uint256 _initialThreshold,
+        address _adminAddress
+    ) public virtual override initializer {
         if (_voters.length < _initialThreshold || _initialThreshold <= _voters.length / 2) {
             revert InvalidThreshold();
         }
@@ -40,8 +44,6 @@ contract NetworkProposal is UUPSUpgradeable, INetworkProposal {
             revert AddressNotAllowed();
         }
 
-        initialized = true;
-        version = 1;
         threshold = _initialThreshold.toUint8();
         uint256 initialVoterCount = _voters.length;
         for (uint256 i; i < initialVoterCount; ++i) {
@@ -50,6 +52,16 @@ contract NetworkProposal is UUPSUpgradeable, INetworkProposal {
             }
         }
         admin = _adminAddress;
+    }
+
+    function reinit() public virtual override reinitializer(1) {
+        _reinit();
+    }
+
+    function _reinit() internal virtual {}
+
+    function version() external view override returns (uint8) {
+        return _getInitializedVersion();
     }
 
     function _authorizeUpgrade(address newImplementation) internal override onlyAdmin {}
