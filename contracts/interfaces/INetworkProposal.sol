@@ -2,9 +2,9 @@ pragma solidity 0.8.19;
 
 // SPDX-License-Identifier: GPL-3.0-only
 import "./Errors.sol";
-import "./Common.sol";
+import "./IUpgrade.sol";
 
-interface INetworkProposal is Errors, Common {
+interface INetworkProposal is Errors, IUpgrade {
     enum ProposalStatus {
         Inactive,
         Active,

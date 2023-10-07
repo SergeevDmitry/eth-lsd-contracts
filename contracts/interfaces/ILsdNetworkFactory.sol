@@ -2,9 +2,9 @@ pragma solidity 0.8.19;
 
 // SPDX-License-Identifier: GPL-3.0-only
 import "./Errors.sol";
-import "./Common.sol";
+import "./IUpgrade.sol";
 
-interface ILsdNetworkFactory is Errors, Common {
+interface ILsdNetworkFactory is Errors, IUpgrade {
     struct NetworkContracts {
         address _feePool;
         address _networkBalances;
