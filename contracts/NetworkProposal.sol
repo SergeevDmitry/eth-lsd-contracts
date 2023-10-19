@@ -85,19 +85,6 @@ contract NetworkProposal is Initializable, UUPSUpgradeable, INetworkProposal {
         return admin == _sender;
     }
 
-    function shouldExecute(bytes32 _proposalId, address _voter) external override returns (bool) {
-        Proposal memory proposal = _checkProposal(_proposalId, _voter);
-        if (proposal._yesVotesTotal >= threshold) {
-            proposal._status = ProposalStatus.Executed;
-            proposals[_proposalId] = proposal;
-            emit ProposalExecuted(_proposalId);
-            return true;
-        } else {
-            proposals[_proposalId] = proposal;
-            return false;
-        }
-    }
-
     // ------------ settings ------------
 
     function transferAdmin(address _newAdmin) external onlyAdmin {
@@ -139,6 +126,25 @@ contract NetworkProposal is Initializable, UUPSUpgradeable, INetworkProposal {
         threshold = _newThreshold.toUint8();
     }
 
+    function batchExecProposals(address[] calldata _tos, bytes[] calldata _callDatas) external {
+        for (uint256 i = 0; i < _tos.length; i++) {
+            execProposal(_tos[i], _callDatas[i]);
+        }
+    }
+
+    function execProposal(address _to, bytes calldata _callData) public {
+        bytes32 proposalId = keccak256(abi.encodePacked("execProposal", _to, _callData));
+
+        if (_shouldExecute(proposalId, msg.sender)) {
+            (bool success, ) = _to.call(_callData);
+            if (!success) {
+                revert ProposalExecFailed();
+            }
+
+            emit ProposalExecuted(proposalId);
+        }
+    }
+
     // ------------ helper ------------
 
     function voterBit(address _voter) internal view returns (uint256) {
@@ -149,14 +155,11 @@ contract NetworkProposal is Initializable, UUPSUpgradeable, INetworkProposal {
         return (voterBit(_voter) & uint256(_proposal._yesVotes)) > 0;
     }
 
-    function _checkProposal(bytes32 _proposalId, address _voter) internal returns (Proposal memory proposal) {
+    function _voteProposal(bytes32 _proposalId, address _voter) internal returns (Proposal memory proposal) {
         proposal = proposals[_proposalId];
 
         if (!voters.contains(_voter)) {
             revert CallerNotAllowed();
-        }
-        if (proposal._status != ProposalStatus.Inactive && proposal._status != ProposalStatus.Active) {
-            revert ProposalAlreadyExecuted();
         }
         if (_hasVoted(proposal, _voter)) {
             revert AlreadyVoted();
@@ -169,5 +172,24 @@ contract NetworkProposal is Initializable, UUPSUpgradeable, INetworkProposal {
         proposal._yesVotesTotal++;
 
         emit VoteProposal(_proposalId, _voter);
+    }
+
+    function _shouldExecute(bytes32 _proposalId, address _voter) internal returns (bool) {
+        Proposal memory proposal = _voteProposal(_proposalId, _voter);
+
+        if (proposal._status == ProposalStatus.Executed) {
+            proposals[_proposalId] = proposal;
+            return false;
+        }
+
+        if (proposal._yesVotesTotal >= threshold) {
+            proposal._status = ProposalStatus.Executed;
+            proposals[_proposalId] = proposal;
+
+            return true;
+        } else {
+            proposals[_proposalId] = proposal;
+            return false;
+        }
     }
 }

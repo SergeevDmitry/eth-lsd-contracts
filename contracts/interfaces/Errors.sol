@@ -13,6 +13,7 @@ interface Errors {
 
     error NotFactoryAdmin();
     error NotNetworkAdmin();
+    error NotNetworkProposal();
 
     error FailedToTransfer();
     error FailedToCall();
@@ -27,6 +28,7 @@ interface Errors {
     error VotersDuplicate();
     error VotersNotExist();
     error ProposalAlreadyExecuted();
+    error ProposalExecFailed();
     error AlreadyVoted();
 
     error WithdrawIndexEmpty();

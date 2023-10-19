@@ -57,6 +57,13 @@ contract NetworkWithdraw is Initializable, UUPSUpgradeable, INetworkWithdraw {
         _;
     }
 
+    modifier onlyNetworkProposal() {
+        if (networkProposalAddress != msg.sender) {
+            revert NotNetworkProposal();
+        }
+        _;
+    }
+
     constructor() {
         _disableInitializers();
     }
@@ -311,124 +318,100 @@ contract NetworkWithdraw is Initializable, UUPSUpgradeable, INetworkWithdraw {
         uint256 _nodeAmount,
         uint256 _platformAmount,
         uint256 _maxClaimableWithdrawIndex
-    ) external override {
-        bytes32 proposalId = keccak256(
-            abi.encodePacked(
-                "distribute",
-                _distributeType,
-                _dealedHeight,
-                _userAmount,
-                _nodeAmount,
-                _platformAmount,
-                _maxClaimableWithdrawIndex
-            )
-        );
-        if (INetworkProposal(networkProposalAddress).shouldExecute(proposalId, msg.sender)) {
-            uint256 totalAmount = _userAmount + _nodeAmount + _platformAmount;
-            uint256 latestDistributeHeight;
-            if (_distributeType == DistributeType.DistributePriorityFee) {
-                latestDistributeHeight = latestDistributePriorityFeeHeight;
-                latestDistributePriorityFeeHeight = _dealedHeight;
+    ) external override onlyNetworkProposal {
+        uint256 totalAmount = _userAmount + _nodeAmount + _platformAmount;
+        uint256 latestDistributeHeight;
+        if (_distributeType == DistributeType.DistributePriorityFee) {
+            latestDistributeHeight = latestDistributePriorityFeeHeight;
+            latestDistributePriorityFeeHeight = _dealedHeight;
 
-                if (totalAmount > 0) {
-                    IFeePool(feePoolAddress).withdrawEther(totalAmount);
-                }
-            } else if (_distributeType == DistributeType.DistributeWithdrawals) {
-                latestDistributeHeight = latestDistributeWithdrawalsHeight;
-                latestDistributeWithdrawalsHeight = _dealedHeight;
-            } else {
-                revert("unknown distribute type");
+            if (totalAmount > 0) {
+                IFeePool(feePoolAddress).withdrawEther(totalAmount);
             }
-
-            if (_dealedHeight <= latestDistributeHeight) {
-                revert AlreadyDealedHeight();
-            }
-            if (_maxClaimableWithdrawIndex >= nextWithdrawIndex) {
-                revert WithdrawIndexOver();
-            }
-            if (totalAmount > address(this).balance) {
-                revert BalanceNotEnough();
-            }
-
-            if (_maxClaimableWithdrawIndex > maxClaimableWithdrawIndex) {
-                maxClaimableWithdrawIndex = _maxClaimableWithdrawIndex;
-            }
-
-            uint256 mvAmount = _userAmount;
-            if (totalMissingAmountForWithdraw < _userAmount) {
-                mvAmount = _userAmount - totalMissingAmountForWithdraw;
-                totalMissingAmountForWithdraw = 0;
-            } else {
-                mvAmount = 0;
-                totalMissingAmountForWithdraw = totalMissingAmountForWithdraw - _userAmount;
-            }
-
-            if (mvAmount > 0) {
-                IUserDeposit(userDepositAddress).recycleNetworkWithdrawDeposit{value: mvAmount}();
-            }
-
-            distributeCommission(_platformAmount);
-
-            emit DistributeRewards(
-                _distributeType,
-                _dealedHeight,
-                _userAmount,
-                _nodeAmount,
-                _platformAmount,
-                _maxClaimableWithdrawIndex,
-                mvAmount
-            );
+        } else if (_distributeType == DistributeType.DistributeWithdrawals) {
+            latestDistributeHeight = latestDistributeWithdrawalsHeight;
+            latestDistributeWithdrawalsHeight = _dealedHeight;
+        } else {
+            revert("unknown distribute type");
         }
+
+        if (_dealedHeight <= latestDistributeHeight) {
+            revert AlreadyDealedHeight();
+        }
+        if (_maxClaimableWithdrawIndex >= nextWithdrawIndex) {
+            revert WithdrawIndexOver();
+        }
+        if (totalAmount > address(this).balance) {
+            revert BalanceNotEnough();
+        }
+
+        if (_maxClaimableWithdrawIndex > maxClaimableWithdrawIndex) {
+            maxClaimableWithdrawIndex = _maxClaimableWithdrawIndex;
+        }
+
+        uint256 mvAmount = _userAmount;
+        if (totalMissingAmountForWithdraw < _userAmount) {
+            mvAmount = _userAmount - totalMissingAmountForWithdraw;
+            totalMissingAmountForWithdraw = 0;
+        } else {
+            mvAmount = 0;
+            totalMissingAmountForWithdraw = totalMissingAmountForWithdraw - _userAmount;
+        }
+
+        if (mvAmount > 0) {
+            IUserDeposit(userDepositAddress).recycleNetworkWithdrawDeposit{value: mvAmount}();
+        }
+
+        distributeCommission(_platformAmount);
+
+        emit DistributeRewards(
+            _distributeType,
+            _dealedHeight,
+            _userAmount,
+            _nodeAmount,
+            _platformAmount,
+            _maxClaimableWithdrawIndex,
+            mvAmount
+        );
     }
 
     function notifyValidatorExit(
         uint256 _withdrawCycle,
         uint256 _ejectedStartCycle,
         uint256[] calldata _validatorIndexList
-    ) external override {
-        bytes32 proposalId = keccak256(
-            abi.encodePacked("notifyValidatorExit", _withdrawCycle, _ejectedStartCycle, _validatorIndexList)
-        );
-
-        // Finalize if Threshold has been reached
-        if (INetworkProposal(networkProposalAddress).shouldExecute(proposalId, msg.sender)) {
-            if (
-                _validatorIndexList.length == 0 ||
-                _validatorIndexList.length > (withdrawLimitAmountPerCycle * 3) / 20 ether
-            ) {
-                revert LengthNotMatch();
-            }
-            if (_ejectedStartCycle >= _withdrawCycle || _withdrawCycle + 1 != currentWithdrawCycle()) {
-                revert CycleNotMatch();
-            }
-            if (ejectedValidatorsAtCycle[_withdrawCycle].length > 0) {
-                revert AlreadyNotifyCycle();
-            }
-
-            ejectedValidatorsAtCycle[_withdrawCycle] = _validatorIndexList;
-            ejectedStartCycle = _ejectedStartCycle;
-
-            emit NotifyValidatorExit(_withdrawCycle, _ejectedStartCycle, _validatorIndexList);
+    ) external override onlyNetworkProposal {
+        if (
+            _validatorIndexList.length == 0 || _validatorIndexList.length > (withdrawLimitAmountPerCycle * 3) / 20 ether
+        ) {
+            revert LengthNotMatch();
         }
+        if (_ejectedStartCycle >= _withdrawCycle || _withdrawCycle + 1 != currentWithdrawCycle()) {
+            revert CycleNotMatch();
+        }
+        if (ejectedValidatorsAtCycle[_withdrawCycle].length > 0) {
+            revert AlreadyNotifyCycle();
+        }
+
+        ejectedValidatorsAtCycle[_withdrawCycle] = _validatorIndexList;
+        ejectedStartCycle = _ejectedStartCycle;
+
+        emit NotifyValidatorExit(_withdrawCycle, _ejectedStartCycle, _validatorIndexList);
     }
 
-    function setMerkleRoot(uint256 _dealedEpoch, bytes32 _merkleRoot, string calldata _nodeRewardsFileCid) external {
-        bytes32 proposalId = keccak256(
-            abi.encodePacked("setMerkleRoot", _dealedEpoch, _merkleRoot, _nodeRewardsFileCid)
-        );
-
-        // Finalize if Threshold has been reached
-        if (INetworkProposal(networkProposalAddress).shouldExecute(proposalId, msg.sender)) {
-            if (_dealedEpoch <= latestMerkleRootEpoch) {
-                revert AlreadyDealedEpoch();
-            }
-
-            merkleRoot = _merkleRoot;
-            latestMerkleRootEpoch = _dealedEpoch;
-            nodeRewardsFileCid = _nodeRewardsFileCid;
-
-            emit SetMerkleRoot(_dealedEpoch, _merkleRoot, _nodeRewardsFileCid);
+    function setMerkleRoot(
+        uint256 _dealedEpoch,
+        bytes32 _merkleRoot,
+        string calldata _nodeRewardsFileCid
+    ) external onlyNetworkProposal {
+        if (_dealedEpoch <= latestMerkleRootEpoch) {
+            revert AlreadyDealedEpoch();
         }
+
+        merkleRoot = _merkleRoot;
+        latestMerkleRootEpoch = _dealedEpoch;
+        nodeRewardsFileCid = _nodeRewardsFileCid;
+
+        emit SetMerkleRoot(_dealedEpoch, _merkleRoot, _nodeRewardsFileCid);
     }
 
     // ----- network --------------

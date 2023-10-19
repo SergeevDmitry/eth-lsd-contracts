@@ -33,6 +33,13 @@ contract NodeDeposit is Initializable, UUPSUpgradeable, INodeDeposit {
         _;
     }
 
+    modifier onlyNetworkProposal() {
+        if (networkProposalAddress != msg.sender) {
+            revert NotNetworkProposal();
+        }
+        _;
+    }
+
     constructor() {
         _disableInitializers();
     }
@@ -217,13 +224,16 @@ contract NodeDeposit is Initializable, UUPSUpgradeable, INodeDeposit {
     // ------------ voter ------------
 
     // Only accepts calls from trusted (oracle) nodes
-    function voteWithdrawCredentials(bytes[] calldata _pubkeys, bool[] calldata _matchs) external override {
+    function voteWithdrawCredentials(
+        bytes[] calldata _pubkeys,
+        bool[] calldata _matchs
+    ) external override onlyNetworkProposal {
         if (_pubkeys.length != _matchs.length) {
             revert LengthNotMatch();
         }
 
         for (uint256 i = 0; i < _pubkeys.length; i++) {
-            _voteWithdrawCredentials(_pubkeys[i], _matchs[i]);
+            _setNodePubkeyStatus(_pubkeys[i], _matchs[i] ? PubkeyStatus.Match : PubkeyStatus.UnMatch);
         }
     }
 
@@ -306,15 +316,6 @@ contract NodeDeposit is Initializable, UUPSUpgradeable, INodeDeposit {
         );
 
         emit Staked(msg.sender, _validatorPubkey);
-    }
-
-    function _voteWithdrawCredentials(bytes calldata _pubkey, bool _match) private {
-        bytes32 proposalId = keccak256(abi.encodePacked("voteWithdrawCredentials", _pubkey));
-
-        // Finalize if Threshold has been reached
-        if (INetworkProposal(networkProposalAddress).shouldExecute(proposalId, msg.sender)) {
-            _setNodePubkeyStatus(_pubkey, _match ? PubkeyStatus.Match : PubkeyStatus.UnMatch);
-        }
     }
 
     // Set node pubkey status

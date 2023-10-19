@@ -24,6 +24,13 @@ contract NetworkBalances is Initializable, UUPSUpgradeable, INetworkBalances {
         _;
     }
 
+    modifier onlyNetworkProposal() {
+        if (networkProposalAddress != msg.sender) {
+            revert NotNetworkProposal();
+        }
+        _;
+    }
+
     constructor() {
         _disableInitializers();
     }
@@ -92,30 +99,29 @@ contract NetworkBalances is Initializable, UUPSUpgradeable, INetworkBalances {
 
     // Submit network balances for a block
     // Only accepts calls from trusted (oracle) nodes
-    function submitBalances(uint256 _block, uint256 _totalEth, uint256 _lsdTokenSupply) external override {
-        bytes32 proposalId = keccak256(abi.encodePacked("submitBalances", _block, _totalEth, _lsdTokenSupply));
-
-        // Emit balances submitted event
-        emit BalancesSubmitted(msg.sender, _block, _totalEth, _lsdTokenSupply, block.timestamp);
-
-        if (INetworkProposal(networkProposalAddress).shouldExecute(proposalId, msg.sender)) {
-            if (!submitBalancesEnabled) {
-                revert SubmitBalancesDisable();
-            }
-            if (_block <= balancesBlock) {
-                revert BlockNotMatch();
-            }
-
-            uint256 oldRate = getExchangeRate();
-
-            updateBalances(_block, _totalEth, _lsdTokenSupply);
-
-            uint256 newRate = getExchangeRate();
-            uint256 rateChange = newRate > oldRate ? newRate - oldRate : oldRate - newRate;
-            if ((rateChange * 1e18) / oldRate > rateChangeLimit) {
-                revert RateChangeOverLimit();
-            }
+    function submitBalances(
+        uint256 _block,
+        uint256 _totalEth,
+        uint256 _lsdTokenSupply
+    ) external override onlyNetworkProposal {
+        if (!submitBalancesEnabled) {
+            revert SubmitBalancesDisable();
         }
+        if (_block <= balancesBlock) {
+            revert BlockNotMatch();
+        }
+
+        uint256 oldRate = getExchangeRate();
+
+        updateBalances(_block, _totalEth, _lsdTokenSupply);
+
+        uint256 newRate = getExchangeRate();
+        uint256 rateChange = newRate > oldRate ? newRate - oldRate : oldRate - newRate;
+        if ((rateChange * 1e18) / oldRate > rateChangeLimit) {
+            revert RateChangeOverLimit();
+        }
+
+        emit BalancesSubmitted(msg.sender, _block, _totalEth, _lsdTokenSupply, block.timestamp);
     }
 
     // ------------ helper ------------

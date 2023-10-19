@@ -22,6 +22,4 @@ interface INetworkProposal is Errors, IUpgrade {
     function init(address[] memory _voters, uint256 _initialThreshold, address _adminAddress) external;
 
     function isAdmin(address _sender) external view returns (bool);
-
-    function shouldExecute(bytes32 _proposalId, address _voter) external returns (bool);
 }
