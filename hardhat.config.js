@@ -26,24 +26,11 @@ module.exports = {
     disambiguatePaths: false,
   },
   networks: {
-    local: {
-      url: 'http://127.0.0.1:8545',
-      accounts: [
-        `${process.env.ACCOUNT1}`,
-        `${process.env.ACCOUNT2}`,
-        `${process.env.ACCOUNT3}`
-      ],
-    },
     mainnet: {
       url: `https://eth-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`,
     },
     goerli: {
       url: `https://goerli.infura.io/v3/${process.env.INFURA_KEY}`,
-      accounts: [
-        `${process.env.ACCOUNT1}`,
-        `${process.env.ACCOUNT2}`,
-        `${process.env.ACCOUNT3}`
-      ],
     }
   },
   etherscan: {

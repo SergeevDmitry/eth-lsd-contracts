@@ -37,9 +37,6 @@ contract NetworkProposal is Initializable, UUPSUpgradeable, INetworkProposal {
         if (_voters.length < _initialThreshold || _initialThreshold <= _voters.length / 2) {
             revert InvalidThreshold();
         }
-        if (_voters.length > 16) {
-            revert VoterNumberOverLimit();
-        }
         if (_adminAddress == address(0)) {
             revert AddressNotAllowed();
         }
@@ -96,9 +93,6 @@ contract NetworkProposal is Initializable, UUPSUpgradeable, INetworkProposal {
     }
 
     function addVoter(address _voter) external onlyAdmin {
-        if (voters.length() >= 16) {
-            revert VoterNumberOverLimit();
-        }
         if (threshold <= (voters.length() + 1) / 2) {
             revert InvalidThreshold();
         }
@@ -126,14 +120,18 @@ contract NetworkProposal is Initializable, UUPSUpgradeable, INetworkProposal {
         threshold = _newThreshold.toUint8();
     }
 
-    function batchExecProposals(address[] calldata _tos, bytes[] calldata _callDatas) external {
+    function batchExecProposals(
+        address[] calldata _tos,
+        bytes[] calldata _callDatas,
+        uint256[] calldata _proposalFactors
+    ) external {
         for (uint256 i = 0; i < _tos.length; i++) {
-            execProposal(_tos[i], _callDatas[i]);
+            execProposal(_tos[i], _callDatas[i], _proposalFactors[i]);
         }
     }
 
-    function execProposal(address _to, bytes calldata _callData) public {
-        bytes32 proposalId = keccak256(abi.encodePacked("execProposal", _to, _callData));
+    function execProposal(address _to, bytes calldata _callData, uint256 _proposalFactor) public {
+        bytes32 proposalId = keccak256(abi.encodePacked("execProposal", _to, _callData, _proposalFactor));
 
         if (_shouldExecute(proposalId, msg.sender)) {
             (bool success, ) = _to.call(_callData);
