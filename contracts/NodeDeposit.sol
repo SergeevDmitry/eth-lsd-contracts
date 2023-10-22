@@ -224,17 +224,11 @@ contract NodeDeposit is Initializable, UUPSUpgradeable, INodeDeposit {
     // ------------ voter ------------
 
     // Only accepts calls from trusted (oracle) nodes
-    function voteWithdrawCredentials(
-        bytes[] calldata _pubkeys,
-        bool[] calldata _matchs
-    ) external override onlyNetworkProposal {
-        if (_pubkeys.length != _matchs.length) {
-            revert LengthNotMatch();
+    function voteWithdrawCredentials(bytes calldata _pubkey, bool _match) external override onlyNetworkProposal {
+        if (pubkeyInfoOf[_pubkey]._status != PubkeyStatus.Deposited) {
+            revert PubkeyStatusUnmatch();
         }
-
-        for (uint256 i = 0; i < _pubkeys.length; i++) {
-            _setNodePubkeyStatus(_pubkeys[i], _matchs[i] ? PubkeyStatus.Match : PubkeyStatus.UnMatch);
-        }
+        _setNodePubkeyStatus(_pubkey, _match ? PubkeyStatus.Match : PubkeyStatus.UnMatch);
     }
 
     // ------------ network ------------

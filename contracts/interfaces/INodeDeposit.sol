@@ -58,5 +58,5 @@ interface INodeDeposit is IDepositEth, Errors, IUpgrade {
         bytes calldata _withdrawCredentials
     ) external;
 
-    function voteWithdrawCredentials(bytes[] calldata _pubkey, bool[] calldata _match) external;
+    function voteWithdrawCredentials(bytes calldata _pubkey, bool _match) external;
 }
