@@ -175,7 +175,7 @@ contract NodeDeposit is Initializable, UUPSUpgradeable, INodeDeposit {
             if (msg.value > 0) {
                 revert AmountNotZero();
             }
-            if (pubkeysOfNode[msg.sender].length + _validatorPubkeys.length >= trustNodePubkeyNumberLimit) {
+            if (pubkeysOfNode[msg.sender].length + _validatorPubkeys.length > trustNodePubkeyNumberLimit) {
                 revert ReachPubkeyNumberLimit();
             }
 
@@ -186,6 +186,10 @@ contract NodeDeposit is Initializable, UUPSUpgradeable, INodeDeposit {
             if (!soloNodeDepositEnabled) {
                 revert SoloNodeDepositDisabled();
             }
+            if (soloNodeDepositAmount == 0) {
+                revert SoloNodeDepositAmountZero();
+            }
+
             if (msg.value != _validatorPubkeys.length * soloNodeDepositAmount) {
                 revert AmountUnmatch();
             }

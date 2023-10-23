@@ -61,6 +61,7 @@ interface Errors {
     error NodeAlreadyRemoved();
     error TrustNodeDepositDisabled();
     error SoloNodeDepositDisabled();
+    error SoloNodeDepositAmountZero();
     error ReachPubkeyNumberLimit();
     error NotPubkeyOwner();
 
