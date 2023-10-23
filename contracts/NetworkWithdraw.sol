@@ -235,7 +235,7 @@ contract NetworkWithdraw is Initializable, UUPSUpgradeable, INetworkWithdraw {
             if (!unclaimedWithdrawalsOfUser[msg.sender].remove(withdrawIndex)) {
                 revert AlreadyClaimed();
             }
-            totalAmount = totalAmount - withdrawalAtIndex[withdrawIndex]._amount;
+            totalAmount = totalAmount + withdrawalAtIndex[withdrawIndex]._amount;
         }
 
         if (totalAmount > 0) {
