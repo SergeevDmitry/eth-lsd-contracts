@@ -30,7 +30,6 @@ interface INodeDeposit is IDepositEth, Errors, IUpgrade {
     struct NodeInfo {
         NodeType _nodeType;
         bool _removed;
-        uint256 _pubkeyNumber;
     }
 
     event EtherDeposited(address indexed from, uint256 amount, uint256 time);

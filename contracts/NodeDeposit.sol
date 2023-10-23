@@ -130,7 +130,7 @@ contract NodeDeposit is Initializable, UUPSUpgradeable, INodeDeposit {
             revert NodeAlreadyExist();
         }
 
-        nodeInfoOf[_trustNodeAddress] = NodeInfo({_nodeType: NodeType.TrustNode, _removed: false, _pubkeyNumber: 0});
+        nodeInfoOf[_trustNodeAddress] = NodeInfo({_nodeType: NodeType.TrustNode, _removed: false});
         nodes.push(_trustNodeAddress);
     }
 
@@ -159,6 +159,7 @@ contract NodeDeposit is Initializable, UUPSUpgradeable, INodeDeposit {
         NodeInfo memory node = nodeInfoOf[msg.sender];
         if (node._nodeType == NodeType.Undefined) {
             node._nodeType = NodeType.SoloNode;
+            nodeInfoOf[msg.sender] = node;
             nodes.push(msg.sender);
         }
 
@@ -174,7 +175,7 @@ contract NodeDeposit is Initializable, UUPSUpgradeable, INodeDeposit {
             if (msg.value > 0) {
                 revert AmountNotZero();
             }
-            if (node._pubkeyNumber >= trustNodePubkeyNumberLimit) {
+            if (pubkeysOfNode[msg.sender].length + _validatorPubkeys.length >= trustNodePubkeyNumberLimit) {
                 revert ReachPubkeyNumberLimit();
             }
 
@@ -192,11 +193,6 @@ contract NodeDeposit is Initializable, UUPSUpgradeable, INodeDeposit {
             depositAmount = soloNodeDepositAmount;
             nodeDepositAmount = soloNodeDepositAmount;
         }
-
-        node._pubkeyNumber += _validatorPubkeys.length;
-
-        // update node
-        nodeInfoOf[msg.sender] = node;
 
         // deposit
         for (uint256 i = 0; i < _validatorPubkeys.length; i++) {
