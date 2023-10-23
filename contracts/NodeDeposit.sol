@@ -22,9 +22,10 @@ contract NodeDeposit is Initializable, UUPSUpgradeable, INodeDeposit {
 
     bytes public withdrawCredentials;
 
-    bytes[] public pubkeys;
+    address[] public nodes;
     mapping(bytes => PubkeyInfo) public pubkeyInfoOf;
     mapping(address => NodeInfo) public nodeInfoOf; //solo node and trust node are always mutually exclusive and cannot be converted to each other
+    mapping(address => bytes[]) public pubkeysOfNode;
 
     modifier onlyAdmin() {
         if (!INetworkProposal(networkProposalAddress).isAdmin(msg.sender)) {
@@ -74,20 +75,24 @@ contract NodeDeposit is Initializable, UUPSUpgradeable, INodeDeposit {
 
     // ------------ getter ------------
 
-    function getPubkeysLength() public view returns (uint256) {
-        return pubkeys.length;
+    function getNodesLength() public view returns (uint256) {
+        return nodes.length;
     }
 
-    function getPubkeys(uint256 _start, uint256 _end) public view returns (bytes[] memory pubkeyList) {
-        pubkeyList = new bytes[](_end - _start);
+    function getNodes(uint256 _start, uint256 _end) public view returns (address[] memory nodeList) {
+        nodeList = new address[](_end - _start);
         uint256 i = _start;
         uint256 j;
         for (; i < _end; ) {
-            pubkeyList[j] = pubkeys[j];
+            nodeList[j] = nodes[j];
             i++;
             j++;
         }
-        return pubkeyList;
+        return nodeList;
+    }
+
+    function getPubkeysOfNode(address _node) public view returns (bytes[] memory) {
+        return pubkeysOfNode[_node];
     }
 
     // ------------ settings ------------
@@ -126,6 +131,7 @@ contract NodeDeposit is Initializable, UUPSUpgradeable, INodeDeposit {
         }
 
         nodeInfoOf[_trustNodeAddress] = NodeInfo({_nodeType: NodeType.TrustNode, _removed: false, _pubkeyNumber: 0});
+        nodes.push(_trustNodeAddress);
     }
 
     function removeTrustNode(address _trustNodeAddress) external onlyAdmin {
@@ -153,6 +159,7 @@ contract NodeDeposit is Initializable, UUPSUpgradeable, INodeDeposit {
         NodeInfo memory node = nodeInfoOf[msg.sender];
         if (node._nodeType == NodeType.Undefined) {
             node._nodeType = NodeType.SoloNode;
+            nodes.push(msg.sender);
         }
 
         uint256 depositAmount;
@@ -253,15 +260,14 @@ contract NodeDeposit is Initializable, UUPSUpgradeable, INodeDeposit {
             revert PubkeyAlreadyExist();
         }
 
-        pubkeys.push(_validatorPubkey);
+        pubkeysOfNode[msg.sender].push(_validatorPubkey);
 
         // add pubkey
         pubkeyInfoOf[_validatorPubkey] = PubkeyInfo({
             _status: PubkeyStatus.Deposited,
             _owner: msg.sender,
             _nodeDepositAmount: _nodeDepositAmount,
-            _depositBlock: block.number,
-            _depositSignature: _validatorSignature
+            _depositBlock: block.number
         });
 
         IDepositContract(ethDepositAddress).deposit{value: _depositAmount}(

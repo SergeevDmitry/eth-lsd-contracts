@@ -25,7 +25,6 @@ interface INodeDeposit is IDepositEth, Errors, IUpgrade {
         address _owner;
         uint256 _nodeDepositAmount;
         uint256 _depositBlock;
-        bytes _depositSignature;
     }
 
     struct NodeInfo {
