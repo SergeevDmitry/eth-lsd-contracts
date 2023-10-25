@@ -80,17 +80,9 @@ contract NodeDeposit is Initializable, UUPSUpgradeable, INodeDeposit {
     }
 
     function getNodes(uint256 _start, uint256 _end) public view returns (address[] memory nodeList) {
-        if (_start == 0 && _end == 0) {
-            return nodes;
-        }
-
         nodeList = new address[](_end - _start);
-        uint256 i = _start;
-        uint256 j;
-        for (; i < _end; ) {
-            nodeList[j] = nodes[j];
-            i++;
-            j++;
+        for (uint256 i = _start; i < _end; i++) {
+            nodeList[i - _start] = nodes[i];
         }
         return nodeList;
     }

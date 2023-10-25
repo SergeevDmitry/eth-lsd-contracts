@@ -89,7 +89,7 @@ contract LsdNetworkFactory is Initializable, UUPSUpgradeable, ILsdNetworkFactory
 
     // ------------ settings ------------
 
-    function transferOwnership(address _newAdmin) public onlyFactoryAdmin {
+    function transferAdmin(address _newAdmin) public onlyFactoryAdmin {
         if (_newAdmin == address(0)) {
             revert AddressNotAllowed();
         }
@@ -141,10 +141,10 @@ contract LsdNetworkFactory is Initializable, UUPSUpgradeable, ILsdNetworkFactory
         string memory _lsdTokenSymbol,
         address[] memory _voters,
         uint256 _threshold,
-        uint256 minDelay,
-        address[] memory proposers
+        uint256 _minDelay,
+        address[] memory _proposers
     ) external override {
-        address networkAdmin = address(new Timelock(minDelay, proposers, proposers, msg.sender));
+        address networkAdmin = address(new Timelock(_minDelay, _proposers, _proposers, msg.sender));
         _createLsdNetwork(_lsdTokenName, _lsdTokenSymbol, networkAdmin, _voters, _threshold);
     }
 

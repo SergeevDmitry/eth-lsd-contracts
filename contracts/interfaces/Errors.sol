@@ -47,8 +47,6 @@ interface Errors {
     error AlreadyDealedEpoch();
     error LsdTokenAmountZero();
     error EthAmountZero();
-    error ReachCycleWithdrawLimit();
-    error ReachUserWithdrawLimit();
     error SecondsZero();
     error NodeNotClaimable();
     error RateValueUnmatch();

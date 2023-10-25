@@ -32,8 +32,6 @@ interface INetworkWithdraw is IDepositEth, Errors, IUpgrade {
         uint256 claimableDeposit,
         ClaimType claimType
     );
-    event SetWithdrawLimitPerCycle(uint256 withdrawLimitPerCycle);
-    event SetUserWithdrawLimitPerCycle(uint256 userWithdrawLimitPerCycle);
     event SetWithdrawCycleSeconds(uint256 cycleSeconds);
     event SetMerkleRoot(uint256 indexed dealedEpoch, bytes32 merkleRoot, string nodeRewardsFileCid);
     event EtherDeposited(address indexed from, uint256 amount, uint256 time);

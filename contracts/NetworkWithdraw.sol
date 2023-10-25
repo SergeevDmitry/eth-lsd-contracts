@@ -29,8 +29,6 @@ contract NetworkWithdraw is Initializable, UUPSUpgradeable, INetworkWithdraw {
     uint256 public latestDistributeWithdrawalsHeight;
     uint256 public latestDistributePriorityFeeHeight;
     uint256 public totalMissingAmountForWithdraw;
-    uint256 public withdrawLimitAmountPerCycle;
-    uint256 public userWithdrawLimitAmountPerCycle;
     uint256 public withdrawCycleSeconds;
     uint256 public factoryCommissionRate;
     uint256 public platformCommissionRate;
@@ -44,8 +42,6 @@ contract NetworkWithdraw is Initializable, UUPSUpgradeable, INetworkWithdraw {
 
     mapping(uint256 => Withdrawal) public withdrawalAtIndex;
     mapping(address => EnumerableSet.UintSet) internal unclaimedWithdrawalsOfUser;
-    mapping(uint256 => uint256) public totalWithdrawAmountAtCycle;
-    mapping(address => mapping(uint256 => uint256)) public userWithdrawAmountAtCycle;
     mapping(uint256 => uint256[]) public ejectedValidatorsAtCycle;
     mapping(address => uint256) public totalClaimedRewardOfNode;
     mapping(address => uint256) public totalClaimedDepositOfNode;
@@ -76,12 +72,10 @@ contract NetworkWithdraw is Initializable, UUPSUpgradeable, INetworkWithdraw {
         address _feePoolAddress,
         address _factoryAddress
     ) public virtual override initializer {
-        withdrawLimitAmountPerCycle = uint256(100 ether);
-        userWithdrawLimitAmountPerCycle = uint256(100 ether);
-        withdrawCycleSeconds = 86400;
-        factoryCommissionRate = 10e16; //10%
-        platformCommissionRate = 5e16; //5%
-        nodeCommissionRate = 5e16; //5%
+        withdrawCycleSeconds = 86400; // 1 day
+        factoryCommissionRate = 10e16; // 10%
+        platformCommissionRate = 5e16; // 5%
+        nodeCommissionRate = 5e16; // 5%
         nextWithdrawIndex = 1;
         nodeClaimEnabled = true;
 
@@ -128,18 +122,6 @@ contract NetworkWithdraw is Initializable, UUPSUpgradeable, INetworkWithdraw {
     }
 
     // ------------ settings ------------
-
-    function setWithdrawLimitAmountPerCycle(uint256 _withdrawLimitPerCycle) external onlyAdmin {
-        withdrawLimitAmountPerCycle = _withdrawLimitPerCycle;
-
-        emit SetWithdrawLimitPerCycle(_withdrawLimitPerCycle);
-    }
-
-    function setUserWithdrawLimitAmountPerCycle(uint256 _userWithdrawLimitPerCycle) external onlyAdmin {
-        userWithdrawLimitAmountPerCycle = _userWithdrawLimitPerCycle;
-
-        emit SetUserWithdrawLimitPerCycle(_userWithdrawLimitPerCycle);
-    }
 
     function setWithdrawCycleSeconds(uint256 _withdrawCycleSeconds) external onlyAdmin {
         if (_withdrawCycleSeconds == 0) {
@@ -221,21 +203,21 @@ contract NetworkWithdraw is Initializable, UUPSUpgradeable, INetworkWithdraw {
         }
     }
 
-    function withdraw(uint256[] calldata _withdrawIndexList) external override {
-        if (_withdrawIndexList.length == 0) {
+    function withdraw(uint256[] calldata _withdrawalIndexList) external override {
+        if (_withdrawalIndexList.length == 0) {
             revert WithdrawIndexEmpty();
         }
 
         uint256 totalAmount;
-        for (uint256 i = 0; i < _withdrawIndexList.length; i++) {
-            uint256 withdrawIndex = _withdrawIndexList[i];
-            if (withdrawIndex > maxClaimableWithdrawIndex) {
+        for (uint256 i = 0; i < _withdrawalIndexList.length; i++) {
+            uint256 withdrawalIndex = _withdrawalIndexList[i];
+            if (withdrawalIndex > maxClaimableWithdrawIndex) {
                 revert NotClaimable();
             }
-            if (!unclaimedWithdrawalsOfUser[msg.sender].remove(withdrawIndex)) {
+            if (!unclaimedWithdrawalsOfUser[msg.sender].remove(withdrawalIndex)) {
                 revert AlreadyClaimed();
             }
-            totalAmount = totalAmount + withdrawalAtIndex[withdrawIndex]._amount;
+            totalAmount = totalAmount + withdrawalAtIndex[withdrawalIndex]._amount;
         }
 
         if (totalAmount > 0) {
@@ -245,7 +227,7 @@ contract NetworkWithdraw is Initializable, UUPSUpgradeable, INetworkWithdraw {
             }
         }
 
-        emit Withdraw(msg.sender, _withdrawIndexList);
+        emit Withdraw(msg.sender, _withdrawalIndexList);
     }
 
     // ----- node claim --------------
@@ -380,9 +362,7 @@ contract NetworkWithdraw is Initializable, UUPSUpgradeable, INetworkWithdraw {
         uint256 _ejectedStartCycle,
         uint256[] calldata _validatorIndexList
     ) external override onlyNetworkProposal {
-        if (
-            _validatorIndexList.length == 0 || _validatorIndexList.length > (withdrawLimitAmountPerCycle * 3) / 20 ether
-        ) {
+        if (_validatorIndexList.length == 0) {
             revert LengthNotMatch();
         }
         if (_ejectedStartCycle >= _withdrawCycle || _withdrawCycle + 1 != currentWithdrawCycle()) {
@@ -447,18 +427,6 @@ contract NetworkWithdraw is Initializable, UUPSUpgradeable, INetworkWithdraw {
         if (ethAmount == 0) {
             revert EthAmountZero();
         }
-        uint256 currentCycle = currentWithdrawCycle();
-        if (totalWithdrawAmountAtCycle[currentCycle] + ethAmount > withdrawLimitAmountPerCycle) {
-            revert ReachCycleWithdrawLimit();
-        }
-        if (userWithdrawAmountAtCycle[msg.sender][currentCycle] + ethAmount > userWithdrawLimitAmountPerCycle) {
-            revert ReachUserWithdrawLimit();
-        }
-
-        totalWithdrawAmountAtCycle[currentCycle] = totalWithdrawAmountAtCycle[currentCycle] + ethAmount;
-        userWithdrawAmountAtCycle[msg.sender][currentCycle] =
-            userWithdrawAmountAtCycle[msg.sender][currentCycle] +
-            ethAmount;
 
         ERC20Burnable(lsdTokenAddress).burnFrom(msg.sender, _lsdTokenAmount);
 
