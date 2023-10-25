@@ -118,7 +118,7 @@ contract NetworkWithdraw is Initializable, UUPSUpgradeable, INetworkWithdraw {
     }
 
     function currentWithdrawCycle() public view returns (uint256) {
-        return (block.timestamp) / withdrawCycleSeconds;
+        return block.timestamp / withdrawCycleSeconds;
     }
 
     // ------------ settings ------------

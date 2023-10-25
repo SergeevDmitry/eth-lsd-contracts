@@ -55,6 +55,7 @@ interface Errors {
     error PubkeyAlreadyExist();
     error PubkeyStatusUnmatch();
     error NodeAlreadyExist();
+    error NodeDoesNotExist();
     error NotTrustNode();
     error NodeAlreadyRemoved();
     error TrustNodeDepositDisabled();

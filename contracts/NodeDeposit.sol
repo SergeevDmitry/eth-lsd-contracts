@@ -135,7 +135,7 @@ contract NodeDeposit is Initializable, UUPSUpgradeable, INodeDeposit {
             revert NotTrustNode();
         }
 
-        nodeInfoOf[_trustNodeAddress]._removed = true;
+        _removeNode(_trustNodeAddress);
     }
 
     // ------------ node ------------
@@ -319,5 +319,21 @@ contract NodeDeposit is Initializable, UUPSUpgradeable, INodeDeposit {
         pubkeyInfoOf[_validatorPubkey]._status = _status;
 
         emit SetPubkeyStatus(_validatorPubkey, _status);
+    }
+
+    function _removeNode(address _node) internal {
+        if (nodeInfoOf[_node]._nodeType == NodeType.Undefined) {
+            revert NodeDoesNotExist();
+        }
+
+        for (uint256 i; i < nodes.length; i++) {
+            if (nodes[i] == _node) {
+                // remove element safely
+                nodes[i] = nodes[nodes.length - 1];
+                nodes.pop();
+                break;
+            }
+        }
+        nodeInfoOf[_node]._removed = true;
     }
 }
