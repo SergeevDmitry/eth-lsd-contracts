@@ -179,7 +179,7 @@ contract NodeDeposit is Initializable, UUPSUpgradeable, INodeDeposit {
                 revert AmountNotZero();
             }
             if (pubkeysOfNode[msg.sender].length + _validatorPubkeys.length > trustNodePubkeyNumberLimit) {
-                revert ReachPubkeyNumberLimit();
+                revert PubkeyNumberOverLimit();
             }
 
             depositAmount = uint256(1 ether);

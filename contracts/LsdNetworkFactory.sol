@@ -130,7 +130,7 @@ contract LsdNetworkFactory is Initializable, UUPSUpgradeable, ILsdNetworkFactory
     function factoryClaim(address _recipient) external onlyFactoryAdmin {
         (bool success, ) = _recipient.call{value: address(this).balance}("");
         if (!success) {
-            revert FailedToTransfer();
+            revert FailedToCall();
         }
     }
 

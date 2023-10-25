@@ -3,25 +3,22 @@ pragma solidity 0.8.19;
 // SPDX-License-Identifier: GPL-3.0-only
 
 interface Errors {
+    error FailedToCall();
     error AddressNotAllowed();
     error CallerNotAllowed();
-    error AlreadyInitialized();
 
     error AmountUnmatch();
     error AmountZero();
     error AmountNotZero();
 
+    error AlreadyInitialized();
     error NotAuthorizedLsdToken();
 
-    error FailedToTransfer();
-    error FailedToCall();
-
-    error SubmitBalancesDisable();
+    error SubmitBalancesDisabled();
     error BlockNotMatch();
     error RateChangeOverLimit();
 
     error InvalidThreshold();
-    error VoterNumberOverLimit();
     error VotersNotEnough();
     error VotersDuplicate();
     error VotersNotExist();
@@ -36,17 +33,17 @@ interface Errors {
     error ClaimableDepositZero();
     error ClaimableAmountZero();
     error AlreadyDealedHeight();
-    error WithdrawIndexOver();
+    error ClaimableWithdrawIndexOverflow();
     error BalanceNotEnough();
     error LengthNotMatch();
     error CycleNotMatch();
-    error AlreadyNotifyCycle();
+    error AlreadyNotifiedCycle();
     error AlreadyDealedEpoch();
     error LsdTokenAmountZero();
     error EthAmountZero();
     error SecondsZero();
     error NodeNotClaimable();
-    error RateValueUnmatch();
+    error CommissionRateInvalid();
 
     error PubkeyNotExist();
     error PubkeyAlreadyExist();
@@ -57,7 +54,7 @@ interface Errors {
     error TrustNodeDepositDisabled();
     error SoloNodeDepositDisabled();
     error SoloNodeDepositAmountZero();
-    error ReachPubkeyNumberLimit();
+    error PubkeyNumberOverLimit();
     error NotPubkeyOwner();
 
     error UserDepositDisabled();

@@ -104,7 +104,7 @@ contract NetworkBalances is Initializable, UUPSUpgradeable, INetworkBalances {
         uint256 _totalLsdToken
     ) external override onlyNetworkProposal {
         if (!submitBalancesEnabled) {
-            revert SubmitBalancesDisable();
+            revert SubmitBalancesDisabled();
         }
         if (_block <= balancesSnapshot._block) {
             revert BlockNotMatch();

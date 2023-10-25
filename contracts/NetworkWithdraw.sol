@@ -148,7 +148,7 @@ contract NetworkWithdraw is Initializable, UUPSUpgradeable, INetworkWithdraw {
 
     function setFactoryCommissionRate(uint256 _factoryCommissionRate) external onlyAdmin {
         if (_factoryCommissionRate > 1e18) {
-            revert RateValueUnmatch();
+            revert CommissionRateInvalid();
         }
         factoryCommissionRate = _factoryCommissionRate;
     }
@@ -158,7 +158,7 @@ contract NetworkWithdraw is Initializable, UUPSUpgradeable, INetworkWithdraw {
         uint256 _nodeCommissionRate
     ) external onlyAdmin {
         if (_platformCommissionRate + _nodeCommissionRate > 1e18) {
-            revert RateValueUnmatch();
+            revert CommissionRateInvalid();
         }
         platformCommissionRate = _platformCommissionRate;
         nodeCommissionRate = _nodeCommissionRate;
@@ -321,7 +321,7 @@ contract NetworkWithdraw is Initializable, UUPSUpgradeable, INetworkWithdraw {
             revert AlreadyDealedHeight();
         }
         if (_maxClaimableWithdrawIndex >= nextWithdrawIndex) {
-            revert WithdrawIndexOver();
+            revert ClaimableWithdrawIndexOverflow();
         }
         if (totalAmount > address(this).balance) {
             revert BalanceNotEnough();
@@ -369,7 +369,7 @@ contract NetworkWithdraw is Initializable, UUPSUpgradeable, INetworkWithdraw {
             revert CycleNotMatch();
         }
         if (ejectedValidatorsAtCycle[_withdrawCycle].length > 0) {
-            revert AlreadyNotifyCycle();
+            revert AlreadyNotifiedCycle();
         }
 
         ejectedValidatorsAtCycle[_withdrawCycle] = _validatorIndexList;
