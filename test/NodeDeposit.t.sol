@@ -3,11 +3,11 @@ pragma solidity 0.8.19;
 // SPDX-License-Identifier: GPL-3.0-only
 
 import "forge-std/Test.sol";
-import { DepositContract } from "../contracts/mock/EthDeposit.sol";
-import { LsdToken } from "../contracts/LsdToken.sol";
-import { NodeDeposit } from "../contracts/NodeDeposit.sol";
-import { UserDeposit } from "../contracts/UserDeposit.sol";
-import { NetworkProposal } from "../contracts/NetworkProposal.sol";
+import { DepositContract } from "contracts/mock/EthDeposit.sol";
+import { LsdToken } from "contracts/LsdToken.sol";
+import { NodeDeposit } from "contracts/NodeDeposit.sol";
+import { UserDeposit } from "contracts/UserDeposit.sol";
+import { NetworkProposal } from "contracts/NetworkProposal.sol";
 import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 contract NodeDepositTest is Test {
@@ -47,7 +47,7 @@ contract NodeDepositTest is Test {
         assertEq(nd.getNodesLength(), 2);
         nd.removeTrustNode(trustNode1);
         assertEq(nd.getNodesLength(), 1);
-        address[] memory nodes = nd.getNodes(0, 0);
+        address[] memory nodes = nd.getNodes(0, 1);
         assertEq(nodes.length, 1);
         assertEq(nodes[0], trustNode2);
     }
