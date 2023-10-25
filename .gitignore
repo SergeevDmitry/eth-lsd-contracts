@@ -14,3 +14,5 @@ artifacts
 .account.sh
 /cache_forge
 /out
+/coverage
+/lcov.info

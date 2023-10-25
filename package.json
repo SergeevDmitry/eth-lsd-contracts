@@ -4,7 +4,8 @@
     "size": "hardhat size-contracts",
     "test": "hardhat test ./test/LsdNetworkFactory.test.js",
     "clean": "rm -rf ./node_modules ./artifacts ./cache",
-    "deploy": "hardhat run ./script/deploy_on_testnet.js --network goerli"
+    "deploy": "hardhat run ./script/deploy_on_testnet.js --network goerli",
+    "coverage": "forge coverage --report lcov && genhtml lcov.info -o coverage"
   },
   "license": "GPL-3.0-only",
   "devDependencies": {
