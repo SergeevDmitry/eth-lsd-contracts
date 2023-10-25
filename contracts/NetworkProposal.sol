@@ -12,10 +12,11 @@ contract NetworkProposal is Initializable, UUPSUpgradeable, INetworkProposal {
     using SafeCast for *;
     using EnumerableSet for EnumerableSet.AddressSet;
 
-    uint8 public threshold;
     address public admin;
 
     EnumerableSet.AddressSet voters;
+    uint8 public threshold;
+
     mapping(bytes32 => Proposal) public proposals;
 
     modifier onlyAdmin() {

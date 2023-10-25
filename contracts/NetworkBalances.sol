@@ -10,12 +10,11 @@ import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 // Network balances
 contract NetworkBalances is Initializable, UUPSUpgradeable, INetworkBalances {
     bool public submitBalancesEnabled;
-    uint256 public balancesBlock;
-    uint256 public totalEthBalance;
-    uint256 public totalLsdTokenSupply;
     uint256 public rateChangeLimit;
     uint256 public updateBalancesEpochs;
     address public networkProposalAddress;
+
+    BalancesSnapshot public balancesSnapshot;
 
     modifier onlyAdmin() {
         if (!INetworkProposal(networkProposalAddress).isAdmin(msg.sender)) {
@@ -59,24 +58,24 @@ contract NetworkBalances is Initializable, UUPSUpgradeable, INetworkBalances {
     // Calculate the amount of ETH backing an amount of lsdToken
     function getEthValue(uint256 _lsdTokenAmount) public view override returns (uint256) {
         // Use 1:1 ratio if no lsdToken is minted
-        if (totalLsdTokenSupply == 0) {
+        if (balancesSnapshot._totalLsdToken == 0) {
             return _lsdTokenAmount;
         }
         // Calculate and return
-        return (_lsdTokenAmount * totalEthBalance) / totalLsdTokenSupply;
+        return (_lsdTokenAmount * balancesSnapshot._totalEth) / balancesSnapshot._totalLsdToken;
     }
 
     // Calculate the amount of lsdToken backed by an amount of ETH
     function getLsdTokenValue(uint256 _ethAmount) public view override returns (uint256) {
         // Use 1:1 ratio if no lsdToken is minted
-        if (totalLsdTokenSupply == 0) {
+        if (balancesSnapshot._totalLsdToken == 0) {
             return _ethAmount;
         }
-        if (totalEthBalance == 0) {
+        if (balancesSnapshot._totalEth == 0) {
             revert AmountZero();
         }
         // Calculate and return
-        return (_ethAmount * totalLsdTokenSupply) / totalEthBalance;
+        return (_ethAmount * balancesSnapshot._totalLsdToken) / balancesSnapshot._totalEth;
     }
 
     // Get the current ETH : lsdToken exchange rate
@@ -102,38 +101,36 @@ contract NetworkBalances is Initializable, UUPSUpgradeable, INetworkBalances {
     function submitBalances(
         uint256 _block,
         uint256 _totalEth,
-        uint256 _lsdTokenSupply
+        uint256 _totalLsdToken
     ) external override onlyNetworkProposal {
         if (!submitBalancesEnabled) {
             revert SubmitBalancesDisable();
         }
-        if (_block <= balancesBlock) {
+        if (_block <= balancesSnapshot._block) {
             revert BlockNotMatch();
         }
 
         uint256 oldRate = getExchangeRate();
 
-        updateBalances(_block, _totalEth, _lsdTokenSupply);
+        updateBalances(_block, _totalEth, _totalLsdToken);
 
         uint256 newRate = getExchangeRate();
         uint256 rateChange = newRate > oldRate ? newRate - oldRate : oldRate - newRate;
         if ((rateChange * 1e18) / oldRate > rateChangeLimit) {
             revert RateChangeOverLimit();
         }
-
-        emit BalancesSubmitted(msg.sender, _block, _totalEth, _lsdTokenSupply, block.timestamp);
     }
 
     // ------------ helper ------------
 
     // Update network balances
-    function updateBalances(uint256 _block, uint256 _totalEth, uint256 _lsdTokenSupply) private {
+    function updateBalances(uint256 _block, uint256 _totalEth, uint256 _totalLsdToken) private {
         // Update balances
-        balancesBlock = _block;
-        totalEthBalance = _totalEth;
-        totalLsdTokenSupply = _lsdTokenSupply;
+        balancesSnapshot._block = _block;
+        balancesSnapshot._totalEth = _totalEth;
+        balancesSnapshot._totalLsdToken = _totalLsdToken;
 
         // Emit balances updated event
-        emit BalancesUpdated(_block, _totalEth, _lsdTokenSupply, block.timestamp);
+        emit BalancesUpdated(_block, _totalEth, _totalLsdToken, block.timestamp);
     }
 }

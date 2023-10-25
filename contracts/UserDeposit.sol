@@ -128,7 +128,7 @@ contract UserDeposit is Initializable, UUPSUpgradeable, IUserDeposit {
     // Only accepts calls from  networkWithdraw
     function recycleNetworkWithdrawDeposit() external payable override {
         if (msg.sender != networkWithdrawAddress) {
-            revert AddressNotAllowed();
+            revert CallerNotAllowed();
         }
         // Emit deposit recycled event
         emit DepositRecycled(msg.sender, msg.value, block.timestamp);
