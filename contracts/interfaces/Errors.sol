@@ -14,6 +14,7 @@ interface Errors {
     error NotFactoryAdmin();
     error NotNetworkAdmin();
     error NotNetworkProposal();
+    error NotAuthorizedLsdToken();
 
     error FailedToTransfer();
     error FailedToCall();

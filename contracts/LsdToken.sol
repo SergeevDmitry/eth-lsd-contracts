@@ -4,26 +4,35 @@ pragma solidity 0.8.19;
 
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
 import "./interfaces/ILsdToken.sol";
-import "./interfaces/IUserDeposit.sol";
+import "./interfaces/IRateProvider.sol";
 
 contract LsdToken is ILsdToken, ERC20Burnable {
-    address public userDepositAddress;
+    address public minter;
 
-    // Construct
-    constructor(address _userDepositAddress, string memory _name, string memory _symbol) ERC20(_name, _symbol) {
-        userDepositAddress = _userDepositAddress;
+    modifier onlyMinter() {
+        if (msg.sender == minter) {
+            revert CallerNotAllowed();
+        }
+        _;
     }
 
-    function getRate() external view returns (uint256) {
-        return IUserDeposit(userDepositAddress).getRate();
+    constructor(string memory _name, string memory _symbol) ERC20(_name, _symbol) {}
+
+    function getRate() external view override returns (uint256) {
+        return IRateProvider(minter).getRate();
+    }
+
+    function initMinter(address _minter) external override {
+        if (minter != address(0)) {
+            revert AlreadyInitialized();
+        }
+
+        minter = _minter;
     }
 
     // Mint lsdToken
-    // Only accepts calls from the UserDeposit contract
-    function mint(address _to, uint256 _lsdTokenAmount) external {
-        if (msg.sender != userDepositAddress) {
-            revert CallerNotAllowed();
-        }
+    // Only accepts calls from minter
+    function mint(address _to, uint256 _lsdTokenAmount) external override onlyMinter {
         // Check lsdToken amount
         if (_lsdTokenAmount == 0) {
             revert AmountZero();

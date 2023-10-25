@@ -12,7 +12,6 @@ interface ILsdNetworkFactory is Errors, IUpgrade {
         address _nodeDeposit;
         address _userDeposit;
         address _networkWithdraw;
-        address _lsdToken;
         uint256 _block;
     }
 
@@ -33,5 +32,12 @@ interface ILsdNetworkFactory is Errors, IUpgrade {
         uint256 _threshold,
         uint256 minDelay,
         address[] memory proposers
+    ) external;
+
+    function createLsdNetworkWithLsdToken(
+        address _lsdToken,
+        address _networkAdmin,
+        address[] memory _voters,
+        uint256 _threshold
     ) external;
 }

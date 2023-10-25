@@ -2,6 +2,7 @@ pragma solidity 0.8.19;
 
 // SPDX-License-Identifier: GPL-3.0-only
 import "./LsdToken.sol";
+import "./interfaces/ILsdToken.sol";
 import "./interfaces/IFeePool.sol";
 import "./interfaces/INetworkBalances.sol";
 import "./interfaces/INetworkProposal.sol";
@@ -26,6 +27,7 @@ contract LsdNetworkFactory is Initializable, UUPSUpgradeable, ILsdNetworkFactory
 
     mapping(address => NetworkContracts) public networkContractsOfLsdToken;
     mapping(address => address[]) private lsdTokensOf;
+    mapping(address => bool) public isAuthorizedLsdToken;
 
     modifier onlyFactoryAdmin() {
         if (msg.sender != factoryAdmin) {
@@ -117,6 +119,10 @@ contract LsdNetworkFactory is Initializable, UUPSUpgradeable, ILsdNetworkFactory
         networkWithdrawLogicAddress = _networkWithdrawLogicAddress;
     }
 
+    function authorizeLsdToken(address _lsdToken, bool _value) public onlyFactoryAdmin {
+        isAuthorizedLsdToken[_lsdToken] = _value;
+    }
+
     function factoryClaim(address _recipient) external onlyFactoryAdmin {
         (bool success, ) = _recipient.call{value: address(this).balance}("");
         if (!success) {
@@ -133,7 +139,9 @@ contract LsdNetworkFactory is Initializable, UUPSUpgradeable, ILsdNetworkFactory
         address[] memory _voters,
         uint256 _threshold
     ) external override {
-        _createLsdNetwork(_lsdTokenName, _lsdTokenSymbol, _networkAdmin, _voters, _threshold);
+        address lsdToken = address(new LsdToken(_lsdTokenName, _lsdTokenSymbol));
+
+        _createLsdNetwork(lsdToken, _networkAdmin, _voters, _threshold);
     }
 
     function createLsdNetworkWithTimelock(
@@ -145,23 +153,43 @@ contract LsdNetworkFactory is Initializable, UUPSUpgradeable, ILsdNetworkFactory
         address[] memory _proposers
     ) external override {
         address networkAdmin = address(new Timelock(_minDelay, _proposers, _proposers, msg.sender));
-        _createLsdNetwork(_lsdTokenName, _lsdTokenSymbol, networkAdmin, _voters, _threshold);
+        address lsdToken = address(new LsdToken(_lsdTokenName, _lsdTokenSymbol));
+
+        _createLsdNetwork(lsdToken, networkAdmin, _voters, _threshold);
+    }
+
+    function createLsdNetworkWithLsdToken(
+        address _lsdToken,
+        address _networkAdmin,
+        address[] memory _voters,
+        uint256 _threshold
+    ) external override {
+        if (!isAuthorizedLsdToken[_lsdToken]) {
+            revert NotAuthorizedLsdToken();
+        }
+        _createLsdNetwork(_lsdToken, _networkAdmin, _voters, _threshold);
     }
 
     // ------------ helper ------------
 
     function _createLsdNetwork(
-        string memory _lsdTokenName,
-        string memory _lsdTokenSymbol,
+        address _lsdToken,
         address _networkAdmin,
         address[] memory _voters,
         uint256 _threshold
     ) private {
-        NetworkContracts memory contracts = deployNetworkContracts(_lsdTokenName, _lsdTokenSymbol);
-        networkContractsOfLsdToken[contracts._lsdToken] = contracts;
-        lsdTokensOf[msg.sender].push(contracts._lsdToken);
+        NetworkContracts memory contracts = deployNetworkContracts();
+        networkContractsOfLsdToken[_lsdToken] = contracts;
+        lsdTokensOf[msg.sender].push(_lsdToken);
 
-        (bool success, bytes memory data) = contracts._feePool.call(
+        (bool success, bytes memory data) = _lsdToken.call(
+            abi.encodeWithSelector(ILsdToken.initMinter.selector, contracts._userDeposit)
+        );
+        if (!success) {
+            revert FailedToCall();
+        }
+
+        (success, data) = contracts._feePool.call(
             abi.encodeWithSelector(IFeePool.init.selector, contracts._networkWithdraw, contracts._networkProposal)
         );
         if (!success) {
@@ -198,7 +226,7 @@ contract LsdNetworkFactory is Initializable, UUPSUpgradeable, ILsdNetworkFactory
         (success, data) = contracts._userDeposit.call(
             abi.encodeWithSelector(
                 IUserDeposit.init.selector,
-                contracts._lsdToken,
+                _lsdToken,
                 contracts._nodeDeposit,
                 contracts._networkWithdraw,
                 contracts._networkProposal,
@@ -212,7 +240,7 @@ contract LsdNetworkFactory is Initializable, UUPSUpgradeable, ILsdNetworkFactory
         (success, data) = contracts._networkWithdraw.call(
             abi.encodeWithSelector(
                 INetworkWithdraw.init.selector,
-                contracts._lsdToken,
+                _lsdToken,
                 contracts._userDeposit,
                 contracts._networkProposal,
                 contracts._networkBalances,
@@ -231,18 +259,13 @@ contract LsdNetworkFactory is Initializable, UUPSUpgradeable, ILsdNetworkFactory
         return address(new ERC1967Proxy(_logicAddress, ""));
     }
 
-    function deployNetworkContracts(
-        string memory _lsdTokenName,
-        string memory _lsdTokenSymbol
-    ) private returns (NetworkContracts memory) {
+    function deployNetworkContracts() private returns (NetworkContracts memory) {
         address feePool = deploy(feePoolLogicAddress);
         address networkBalances = deploy(networkBalancesLogicAddress);
         address networkProposal = deploy(networkProposalLogicAddress);
         address nodeDeposit = deploy(nodeDepositLogicAddress);
         address userDeposit = deploy(userDepositLogicAddress);
         address networkWithdraw = deploy(networkWithdrawLogicAddress);
-
-        address lsdToken = address(new LsdToken(userDeposit, _lsdTokenName, _lsdTokenSymbol));
 
         return
             NetworkContracts(
@@ -252,7 +275,6 @@ contract LsdNetworkFactory is Initializable, UUPSUpgradeable, ILsdNetworkFactory
                 nodeDeposit,
                 userDeposit,
                 networkWithdraw,
-                lsdToken,
                 block.number
             );
     }
