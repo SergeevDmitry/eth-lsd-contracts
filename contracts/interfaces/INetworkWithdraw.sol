@@ -26,21 +26,13 @@ interface INetworkWithdraw is IDepositEth, Errors, IUpgrade {
     }
 
     event NodeClaimed(
-        uint256 index,
-        address account,
-        uint256 claimableReward,
-        uint256 claimableDeposit,
-        ClaimType claimType
+        uint256 index, address account, uint256 claimableReward, uint256 claimableDeposit, ClaimType claimType
     );
     event SetWithdrawCycleSeconds(uint256 cycleSeconds);
     event SetMerkleRoot(uint256 indexed dealedEpoch, bytes32 merkleRoot, string nodeRewardsFileCid);
     event EtherDeposited(address indexed from, uint256 amount, uint256 time);
     event Unstake(
-        address indexed from,
-        uint256 lsdTokenAmount,
-        uint256 ethAmount,
-        uint256 withdrawIndex,
-        bool instantly
+        address indexed from, uint256 lsdTokenAmount, uint256 ethAmount, uint256 withdrawIndex, bool instantly
     );
     event Withdraw(address indexed from, uint256[] withdrawIndexList);
     event DistributeRewards(

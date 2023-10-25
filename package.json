@@ -5,7 +5,9 @@
     "test": "hardhat test ./test/LsdNetworkFactory.test.js",
     "clean": "rm -rf ./node_modules ./artifacts ./cache",
     "deploy": "hardhat run ./script/deploy_on_testnet.js --network goerli",
-    "coverage": "forge coverage --report lcov && genhtml lcov.info -o coverage"
+    "coverage": "forge coverage --report lcov && genhtml lcov.info -o coverage",
+    "prettier": "forge fmt contracts/ && forge fmt test/*.sol && prettier --write 'test/*.js'",
+    "prettier-check": "forge fmt --check && prettier --check 'test/*.js'"
   },
   "license": "GPL-3.0-only",
   "devDependencies": {
@@ -20,6 +22,7 @@
     "ethers": "^5.7.0",
     "hardhat": "^2.17.1",
     "hardhat-contract-sizer": "^2.6.1",
+    "prettier": "3.0.3",
     "web3": "^1.7.5"
   }
 }

@@ -153,8 +153,8 @@ contract NodeDeposit is Initializable, UUPSUpgradeable, INodeDeposit {
         bytes32[] calldata _depositDataRoots
     ) external payable override {
         if (
-            _validatorPubkeys.length != _validatorSignatures.length ||
-            _validatorPubkeys.length != _depositDataRoots.length
+            _validatorPubkeys.length != _validatorSignatures.length
+                || _validatorPubkeys.length != _depositDataRoots.length
         ) {
             revert LengthNotMatch();
         }
@@ -220,8 +220,8 @@ contract NodeDeposit is Initializable, UUPSUpgradeable, INodeDeposit {
         bytes32[] calldata _depositDataRoots
     ) external override {
         if (
-            _validatorPubkeys.length != _validatorSignatures.length ||
-            _validatorPubkeys.length != _depositDataRoots.length
+            _validatorPubkeys.length != _validatorSignatures.length
+                || _validatorPubkeys.length != _depositDataRoots.length
         ) {
             revert LengthNotMatch();
         }
@@ -274,20 +274,15 @@ contract NodeDeposit is Initializable, UUPSUpgradeable, INodeDeposit {
         });
 
         IDepositContract(ethDepositAddress).deposit{value: _depositAmount}(
-            _validatorPubkey,
-            withdrawCredentials,
-            _validatorSignature,
-            _depositDataRoot
+            _validatorPubkey, withdrawCredentials, _validatorSignature, _depositDataRoot
         );
 
         emit Deposited(msg.sender, _nodeType, _validatorPubkey, _validatorSignature, _depositAmount);
     }
 
-    function _stake(
-        bytes calldata _validatorPubkey,
-        bytes calldata _validatorSignature,
-        bytes32 _depositDataRoot
-    ) private {
+    function _stake(bytes calldata _validatorPubkey, bytes calldata _validatorSignature, bytes32 _depositDataRoot)
+        private
+    {
         PubkeyInfo memory pubkeyInfo = pubkeyInfoOf[_validatorPubkey];
 
         if (pubkeyInfo._status != PubkeyStatus.Match) {
@@ -312,10 +307,7 @@ contract NodeDeposit is Initializable, UUPSUpgradeable, INodeDeposit {
         IUserDeposit(userDepositAddress).withdrawExcessBalance(willWithdrawAmount);
 
         IDepositContract(ethDepositAddress).deposit{value: willWithdrawAmount}(
-            _validatorPubkey,
-            withdrawCredentials,
-            _validatorSignature,
-            _depositDataRoot
+            _validatorPubkey, withdrawCredentials, _validatorSignature, _depositDataRoot
         );
 
         emit Staked(msg.sender, _validatorPubkey);

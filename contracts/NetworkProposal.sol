@@ -30,11 +30,12 @@ contract NetworkProposal is Initializable, UUPSUpgradeable, INetworkProposal {
         _disableInitializers();
     }
 
-    function init(
-        address[] memory _voters,
-        uint256 _initialThreshold,
-        address _adminAddress
-    ) public virtual override initializer {
+    function init(address[] memory _voters, uint256 _initialThreshold, address _adminAddress)
+        public
+        virtual
+        override
+        initializer
+    {
         if (_voters.length < _initialThreshold || _initialThreshold <= _voters.length / 2) {
             revert InvalidThreshold();
         }
@@ -135,7 +136,7 @@ contract NetworkProposal is Initializable, UUPSUpgradeable, INetworkProposal {
         bytes32 proposalId = keccak256(abi.encodePacked("execProposal", _to, _callData, _proposalFactor));
 
         if (_shouldExecute(proposalId, msg.sender)) {
-            (bool success, ) = _to.call(_callData);
+            (bool success,) = _to.call(_callData);
             if (!success) {
                 revert ProposalExecFailed();
             }

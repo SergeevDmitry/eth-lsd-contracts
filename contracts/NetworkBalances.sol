@@ -98,11 +98,11 @@ contract NetworkBalances is Initializable, UUPSUpgradeable, INetworkBalances {
 
     // Submit network balances for a block
     // Only accepts calls from trusted (oracle) nodes
-    function submitBalances(
-        uint256 _block,
-        uint256 _totalEth,
-        uint256 _totalLsdToken
-    ) external override onlyNetworkProposal {
+    function submitBalances(uint256 _block, uint256 _totalEth, uint256 _totalLsdToken)
+        external
+        override
+        onlyNetworkProposal
+    {
         if (!submitBalancesEnabled) {
             revert SubmitBalancesDisabled();
         }

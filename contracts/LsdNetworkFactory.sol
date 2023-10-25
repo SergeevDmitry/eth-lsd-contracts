@@ -128,7 +128,7 @@ contract LsdNetworkFactory is Initializable, UUPSUpgradeable, ILsdNetworkFactory
     }
 
     function factoryClaim(address _recipient) external onlyFactoryAdmin {
-        (bool success, ) = _recipient.call{value: address(this).balance}("");
+        (bool success,) = _recipient.call{value: address(this).balance}("");
         if (!success) {
             revert FailedToCall();
         }
@@ -176,19 +176,15 @@ contract LsdNetworkFactory is Initializable, UUPSUpgradeable, ILsdNetworkFactory
 
     // ------------ helper ------------
 
-    function _createLsdNetwork(
-        address _lsdToken,
-        address _networkAdmin,
-        address[] memory _voters,
-        uint256 _threshold
-    ) private {
+    function _createLsdNetwork(address _lsdToken, address _networkAdmin, address[] memory _voters, uint256 _threshold)
+        private
+    {
         NetworkContracts memory contracts = deployNetworkContracts();
         networkContractsOfLsdToken[_lsdToken] = contracts;
         lsdTokensOf[msg.sender].push(_lsdToken);
 
-        (bool success, bytes memory data) = _lsdToken.call(
-            abi.encodeWithSelector(ILsdToken.initMinter.selector, contracts._userDeposit)
-        );
+        (bool success, bytes memory data) =
+            _lsdToken.call(abi.encodeWithSelector(ILsdToken.initMinter.selector, contracts._userDeposit));
         if (!success) {
             revert FailedToCall();
         }
@@ -271,15 +267,8 @@ contract LsdNetworkFactory is Initializable, UUPSUpgradeable, ILsdNetworkFactory
         address userDeposit = deploy(userDepositLogicAddress);
         address networkWithdraw = deploy(networkWithdrawLogicAddress);
 
-        return
-            NetworkContracts(
-                feePool,
-                networkBalances,
-                networkProposal,
-                nodeDeposit,
-                userDeposit,
-                networkWithdraw,
-                block.number
-            );
+        return NetworkContracts(
+            feePool, networkBalances, networkProposal, nodeDeposit, userDeposit, networkWithdraw, block.number
+        );
     }
 }

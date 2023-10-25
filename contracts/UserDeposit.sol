@@ -93,8 +93,7 @@ contract UserDeposit is Initializable, UUPSUpgradeable, IUserDeposit {
         ILsdToken(lsdTokenAddress).mint(msg.sender, lsdTokenAmount);
 
         uint256 poolBalance = getBalance();
-        uint256 totalMissingAmountForWithdraw = INetworkWithdraw(networkWithdrawAddress)
-            .totalMissingAmountForWithdraw();
+        uint256 totalMissingAmountForWithdraw = INetworkWithdraw(networkWithdrawAddress).totalMissingAmountForWithdraw();
 
         if (poolBalance > 0 && totalMissingAmountForWithdraw > 0) {
             uint256 mvAmount = totalMissingAmountForWithdraw;

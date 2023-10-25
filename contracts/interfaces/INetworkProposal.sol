@@ -10,6 +10,7 @@ interface INetworkProposal is Errors, IUpgrade {
         Active,
         Executed
     }
+
     struct Proposal {
         ProposalStatus _status;
         uint16 _yesVotes; // bitmap, 16 maximum votes

@@ -24,10 +24,12 @@ contract FeePool is Initializable, UUPSUpgradeable, IFeePool {
         _disableInitializers();
     }
 
-    function init(
-        address _networkWithdrawAddress,
-        address _networkProposalAddress
-    ) public virtual override initializer {
+    function init(address _networkWithdrawAddress, address _networkProposalAddress)
+        public
+        virtual
+        override
+        initializer
+    {
         networkWithdrawAddress = _networkWithdrawAddress;
         networkProposalAddress = _networkProposalAddress;
     }

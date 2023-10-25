@@ -140,7 +140,7 @@ contract NetworkWithdraw is Initializable, UUPSUpgradeable, INetworkWithdraw {
         uint256 shouldClaimAmount = totalPlatformCommission - totalPlatformClaimedAmount;
         totalPlatformClaimedAmount = totalPlatformCommission;
 
-        (bool success, ) = _recipient.call{value: shouldClaimAmount}("");
+        (bool success,) = _recipient.call{value: shouldClaimAmount}("");
         if (!success) {
             revert FailedToCall();
         }
@@ -153,10 +153,10 @@ contract NetworkWithdraw is Initializable, UUPSUpgradeable, INetworkWithdraw {
         factoryCommissionRate = _factoryCommissionRate;
     }
 
-    function setPlatformAndNodeCommissionRate(
-        uint256 _platformCommissionRate,
-        uint256 _nodeCommissionRate
-    ) external onlyAdmin {
+    function setPlatformAndNodeCommissionRate(uint256 _platformCommissionRate, uint256 _nodeCommissionRate)
+        external
+        onlyAdmin
+    {
         if (_platformCommissionRate + _nodeCommissionRate > 1e18) {
             revert CommissionRateInvalid();
         }
@@ -194,7 +194,7 @@ contract NetworkWithdraw is Initializable, UUPSUpgradeable, INetworkWithdraw {
         if (unstakeInstantly) {
             maxClaimableWithdrawIndex = willUseWithdrawalIndex;
 
-            (bool success, ) = msg.sender.call{value: ethAmount}("");
+            (bool success,) = msg.sender.call{value: ethAmount}("");
             if (!success) {
                 revert FailedToCall();
             }
@@ -221,7 +221,7 @@ contract NetworkWithdraw is Initializable, UUPSUpgradeable, INetworkWithdraw {
         }
 
         if (totalAmount > 0) {
-            (bool success, ) = msg.sender.call{value: totalAmount}("");
+            (bool success,) = msg.sender.call{value: totalAmount}("");
             if (!success) {
                 revert FailedToCall();
             }
@@ -283,7 +283,7 @@ contract NetworkWithdraw is Initializable, UUPSUpgradeable, INetworkWithdraw {
             revert("unknown claimType");
         }
 
-        (bool success, ) = _account.call{value: willClaimAmount}("");
+        (bool success,) = _account.call{value: willClaimAmount}("");
         if (!success) {
             revert FailedToCall();
         }
@@ -378,11 +378,10 @@ contract NetworkWithdraw is Initializable, UUPSUpgradeable, INetworkWithdraw {
         emit NotifyValidatorExit(_withdrawCycle, _ejectedStartCycle, _validatorIndexList);
     }
 
-    function setMerkleRoot(
-        uint256 _dealedEpoch,
-        bytes32 _merkleRoot,
-        string calldata _nodeRewardsFileCid
-    ) external onlyNetworkProposal {
+    function setMerkleRoot(uint256 _dealedEpoch, bytes32 _merkleRoot, string calldata _nodeRewardsFileCid)
+        external
+        onlyNetworkProposal
+    {
         if (_dealedEpoch <= latestMerkleRootEpoch) {
             revert AlreadyDealedEpoch();
         }
@@ -441,7 +440,7 @@ contract NetworkWithdraw is Initializable, UUPSUpgradeable, INetworkWithdraw {
         uint256 platformAmount = _amount - factoryAmount;
         totalPlatformCommission += platformAmount;
 
-        (bool success, ) = factoryAddress.call{value: factoryAmount}("");
+        (bool success,) = factoryAddress.call{value: factoryAmount}("");
         if (!success) {
             revert FailedToCall();
         }
