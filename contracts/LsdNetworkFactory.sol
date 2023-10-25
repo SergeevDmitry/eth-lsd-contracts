@@ -27,7 +27,7 @@ contract LsdNetworkFactory is Initializable, UUPSUpgradeable, ILsdNetworkFactory
 
     mapping(address => NetworkContracts) public networkContractsOfLsdToken;
     mapping(address => address[]) private lsdTokensOf;
-    mapping(address => bool) public isAuthorizedLsdToken;
+    mapping(address => bool) public authorizedLsdToken;
 
     modifier onlyFactoryAdmin() {
         if (msg.sender != factoryAdmin) {
@@ -119,8 +119,12 @@ contract LsdNetworkFactory is Initializable, UUPSUpgradeable, ILsdNetworkFactory
         networkWithdrawLogicAddress = _networkWithdrawLogicAddress;
     }
 
-    function authorizeLsdToken(address _lsdToken, bool _value) public onlyFactoryAdmin {
-        isAuthorizedLsdToken[_lsdToken] = _value;
+    function addAuthorizedLsdToken(address _lsdToken) public onlyFactoryAdmin {
+        authorizedLsdToken[_lsdToken] = true;
+    }
+
+    function removeAuthorizedLsdToken(address _lsdToken) public onlyFactoryAdmin {
+        delete authorizedLsdToken[_lsdToken];
     }
 
     function factoryClaim(address _recipient) external onlyFactoryAdmin {
@@ -164,7 +168,7 @@ contract LsdNetworkFactory is Initializable, UUPSUpgradeable, ILsdNetworkFactory
         address[] memory _voters,
         uint256 _threshold
     ) external override {
-        if (!isAuthorizedLsdToken[_lsdToken]) {
+        if (!authorizedLsdToken[_lsdToken]) {
             revert NotAuthorizedLsdToken();
         }
         _createLsdNetwork(_lsdToken, _networkAdmin, _voters, _threshold);

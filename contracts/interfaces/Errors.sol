@@ -28,7 +28,6 @@ interface Errors {
     error VotersNotEnough();
     error VotersDuplicate();
     error VotersNotExist();
-    error ProposalAlreadyExecuted();
     error ProposalExecFailed();
     error AlreadyVoted();
 
@@ -56,7 +55,6 @@ interface Errors {
     error PubkeyAlreadyExist();
     error PubkeyStatusUnmatch();
     error NodeAlreadyExist();
-    error NodeDoesNotExist();
     error NotTrustNode();
     error NodeAlreadyRemoved();
     error TrustNodeDepositDisabled();
