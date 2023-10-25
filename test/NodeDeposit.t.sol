@@ -46,9 +46,10 @@ contract NodeDepositTest is Test {
         nd.addTrustNode(trustNode2);
         assertEq(nd.getNodesLength(), 2);
         nd.removeTrustNode(trustNode1);
-        assertEq(nd.getNodesLength(), 1);
-        address[] memory nodes = nd.getNodes(0, 1);
-        assertEq(nodes.length, 1);
-        assertEq(nodes[0], trustNode2);
+        assertEq(nd.getNodesLength(), 2);
+        address[] memory nodes = nd.getNodes(0, 2);
+        assertEq(nodes.length, 2);
+        assertEq(nodes[0], trustNode1);
+        assertEq(nodes[1], trustNode2);
     }
 }
