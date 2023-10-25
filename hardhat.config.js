@@ -2,6 +2,7 @@ require("hardhat-contract-sizer")
 require("@nomiclabs/hardhat-ethers");
 require("@nomiclabs/hardhat-web3");
 require("@nomiclabs/hardhat-etherscan");
+require("@nomicfoundation/hardhat-foundry");
 
 // set proxy
 const { ProxyAgent, setGlobalDispatcher } = require("undici");

@@ -122,6 +122,10 @@ contract NodeDeposit is Initializable, UUPSUpgradeable, INodeDeposit {
     }
 
     function addTrustNode(address _trustNodeAddress) external onlyAdmin {
+        if (!trustNodeDepositEnabled) {
+            revert TrustNodeDepositDisabled();
+        }
+
         if (nodeInfoOf[_trustNodeAddress]._nodeType != NodeType.Undefined) {
             revert NodeAlreadyExist();
         }
