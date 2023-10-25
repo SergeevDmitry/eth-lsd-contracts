@@ -52,4 +52,11 @@ contract NodeDepositTest is Test {
         assertEq(nodes[0], trustNode1);
         assertEq(nodes[1], trustNode2);
     }
+
+    function test_setSoloNodeDepositAmount() public {
+        vm.startPrank(admin);
+        vm.expectRevert();
+        nd.setSoloNodeDepositAmount(10 gwei);
+        nd.setSoloNodeDepositAmount(1 ether);
+    }
 }
