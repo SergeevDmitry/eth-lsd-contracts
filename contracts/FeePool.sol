@@ -15,7 +15,7 @@ contract FeePool is Initializable, UUPSUpgradeable, IFeePool {
 
     modifier onlyAdmin() {
         if (!INetworkProposal(networkProposalAddress).isAdmin(msg.sender)) {
-            revert NotNetworkAdmin();
+            revert CallerNotAllowed();
         }
         _;
     }

@@ -20,7 +20,7 @@ contract NetworkProposal is Initializable, UUPSUpgradeable, INetworkProposal {
 
     modifier onlyAdmin() {
         if (msg.sender != admin) {
-            revert NotNetworkAdmin();
+            revert CallerNotAllowed();
         }
         _;
     }

@@ -11,9 +11,6 @@ interface Errors {
     error AmountZero();
     error AmountNotZero();
 
-    error NotFactoryAdmin();
-    error NotNetworkAdmin();
-    error NotNetworkProposal();
     error NotAuthorizedLsdToken();
 
     error FailedToTransfer();

@@ -48,14 +48,14 @@ contract NetworkWithdraw is Initializable, UUPSUpgradeable, INetworkWithdraw {
 
     modifier onlyAdmin() {
         if (!INetworkProposal(networkProposalAddress).isAdmin(msg.sender)) {
-            revert NotNetworkAdmin();
+            revert CallerNotAllowed();
         }
         _;
     }
 
     modifier onlyNetworkProposal() {
         if (networkProposalAddress != msg.sender) {
-            revert NotNetworkProposal();
+            revert CallerNotAllowed();
         }
         _;
     }

@@ -10,7 +10,7 @@ contract LsdToken is ILsdToken, ERC20Burnable {
     address public minter;
 
     modifier onlyMinter() {
-        if (msg.sender == minter) {
+        if (msg.sender != minter) {
             revert CallerNotAllowed();
         }
         _;

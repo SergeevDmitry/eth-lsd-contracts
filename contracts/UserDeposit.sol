@@ -22,7 +22,7 @@ contract UserDeposit is Initializable, UUPSUpgradeable, IUserDeposit {
 
     modifier onlyAdmin() {
         if (!INetworkProposal(networkProposalAddress).isAdmin(msg.sender)) {
-            revert NotNetworkAdmin();
+            revert CallerNotAllowed();
         }
         _;
     }

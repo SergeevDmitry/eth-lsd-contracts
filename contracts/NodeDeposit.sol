@@ -29,14 +29,14 @@ contract NodeDeposit is Initializable, UUPSUpgradeable, INodeDeposit {
 
     modifier onlyAdmin() {
         if (!INetworkProposal(networkProposalAddress).isAdmin(msg.sender)) {
-            revert NotNetworkAdmin();
+            revert CallerNotAllowed();
         }
         _;
     }
 
     modifier onlyNetworkProposal() {
         if (networkProposalAddress != msg.sender) {
-            revert NotNetworkProposal();
+            revert CallerNotAllowed();
         }
         _;
     }
