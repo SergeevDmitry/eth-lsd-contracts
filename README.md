@@ -8,12 +8,14 @@ a very brief diagrams of the workflow:
 
 ```mermaid
 sequenceDiagram
+participant  UserDeposit.sol
 actor User
+participant  NetworkWithdraw.sol
 
-User->>UserPool.sol: stake ETH
-UserPool.sol->>User: mint rToken
-User->>UserPool.sol: unstake rToken 
-UserPool.sol->>User: transfer ETH
+User->>UserDeposit.sol: stake ETH
+UserDeposit.sol->>User: mint rToken
+User->>NetworkWithdraw.sol: unstake rToken 
+NetworkWithdraw.sol->>User: transfer ETH
 ```
 
 ```mermaid
