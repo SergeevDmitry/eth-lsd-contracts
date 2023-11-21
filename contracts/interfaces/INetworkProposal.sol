@@ -20,7 +20,7 @@ interface INetworkProposal is Errors, IUpgrade {
     event VoteProposal(bytes32 indexed _proposalId, address _voter);
     event ProposalExecuted(bytes32 indexed _proposalId);
 
-    function init(address[] memory _voters, uint256 _initialThreshold, address _adminAddress) external;
+    function init(address[] memory _voters, uint256 _initialThreshold, address _adminAddress, address _voterManagerAddress) external;
 
     function isAdmin(address _sender) external view returns (bool);
 }

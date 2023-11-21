@@ -145,7 +145,7 @@ contract LsdNetworkFactory is Initializable, UUPSUpgradeable, ILsdNetworkFactory
     ) external override {
         address lsdToken = address(new LsdToken(_lsdTokenName, _lsdTokenSymbol));
 
-        _createLsdNetwork(lsdToken, _networkAdmin, _voters, _threshold);
+        _createLsdNetwork(lsdToken, _networkAdmin, _networkAdmin, _voters, _threshold);
     }
 
     function createLsdNetworkWithTimelock(
@@ -159,7 +159,7 @@ contract LsdNetworkFactory is Initializable, UUPSUpgradeable, ILsdNetworkFactory
         address networkAdmin = address(new Timelock(_minDelay, _proposers, _proposers, msg.sender));
         address lsdToken = address(new LsdToken(_lsdTokenName, _lsdTokenSymbol));
 
-        _createLsdNetwork(lsdToken, networkAdmin, _voters, _threshold);
+        _createLsdNetwork(lsdToken, networkAdmin, networkAdmin, _voters, _threshold);
     }
 
     function createLsdNetworkWithLsdToken(
@@ -171,12 +171,12 @@ contract LsdNetworkFactory is Initializable, UUPSUpgradeable, ILsdNetworkFactory
         if (!authorizedLsdToken[_lsdToken]) {
             revert NotAuthorizedLsdToken();
         }
-        _createLsdNetwork(_lsdToken, _networkAdmin, _voters, _threshold);
+        _createLsdNetwork(_lsdToken, _networkAdmin, _networkAdmin, _voters, _threshold);
     }
 
     // ------------ helper ------------
 
-    function _createLsdNetwork(address _lsdToken, address _networkAdmin, address[] memory _voters, uint256 _threshold)
+    function _createLsdNetwork(address _lsdToken, address _networkAdmin, address _voterManager, address[] memory _voters, uint256 _threshold)
         private
     {
         NetworkContracts memory contracts = deployNetworkContracts();
@@ -204,7 +204,7 @@ contract LsdNetworkFactory is Initializable, UUPSUpgradeable, ILsdNetworkFactory
         }
 
         (success, data) = contracts._networkProposal.call(
-            abi.encodeWithSelector(INetworkProposal.init.selector, _voters, _threshold, _networkAdmin)
+            abi.encodeWithSelector(INetworkProposal.init.selector, _voters, _threshold, _networkAdmin, _voterManager)
         );
         if (!success) {
             revert FailedToCall();
