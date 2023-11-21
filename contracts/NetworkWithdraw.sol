@@ -124,8 +124,8 @@ contract NetworkWithdraw is Initializable, UUPSUpgradeable, INetworkWithdraw {
     // ------------ settings ------------
 
     function setWithdrawCycleSeconds(uint256 _withdrawCycleSeconds) external onlyAdmin {
-        if (_withdrawCycleSeconds == 0) {
-            revert SecondsZero();
+        if (_withdrawCycleSeconds < 28800) { // 8 hours
+            revert TooLow(28800);
         }
         withdrawCycleSeconds = _withdrawCycleSeconds;
 
