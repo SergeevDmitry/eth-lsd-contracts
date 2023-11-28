@@ -152,10 +152,14 @@ contract LsdNetworkFactory is Initializable, UUPSUpgradeable, ILsdNetworkFactory
         return list;
     }
 
-    function setEntrustWithVoters(address[] calldata _newVoters, address[] calldata _votersToRemove, uint256 _threshold) external onlyFactoryAdmin {
-        uint256 cnt = entrustWithVoters.length() + _newVoters.length - _votersToRemove.length;
-        if (cnt < _threshold || _threshold <= cnt / 2) {
+    function setEntrustWithVoters(address[] calldata _newVoters, uint256 _threshold) external onlyFactoryAdmin {
+        if (_newVoters.length < _threshold || _threshold <= _newVoters.length / 2) {
             revert InvalidThreshold();
+        }
+
+        // Clear all
+        for (uint256 i; i < entrustWithVoters.length(); ++i) {
+            entrustWithVoters.remove(entrustWithVoters.at(0));
         }
 
         for (uint256 i; i < _newVoters.length; ++i) {
@@ -164,11 +168,6 @@ contract LsdNetworkFactory is Initializable, UUPSUpgradeable, ILsdNetworkFactory
             }
         }
 
-        for (uint256 i; i < _votersToRemove.length; ++i) {
-            if (!entrustWithVoters.remove(_votersToRemove[i])) {
-                revert VotersNotExist();
-            }
-        }
 
         entrustWithThreshold = _threshold.toUint8();
     }
@@ -224,8 +223,9 @@ contract LsdNetworkFactory is Initializable, UUPSUpgradeable, ILsdNetworkFactory
         address _networkAdmin
     ) external {
         address lsdToken = address(new LsdToken(_lsdTokenName, _lsdTokenSymbol));
+        entrustedLsdTokens.add(lsdToken);
 
-        _createLsdNetwork(lsdToken, _networkAdmin, _networkAdmin, getEntrustWithVoters(), entrustWithThreshold);
+        _createLsdNetwork(lsdToken, _networkAdmin, factoryAdmin, getEntrustWithVoters(), entrustWithThreshold);
     }
 
     function createLsdNetworkWithLsdToken(

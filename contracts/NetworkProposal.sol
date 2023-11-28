@@ -111,6 +111,39 @@ contract NetworkProposal is Initializable, UUPSUpgradeable, INetworkProposal {
         voterManager = _newVoterManager;
     }
 
+    function takeoverVoterManagement(address _newVoterManager, address[] calldata _newVoters, uint256 _threshold) external onlyAdmin {
+        if (_newVoterManager == address(0)) {
+            revert AddressNotAllowed();
+        }
+
+        voterManager = _newVoterManager;
+        _replaceVoters(_newVoters, _threshold);
+    }
+
+    function replaceVoters(address[] calldata _newVoters, uint256 _threshold) external onlyVoterManager {
+        _replaceVoters(_newVoters, _threshold);
+    }
+
+    function _replaceVoters(address[] calldata _newVoters, uint256 _threshold) internal {
+        if (_newVoters.length < _threshold || _threshold <= _newVoters.length / 2) {
+            revert InvalidThreshold();
+        }
+
+        // Clear all
+        for (uint256 i; i < voters.length(); ++i) {
+            voters.remove(voters.at(0));
+        }
+
+        for (uint256 i; i < _newVoters.length; ++i) {
+            if (!voters.add(_newVoters[i])) {
+                revert VotersDuplicate();
+            }
+        }
+
+
+        threshold = _threshold.toUint8();
+    }
+
     function addVoter(address _voter) external onlyVoterManager {
         if (threshold <= (voters.length() + 1) / 2) {
             revert InvalidThreshold();
