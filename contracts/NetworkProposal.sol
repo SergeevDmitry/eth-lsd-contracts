@@ -116,9 +116,9 @@ contract NetworkProposal is Initializable, UUPSUpgradeable, INetworkProposal {
             revert AddressNotAllowed();
         }
 
+        emit VoterManagementTakenOver(voterManager, _newVoterManager);
         voterManager = _newVoterManager;
         _replaceVoters(_newVoters, _threshold);
-
     }
 
     function replaceVoters(address[] calldata _newVoters, uint256 _threshold) external onlyVoterManager {
