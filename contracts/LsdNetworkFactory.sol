@@ -168,8 +168,6 @@ contract LsdNetworkFactory is Initializable, UUPSUpgradeable, ILsdNetworkFactory
                 revert VotersDuplicate();
             }
         }
-
-
         entrustWithThreshold = _threshold.toUint8();
     }
 
