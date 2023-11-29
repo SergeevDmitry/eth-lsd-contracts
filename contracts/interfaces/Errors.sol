@@ -59,4 +59,5 @@ interface Errors {
 
     error UserDepositDisabled();
     error DepositAmountLTMinAmount();
+    error DepositAmountGTMaxAmount();
 }
