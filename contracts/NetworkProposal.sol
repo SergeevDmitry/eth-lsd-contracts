@@ -118,6 +118,7 @@ contract NetworkProposal is Initializable, UUPSUpgradeable, INetworkProposal {
 
         voterManager = _newVoterManager;
         _replaceVoters(_newVoters, _threshold);
+
     }
 
     function replaceVoters(address[] calldata _newVoters, uint256 _threshold) external onlyVoterManager {
@@ -130,7 +131,8 @@ contract NetworkProposal is Initializable, UUPSUpgradeable, INetworkProposal {
         }
 
         // Clear all
-        for (uint256 i; i < voters.length(); ++i) {
+        uint256 oldLen = voters.length();
+        for (uint256 i; i < oldLen; ++i) {
             voters.remove(voters.at(0));
         }
 
@@ -139,8 +141,6 @@ contract NetworkProposal is Initializable, UUPSUpgradeable, INetworkProposal {
                 revert VotersDuplicate();
             }
         }
-
-
         threshold = _threshold.toUint8();
     }
 

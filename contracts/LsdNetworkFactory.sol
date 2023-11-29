@@ -158,7 +158,8 @@ contract LsdNetworkFactory is Initializable, UUPSUpgradeable, ILsdNetworkFactory
         }
 
         // Clear all
-        for (uint256 i; i < entrustWithVoters.length(); ++i) {
+        uint256 oldLen = entrustWithVoters.length();
+        for (uint256 i; i < oldLen; ++i) {
             entrustWithVoters.remove(entrustWithVoters.at(0));
         }
 
@@ -172,7 +173,7 @@ contract LsdNetworkFactory is Initializable, UUPSUpgradeable, ILsdNetworkFactory
         entrustWithThreshold = _threshold.toUint8();
     }
 
-    function getEntrustedLsdTokens() external view returns (address[] memory) {
+    function getEntrustedLsdTokens() public view returns (address[] memory) {
         uint256 length = entrustedLsdTokens.length();
         address[] memory list = new address[](length);
         for (uint256 i = 0; i < length; i++) {
