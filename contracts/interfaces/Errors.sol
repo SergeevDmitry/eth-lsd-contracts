@@ -41,7 +41,7 @@ interface Errors {
     error AlreadyDealedEpoch();
     error LsdTokenAmountZero();
     error EthAmountZero();
-    error SecondsZero();
+    error TooLow(uint256 min);
     error NodeNotClaimable();
     error CommissionRateInvalid();
 
@@ -59,4 +59,5 @@ interface Errors {
 
     error UserDepositDisabled();
     error DepositAmountLTMinAmount();
+    error DepositAmountGTMaxAmount();
 }

@@ -13,6 +13,7 @@ contract NetworkProposal is Initializable, UUPSUpgradeable, INetworkProposal {
     using EnumerableSet for EnumerableSet.AddressSet;
 
     address public admin;
+    address public voterManager;
 
     EnumerableSet.AddressSet voters;
     uint8 public threshold;
@@ -26,11 +27,18 @@ contract NetworkProposal is Initializable, UUPSUpgradeable, INetworkProposal {
         _;
     }
 
+    modifier onlyVoterManager() {
+        if (msg.sender != voterManager) {
+            revert CallerNotAllowed();
+        }
+        _;
+    }
+
     constructor() {
         _disableInitializers();
     }
 
-    function init(address[] memory _voters, uint256 _initialThreshold, address _adminAddress)
+    function init(address[] memory _voters, uint256 _initialThreshold, address _adminAddress, address _voterManagerAddress)
         public
         virtual
         override
@@ -51,6 +59,7 @@ contract NetworkProposal is Initializable, UUPSUpgradeable, INetworkProposal {
             }
         }
         admin = _adminAddress;
+        voterManager = _voterManagerAddress;
     }
 
     function reinit() public virtual override reinitializer(1) {
@@ -94,7 +103,48 @@ contract NetworkProposal is Initializable, UUPSUpgradeable, INetworkProposal {
         admin = _newAdmin;
     }
 
-    function addVoter(address _voter) external onlyAdmin {
+    function transferVoterManager(address _newVoterManager) external onlyVoterManager {
+        if (_newVoterManager == address(0)) {
+            revert AddressNotAllowed();
+        }
+
+        voterManager = _newVoterManager;
+    }
+
+    function takeoverVoterManagement(address _newVoterManager, address[] calldata _newVoters, uint256 _threshold) external onlyAdmin {
+        if (_newVoterManager == address(0)) {
+            revert AddressNotAllowed();
+        }
+
+        emit VoterManagementTakenOver(voterManager, _newVoterManager);
+        voterManager = _newVoterManager;
+        _replaceVoters(_newVoters, _threshold);
+    }
+
+    function replaceVoters(address[] calldata _newVoters, uint256 _threshold) external onlyVoterManager {
+        _replaceVoters(_newVoters, _threshold);
+    }
+
+    function _replaceVoters(address[] calldata _newVoters, uint256 _threshold) internal {
+        if (_newVoters.length < _threshold || _threshold <= _newVoters.length / 2) {
+            revert InvalidThreshold();
+        }
+
+        // Clear all
+        uint256 oldLen = voters.length();
+        for (uint256 i; i < oldLen; ++i) {
+            voters.remove(voters.at(0));
+        }
+
+        for (uint256 i; i < _newVoters.length; ++i) {
+            if (!voters.add(_newVoters[i])) {
+                revert VotersDuplicate();
+            }
+        }
+        threshold = _threshold.toUint8();
+    }
+
+    function addVoter(address _voter) external onlyVoterManager {
         if (threshold <= (voters.length() + 1) / 2) {
             revert InvalidThreshold();
         }
@@ -104,7 +154,7 @@ contract NetworkProposal is Initializable, UUPSUpgradeable, INetworkProposal {
         }
     }
 
-    function removeVoter(address _voter) external onlyAdmin {
+    function removeVoter(address _voter) external onlyVoterManager {
         if (voters.length() <= threshold) {
             revert VotersNotEnough();
         }
@@ -114,7 +164,7 @@ contract NetworkProposal is Initializable, UUPSUpgradeable, INetworkProposal {
         }
     }
 
-    function changeThreshold(uint256 _newThreshold) external onlyAdmin {
+    function changeThreshold(uint256 _newThreshold) external onlyVoterManager {
         if (voters.length() < _newThreshold || _newThreshold <= voters.length() / 2) {
             revert InvalidThreshold();
         }

@@ -91,6 +91,9 @@ contract NetworkBalances is Initializable, UUPSUpgradeable, INetworkBalances {
     }
 
     function setUpdateBalancesEpochs(uint256 _value) external onlyAdmin {
+        if (_value < 75) { // equivalent to 8 hours
+            revert TooLow(75);
+        }
         updateBalancesEpochs = _value;
     }
 

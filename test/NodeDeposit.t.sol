@@ -22,7 +22,7 @@ contract NodeDepositTest is Test {
     function setUp() public {
         ethDepositAddress = address(new DepositContract());
         ud = UserDeposit(address(new ERC1967Proxy(address(new UserDeposit()), "")));
-        lt = new LsdToken(address(ud), "rETH", "rETH");
+        lt = new LsdToken("rETH", "rETH");
         // ud.init();
         nd = NodeDeposit(address(new ERC1967Proxy(address(new NodeDeposit()), "")));
         np = NetworkProposal(address(new ERC1967Proxy(address(new NetworkProposal()), "")));
@@ -31,7 +31,7 @@ contract NodeDepositTest is Test {
         voters[1] = address(2);
         voters[2] = address(3);
         admin = address(4);
-        np.init(voters, 2, admin);
+        np.init(voters, 2, admin, admin);
         nd.init(address(ud), ethDepositAddress, address(np), bytes("fake withdrawal credentials"));
     }
 

@@ -113,6 +113,9 @@ contract NodeDeposit is Initializable, UUPSUpgradeable, INodeDeposit {
         if (_amount < 1 ether) {
             revert DepositAmountLTMinAmount();
         }
+        if (_amount > 31 ether) {
+            revert DepositAmountGTMaxAmount();
+        }
         soloNodeDepositAmount = _amount;
     }
 

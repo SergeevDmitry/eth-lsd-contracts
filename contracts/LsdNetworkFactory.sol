@@ -13,9 +13,14 @@ import "./interfaces/ILsdNetworkFactory.sol";
 import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
+import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import "./Timelock.sol";
 
 contract LsdNetworkFactory is Initializable, UUPSUpgradeable, ILsdNetworkFactory {
+    using SafeCast for *;
+    using EnumerableSet for EnumerableSet.AddressSet;
+
     address public factoryAdmin;
     address public ethDepositAddress;
     address public feePoolLogicAddress;
@@ -28,6 +33,10 @@ contract LsdNetworkFactory is Initializable, UUPSUpgradeable, ILsdNetworkFactory
     mapping(address => NetworkContracts) public networkContractsOfLsdToken;
     mapping(address => address[]) private lsdTokensOf;
     mapping(address => bool) public authorizedLsdToken;
+
+    EnumerableSet.AddressSet private entrustWithVoters;
+    uint8 public entrustWithThreshold;
+    EnumerableSet.AddressSet private entrustedLsdTokens;
 
     modifier onlyFactoryAdmin() {
         if (msg.sender != factoryAdmin) {
@@ -134,6 +143,51 @@ contract LsdNetworkFactory is Initializable, UUPSUpgradeable, ILsdNetworkFactory
         }
     }
 
+    function getEntrustWithVoters() public view returns (address[] memory) {
+        uint256 length = entrustWithVoters.length();
+        address[] memory list = new address[](length);
+        for (uint256 i = 0; i < length; i++) {
+            list[i] = entrustWithVoters.at(i);
+        }
+        return list;
+    }
+
+    function setEntrustWithVoters(address[] calldata _newVoters, uint256 _threshold) external onlyFactoryAdmin {
+        if (_newVoters.length < _threshold || _threshold <= _newVoters.length / 2) {
+            revert InvalidThreshold();
+        }
+
+        // Clear all
+        uint256 oldLen = entrustWithVoters.length();
+        for (uint256 i; i < oldLen; ++i) {
+            entrustWithVoters.remove(entrustWithVoters.at(0));
+        }
+
+        for (uint256 i; i < _newVoters.length; ++i) {
+            if (!entrustWithVoters.add(_newVoters[i])) {
+                revert VotersDuplicate();
+            }
+        }
+        entrustWithThreshold = _threshold.toUint8();
+    }
+
+    function getEntrustedLsdTokens() public view returns (address[] memory) {
+        uint256 length = entrustedLsdTokens.length();
+        address[] memory list = new address[](length);
+        for (uint256 i = 0; i < length; i++) {
+            list[i] = entrustedLsdTokens.at(i);
+        }
+        return list;
+    }
+
+    function addEntrustedLsdToken(address _lsdToken) external onlyFactoryAdmin returns (bool) {
+        return entrustedLsdTokens.add(_lsdToken);
+    }
+
+    function removeEntrustedLsdToken(address _lsdToken) external onlyFactoryAdmin returns (bool) {
+        return entrustedLsdTokens.remove(_lsdToken);
+    }
+
     // ------------ user ------------
 
     function createLsdNetwork(
@@ -145,7 +199,7 @@ contract LsdNetworkFactory is Initializable, UUPSUpgradeable, ILsdNetworkFactory
     ) external override {
         address lsdToken = address(new LsdToken(_lsdTokenName, _lsdTokenSymbol));
 
-        _createLsdNetwork(lsdToken, _networkAdmin, _voters, _threshold);
+        _createLsdNetwork(lsdToken, _networkAdmin, _networkAdmin, _voters, _threshold);
     }
 
     function createLsdNetworkWithTimelock(
@@ -159,7 +213,18 @@ contract LsdNetworkFactory is Initializable, UUPSUpgradeable, ILsdNetworkFactory
         address networkAdmin = address(new Timelock(_minDelay, _proposers, _proposers, msg.sender));
         address lsdToken = address(new LsdToken(_lsdTokenName, _lsdTokenSymbol));
 
-        _createLsdNetwork(lsdToken, networkAdmin, _voters, _threshold);
+        _createLsdNetwork(lsdToken, networkAdmin, networkAdmin, _voters, _threshold);
+    }
+
+    function createLsdNetworkWithEntrustedVoters(
+        string memory _lsdTokenName,
+        string memory _lsdTokenSymbol,
+        address _networkAdmin
+    ) external {
+        address lsdToken = address(new LsdToken(_lsdTokenName, _lsdTokenSymbol));
+        entrustedLsdTokens.add(lsdToken);
+
+        _createLsdNetwork(lsdToken, _networkAdmin, factoryAdmin, getEntrustWithVoters(), entrustWithThreshold);
     }
 
     function createLsdNetworkWithLsdToken(
@@ -171,12 +236,12 @@ contract LsdNetworkFactory is Initializable, UUPSUpgradeable, ILsdNetworkFactory
         if (!authorizedLsdToken[_lsdToken]) {
             revert NotAuthorizedLsdToken();
         }
-        _createLsdNetwork(_lsdToken, _networkAdmin, _voters, _threshold);
+        _createLsdNetwork(_lsdToken, _networkAdmin, _networkAdmin, _voters, _threshold);
     }
 
     // ------------ helper ------------
 
-    function _createLsdNetwork(address _lsdToken, address _networkAdmin, address[] memory _voters, uint256 _threshold)
+    function _createLsdNetwork(address _lsdToken, address _networkAdmin, address _voterManager, address[] memory _voters, uint256 _threshold)
         private
     {
         NetworkContracts memory contracts = deployNetworkContracts();
@@ -204,7 +269,7 @@ contract LsdNetworkFactory is Initializable, UUPSUpgradeable, ILsdNetworkFactory
         }
 
         (success, data) = contracts._networkProposal.call(
-            abi.encodeWithSelector(INetworkProposal.init.selector, _voters, _threshold, _networkAdmin)
+            abi.encodeWithSelector(INetworkProposal.init.selector, _voters, _threshold, _networkAdmin, _voterManager)
         );
         if (!success) {
             revert FailedToCall();
