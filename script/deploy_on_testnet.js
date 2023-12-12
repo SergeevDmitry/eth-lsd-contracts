@@ -1,14 +1,13 @@
-const { ethers, web3 } = require("hardhat")
+const { ethers } = require("hardhat")
+const { Wallet } = ethers
 
 
 async function main() {
+    console.log(ethers.version)
 
-
-    this.signers = await ethers.getSigners()
-
-    this.AccountDeployer = this.signers[0]
-    this.AccountFactoryAdmin = this.signers[1]
-    this.FactoryProxyAdmin = this.signers[2]
+    const networkAdmin = new Wallet(process.env.NETWORK_ADMIN_PRIVATE_KEY, ethers.provider)
+    this.AccountDeployer = networkAdmin
+    this.AccountFactoryAdmin = networkAdmin
 
 
     this.FactoryFeePool = await ethers.getContractFactory("FeePool", this.AccountDeployer)
