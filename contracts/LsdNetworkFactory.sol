@@ -2,6 +2,7 @@ pragma solidity 0.8.19;
 
 // SPDX-License-Identifier: GPL-3.0-only
 import "./LsdToken.sol";
+import "./libraries/NewContractLib.sol";
 import "./interfaces/ILsdToken.sol";
 import "./interfaces/IFeePool.sol";
 import "./interfaces/INetworkBalances.sol";
@@ -210,7 +211,7 @@ contract LsdNetworkFactory is Initializable, UUPSUpgradeable, ILsdNetworkFactory
         uint256 _minDelay,
         address[] memory _proposers
     ) external override {
-        address networkAdmin = address(new Timelock(_minDelay, _proposers, _proposers, msg.sender));
+        address networkAdmin = NewContractLib.newTimelock(_minDelay, _proposers, _proposers, msg.sender);
         address lsdToken = address(new LsdToken(_lsdTokenName, _lsdTokenSymbol));
 
         _createLsdNetwork(lsdToken, networkAdmin, networkAdmin, _voters, _threshold);
@@ -321,7 +322,7 @@ contract LsdNetworkFactory is Initializable, UUPSUpgradeable, ILsdNetworkFactory
     }
 
     function deploy(address _logicAddress) private returns (address) {
-        return address(new ERC1967Proxy(_logicAddress, ""));
+        return NewContractLib.newERC1967Proxy(_logicAddress);
     }
 
     function deployNetworkContracts() private returns (NetworkContracts memory) {

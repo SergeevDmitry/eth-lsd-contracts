@@ -9,19 +9,27 @@ async function main() {
     this.AccountDeployer = networkAdmin
     this.AccountFactoryAdmin = networkAdmin
 
+    // Library deployment: uncomment below to deploy a new lib instance
+    // const NewContractLib = await ethers.getContractFactory("NewContractLib", this.AccountDeployer);
+    // const newContractLib = await NewContractLib.deploy();
+    // console.log(newContractLib)
+    // await newContractLib.deployed()
+    // console.log("NewContractLib Address ---> " + newContractLib.address)
+    // const newContractLibAddr = newContractLib.address
+    const newContractLibAddr = "0x7ef9279cB946D3BFf0A181724D0ac174a08f4C6A"
 
+    this.FactoryLsdNetworkFactory = await ethers.getContractFactory("LsdNetworkFactory", {
+        signer: this.AccountDeployer,
+        libraries: { "contracts/libraries/NewContractLib.sol:NewContractLib": newContractLibAddr }
+    })
     this.FactoryFeePool = await ethers.getContractFactory("FeePool", this.AccountDeployer)
-    this.FactoryLsdNetworkFactory = await ethers.getContractFactory("LsdNetworkFactory", this.AccountDeployer)
     this.FactoryLsdToken = await ethers.getContractFactory("LsdToken", this.AccountDeployer)
     this.FactoryNetworkBalances = await ethers.getContractFactory("NetworkBalances", this.AccountDeployer)
     this.FactoryNetworkProposal = await ethers.getContractFactory("NetworkProposal", this.AccountDeployer)
     this.FactoryNodeDeposit = await ethers.getContractFactory("NodeDeposit", this.AccountDeployer)
     this.FactoryUserDeposit = await ethers.getContractFactory("UserDeposit", this.AccountDeployer)
     this.FactoryNetworkWithdraw = await ethers.getContractFactory("NetworkWithdraw", this.AccountDeployer)
-
     this.FactoryERC1967Proxy = await ethers.getContractFactory("ERC1967Proxy", this.AccountDeployer)
-
-
 
     this.ContractDepositContractAddress = "0xff50ed3d0ec03ac01d4c79aad74928bff48a7b2b"
     console.log("ContractDepositContract address: ", this.ContractDepositContractAddress)
