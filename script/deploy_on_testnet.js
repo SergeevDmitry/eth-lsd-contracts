@@ -4,19 +4,21 @@ const { Wallet } = ethers
 
 async function main() {
     console.log(ethers.version)
+    this.ContractDepositContractAddress = process.env.DEPOSIT_CONTRACT_ADDRESS;
+    console.log("ContractDepositContract address: ", this.ContractDepositContractAddress)
 
     const networkAdmin = new Wallet(process.env.NETWORK_ADMIN_PRIVATE_KEY, ethers.provider)
     this.AccountDeployer = networkAdmin
     this.AccountFactoryAdmin = networkAdmin
 
-    // Library deployment: uncomment below to deploy a new lib instance
+    // // Library deployment: uncomment below to deploy a new lib instance
     // const NewContractLib = await ethers.getContractFactory("NewContractLib", this.AccountDeployer);
     // const newContractLib = await NewContractLib.deploy();
     // console.log(newContractLib)
     // await newContractLib.deployed()
-    // console.log("NewContractLib Address ---> " + newContractLib.address)
     // const newContractLibAddr = newContractLib.address
-    const newContractLibAddr = "0x7ef9279cB946D3BFf0A181724D0ac174a08f4C6A"
+    const newContractLibAddr = "0xF41cFAF21e5f55CBFb3712C9F11B8CC0E78e64C8"
+    console.log("NewContractLib Address ---> " + newContractLibAddr)
 
     this.FactoryLsdNetworkFactory = await ethers.getContractFactory("LsdNetworkFactory", {
         signer: this.AccountDeployer,
@@ -31,8 +33,6 @@ async function main() {
     this.FactoryNetworkWithdraw = await ethers.getContractFactory("NetworkWithdraw", this.AccountDeployer)
     this.FactoryERC1967Proxy = await ethers.getContractFactory("ERC1967Proxy", this.AccountDeployer)
 
-    this.ContractDepositContractAddress = "0xff50ed3d0ec03ac01d4c79aad74928bff48a7b2b"
-    console.log("ContractDepositContract address: ", this.ContractDepositContractAddress)
 
     // deploy logic contract
     this.ContractFeePoolLogic = await this.FactoryFeePool.deploy()

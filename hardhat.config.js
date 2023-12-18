@@ -36,11 +36,27 @@ module.exports = {
     },
     goerli: {
       url: `${process.env.GOERLI_RPC_URL}`,
+    },
+    holesky: {
+      url: `${process.env.HOLESKY_RPC_URL}`,
     }
   },
   etherscan: {
     // Your API key for Etherscan
     // Obtain one at https://etherscan.io/
-    apiKey: `${process.env.ETHERSCAN_KEY}`
+    apiKey: {
+      goerli: `${process.env.ETHERSCAN_KEY}`,
+      holesky: `${process.env.ETHERSCAN_KEY}`,
+    },
+    customChains: [
+      {
+        network: "holesky",
+        chainId: 17000,
+        urls: {
+          apiURL: "https://api-holesky.etherscan.io/api",
+          browserURL: "https://holesky.etherscan.io"
+        }
+      }
+    ]
   }
 };
