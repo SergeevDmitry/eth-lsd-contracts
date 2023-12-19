@@ -10,7 +10,12 @@ if (process.env.HTTP_NETWORK_PROXY) {
   // set proxy
   console.log("using http proxy", process.env.HTTP_NETWORK_PROXY);
   const { ProxyAgent, setGlobalDispatcher } = require("undici");
-  const proxyAgent = new ProxyAgent(process.env.HTTP_NETWORK_PROXY);
+  const proxyAgent = new ProxyAgent({
+    uri: process.env.HTTP_NETWORK_PROXY,
+    connect: {
+      timeout: 30_000,
+    }
+  });
   setGlobalDispatcher(proxyAgent)
 }
 

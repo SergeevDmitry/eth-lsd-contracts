@@ -69,8 +69,9 @@ async function main() {
     // deploy factory proxy contract
     this.ContractERC1967Proxy = await this.FactoryERC1967Proxy.deploy(this.ContractLsdNetworkFactoryLogic.address, "0x")
     await this.ContractERC1967Proxy.deployed()
+    console.log("LsdNetworkFactory address: ", this.ContractERC1967Proxy.address)
 
-    this.ContractLsdNetworkFactory = await ethers.getContractAt("LsdNetworkFactory", this.ContractERC1967Proxy.address)
+    this.ContractLsdNetworkFactory = await ethers.getContractAt("LsdNetworkFactory", this.ContractERC1967Proxy.address, this.AccountDeployer)
 
     await this.ContractLsdNetworkFactory.init(this.AccountFactoryAdmin.address,
         this.ContractDepositContractAddress, this.ContractFeePoolLogic.address, this.ContractNetworkBalancesLogic.address,
