@@ -198,7 +198,7 @@ contract LsdNetworkFactory is Initializable, UUPSUpgradeable, ILsdNetworkFactory
         address[] memory _voters,
         uint256 _threshold
     ) external override {
-        address lsdToken = address(new LsdToken(_lsdTokenName, _lsdTokenSymbol));
+        address lsdToken = NewContractLib.newLsdToken(_lsdTokenName, _lsdTokenSymbol);
 
         _createLsdNetwork(lsdToken, _networkAdmin, _networkAdmin, _voters, _threshold);
     }
@@ -212,7 +212,7 @@ contract LsdNetworkFactory is Initializable, UUPSUpgradeable, ILsdNetworkFactory
         address[] memory _proposers
     ) external override {
         address networkAdmin = NewContractLib.newTimelock(_minDelay, _proposers, _proposers, msg.sender);
-        address lsdToken = address(new LsdToken(_lsdTokenName, _lsdTokenSymbol));
+        address lsdToken = NewContractLib.newLsdToken(_lsdTokenName, _lsdTokenSymbol);
 
         _createLsdNetwork(lsdToken, networkAdmin, networkAdmin, _voters, _threshold);
     }
@@ -222,7 +222,7 @@ contract LsdNetworkFactory is Initializable, UUPSUpgradeable, ILsdNetworkFactory
         string memory _lsdTokenSymbol,
         address _networkAdmin
     ) external {
-        address lsdToken = address(new LsdToken(_lsdTokenName, _lsdTokenSymbol));
+        address lsdToken = NewContractLib.newLsdToken(_lsdTokenName, _lsdTokenSymbol);
         entrustedLsdTokens.add(lsdToken);
 
         _createLsdNetwork(lsdToken, _networkAdmin, factoryAdmin, getEntrustWithVoters(), entrustWithThreshold);
