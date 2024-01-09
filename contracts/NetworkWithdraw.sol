@@ -30,7 +30,7 @@ contract NetworkWithdraw is Initializable, UUPSUpgradeable, INetworkWithdraw {
     uint256 public latestDistributePriorityFeeHeight;
     uint256 public totalMissingAmountForWithdraw;
     uint256 public withdrawCycleSeconds;
-    uint256 public factoryCommissionRate;
+    uint256 public stackCommissionRate;
     uint256 public platformCommissionRate;
     uint256 public nodeCommissionRate;
     uint256 public totalPlatformCommission;
@@ -73,7 +73,7 @@ contract NetworkWithdraw is Initializable, UUPSUpgradeable, INetworkWithdraw {
         address _factoryAddress
     ) public virtual override initializer {
         withdrawCycleSeconds = 86400; // 1 day
-        factoryCommissionRate = 10e16; // 10%
+        stackCommissionRate = 10e16; // 10%
         platformCommissionRate = 5e16; // 5%
         nodeCommissionRate = 5e16; // 5%
         nextWithdrawIndex = 1;
@@ -146,11 +146,11 @@ contract NetworkWithdraw is Initializable, UUPSUpgradeable, INetworkWithdraw {
         }
     }
 
-    function setFactoryCommissionRate(uint256 _factoryCommissionRate) external onlyAdmin {
-        if (_factoryCommissionRate > 1e18) {
+    function setStackCommissionRate(uint256 _stackCommissionRate) external onlyAdmin {
+        if (_stackCommissionRate > 1e18) {
             revert CommissionRateInvalid();
         }
-        factoryCommissionRate = _factoryCommissionRate;
+        stackCommissionRate = _stackCommissionRate;
     }
 
     function setPlatformAndNodeCommissionRate(uint256 _platformCommissionRate, uint256 _nodeCommissionRate)
@@ -436,11 +436,11 @@ contract NetworkWithdraw is Initializable, UUPSUpgradeable, INetworkWithdraw {
         if (_amount == 0) {
             return;
         }
-        uint256 factoryAmount = (_amount * factoryCommissionRate) / 1e18;
-        uint256 platformAmount = _amount - factoryAmount;
+        uint256 stackFee = (_amount * stackCommissionRate) / 1e18;
+        uint256 platformAmount = _amount - stackFee;
         totalPlatformCommission += platformAmount;
 
-        (bool success,) = factoryAddress.call{value: factoryAmount}("");
+        (bool success,) = factoryAddress.call{value: stackFee}("");
         if (!success) {
             revert FailedToCall();
         }
