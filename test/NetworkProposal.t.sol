@@ -12,28 +12,16 @@ import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 
-contract MockNetworkProposal is NetworkProposal {
-    using EnumerableSet for EnumerableSet.AddressSet;
-    function getVoters() public view returns (address[] memory) {
-        uint256 length = voters.length();
-        address[] memory list = new address[](length);
-        for (uint256 i = 0; i < length; i++) {
-            list[i] = voters.at(i);
-        }
-        return list;
-    }
-}
-
 contract NodeProposalTest is Test {
     LsdToken lt;
     NodeDeposit nd;
-    MockNetworkProposal np;
+    NetworkProposal np;
     address admin;
     address[] voters;
     address ethDepositAddress;
 
     function setUp() public {
-        np = MockNetworkProposal(address(new ERC1967Proxy(address(new MockNetworkProposal()), "")));
+        np = NetworkProposal(address(new ERC1967Proxy(address(new NetworkProposal()), "")));
         voters = new address[](3);
         voters[0] = address(1);
         voters[1] = address(2);
