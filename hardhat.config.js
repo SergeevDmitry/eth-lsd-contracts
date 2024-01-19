@@ -3,6 +3,7 @@ require("@nomiclabs/hardhat-ethers");
 require("@nomiclabs/hardhat-web3");
 require("@nomiclabs/hardhat-etherscan");
 require("@nomicfoundation/hardhat-foundry");
+require("@nomicfoundation/hardhat-chai-matchers")
 require('dotenv').config()
 
 // set proxy

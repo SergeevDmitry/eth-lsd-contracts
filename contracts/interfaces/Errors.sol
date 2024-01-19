@@ -13,6 +13,8 @@ interface Errors {
 
     error AlreadyInitialized();
     error NotAuthorizedLsdToken();
+    error LsdTokenCanOnlyUseOnce();
+    error EmptyEntrustedVoters();
 
     error SubmitBalancesDisabled();
     error BlockNotMatch();

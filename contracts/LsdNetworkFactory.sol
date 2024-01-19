@@ -222,6 +222,9 @@ contract LsdNetworkFactory is Initializable, UUPSUpgradeable, ILsdNetworkFactory
         string memory _lsdTokenSymbol,
         address _networkAdmin
     ) external {
+        if (0 == entrustWithThreshold) {
+            revert EmptyEntrustedVoters();
+        }
         address lsdToken = NewContractLib.newLsdToken(_lsdTokenName, _lsdTokenSymbol);
         entrustedLsdTokens.add(lsdToken);
 
@@ -246,6 +249,10 @@ contract LsdNetworkFactory is Initializable, UUPSUpgradeable, ILsdNetworkFactory
         private
     {
         NetworkContracts memory contracts = deployNetworkContracts();
+        if (0 != networkContractsOfLsdToken[_lsdToken]._block) {
+            revert LsdTokenCanOnlyUseOnce();
+        }
+
         networkContractsOfLsdToken[_lsdToken] = contracts;
         lsdTokensOf[msg.sender].push(_lsdToken);
 
