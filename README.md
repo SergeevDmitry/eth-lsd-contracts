@@ -39,3 +39,11 @@ Ethereum->>NetworkWithdraw.sol: distribute validator rewards
 sequenceDiagram
 Voter->>NetworkBalances.sol: vote for user balances <br>and other proposals for the network
 ```
+
+## License
+
+The primary license for ETH LSD Contracts is the Business Source License 1.1 (BUSL-1.1), see [LICENSE](./LICENSE). Minus the following exceptions:
+
+- Some [libraries](./contracts/libraries/) and [interfaces](./contracts/interfaces/) have a GPL license
+
+Each of these files states their license type.

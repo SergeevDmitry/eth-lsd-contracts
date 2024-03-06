@@ -1,6 +1,6 @@
+// SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.19;
 
-// SPDX-License-Identifier: GPL-3.0-only
 import "./LsdToken.sol";
 import "./libraries/NewContractLib.sol";
 import "./interfaces/ILsdToken.sol";
