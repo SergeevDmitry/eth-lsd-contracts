@@ -1,5 +1,5 @@
+// SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.19;
-// SPDX-License-Identifier: GPL-3.0-only
 
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
@@ -29,10 +29,8 @@ contract NetworkWithdraw is Initializable, UUPSUpgradeable, INetworkWithdraw {
     uint256 public latestDistributeWithdrawalsHeight;
     uint256 public latestDistributePriorityFeeHeight;
     uint256 public totalMissingAmountForWithdraw;
-    uint256 public withdrawLimitAmountPerCycle;
-    uint256 public userWithdrawLimitAmountPerCycle;
     uint256 public withdrawCycleSeconds;
-    uint256 public factoryCommissionRate;
+    uint256 public stackCommissionRate;
     uint256 public platformCommissionRate;
     uint256 public nodeCommissionRate;
     uint256 public totalPlatformCommission;
@@ -44,15 +42,20 @@ contract NetworkWithdraw is Initializable, UUPSUpgradeable, INetworkWithdraw {
 
     mapping(uint256 => Withdrawal) public withdrawalAtIndex;
     mapping(address => EnumerableSet.UintSet) internal unclaimedWithdrawalsOfUser;
-    mapping(uint256 => uint256) public totalWithdrawAmountAtCycle;
-    mapping(address => mapping(uint256 => uint256)) public userWithdrawAmountAtCycle;
     mapping(uint256 => uint256[]) public ejectedValidatorsAtCycle;
     mapping(address => uint256) public totalClaimedRewardOfNode;
     mapping(address => uint256) public totalClaimedDepositOfNode;
 
     modifier onlyAdmin() {
         if (!INetworkProposal(networkProposalAddress).isAdmin(msg.sender)) {
-            revert NotNetworkAdmin();
+            revert CallerNotAllowed();
+        }
+        _;
+    }
+
+    modifier onlyNetworkProposal() {
+        if (networkProposalAddress != msg.sender) {
+            revert CallerNotAllowed();
         }
         _;
     }
@@ -69,12 +72,10 @@ contract NetworkWithdraw is Initializable, UUPSUpgradeable, INetworkWithdraw {
         address _feePoolAddress,
         address _factoryAddress
     ) public virtual override initializer {
-        withdrawLimitAmountPerCycle = uint256(100 ether);
-        userWithdrawLimitAmountPerCycle = uint256(100 ether);
-        withdrawCycleSeconds = 86400;
-        factoryCommissionRate = 10e16; //10%
-        platformCommissionRate = 5e16; //5%
-        nodeCommissionRate = 5e16; //5%
+        withdrawCycleSeconds = 86400; // 1 day
+        stackCommissionRate = 10e16; // 10%
+        platformCommissionRate = 5e16; // 5%
+        nodeCommissionRate = 5e16; // 5%
         nextWithdrawIndex = 1;
         nodeClaimEnabled = true;
 
@@ -117,26 +118,14 @@ contract NetworkWithdraw is Initializable, UUPSUpgradeable, INetworkWithdraw {
     }
 
     function currentWithdrawCycle() public view returns (uint256) {
-        return (block.timestamp) / withdrawCycleSeconds;
+        return block.timestamp / withdrawCycleSeconds;
     }
 
     // ------------ settings ------------
 
-    function setWithdrawLimitAmountPerCycle(uint256 _withdrawLimitPerCycle) external onlyAdmin {
-        withdrawLimitAmountPerCycle = _withdrawLimitPerCycle;
-
-        emit SetWithdrawLimitPerCycle(_withdrawLimitPerCycle);
-    }
-
-    function setUserWithdrawLimitAmountPerCycle(uint256 _userWithdrawLimitPerCycle) external onlyAdmin {
-        userWithdrawLimitAmountPerCycle = _userWithdrawLimitPerCycle;
-
-        emit SetUserWithdrawLimitPerCycle(_userWithdrawLimitPerCycle);
-    }
-
     function setWithdrawCycleSeconds(uint256 _withdrawCycleSeconds) external onlyAdmin {
-        if (_withdrawCycleSeconds == 0) {
-            revert SecondsZero();
+        if (_withdrawCycleSeconds < 28800) { // 8 hours
+            revert TooLow(28800);
         }
         withdrawCycleSeconds = _withdrawCycleSeconds;
 
@@ -151,25 +140,25 @@ contract NetworkWithdraw is Initializable, UUPSUpgradeable, INetworkWithdraw {
         uint256 shouldClaimAmount = totalPlatformCommission - totalPlatformClaimedAmount;
         totalPlatformClaimedAmount = totalPlatformCommission;
 
-        (bool success, ) = _recipient.call{value: shouldClaimAmount}("");
+        (bool success,) = _recipient.call{value: shouldClaimAmount}("");
         if (!success) {
             revert FailedToCall();
         }
     }
 
-    function setFactoryCommissionRate(uint256 _factoryCommissionRate) external onlyAdmin {
-        if (_factoryCommissionRate > 1e18) {
-            revert RateValueUnmatch();
+    function setStackCommissionRate(uint256 _stackCommissionRate) external onlyAdmin {
+        if (_stackCommissionRate > 1e18) {
+            revert CommissionRateInvalid();
         }
-        factoryCommissionRate = _factoryCommissionRate;
+        stackCommissionRate = _stackCommissionRate;
     }
 
-    function setPlatformAndNodeCommissionRate(
-        uint256 _platformCommissionRate,
-        uint256 _nodeCommissionRate
-    ) external onlyAdmin {
+    function setPlatformAndNodeCommissionRate(uint256 _platformCommissionRate, uint256 _nodeCommissionRate)
+        external
+        onlyAdmin
+    {
         if (_platformCommissionRate + _nodeCommissionRate > 1e18) {
-            revert RateValueUnmatch();
+            revert CommissionRateInvalid();
         }
         platformCommissionRate = _platformCommissionRate;
         nodeCommissionRate = _nodeCommissionRate;
@@ -205,7 +194,7 @@ contract NetworkWithdraw is Initializable, UUPSUpgradeable, INetworkWithdraw {
         if (unstakeInstantly) {
             maxClaimableWithdrawIndex = willUseWithdrawalIndex;
 
-            (bool success, ) = msg.sender.call{value: ethAmount}("");
+            (bool success,) = msg.sender.call{value: ethAmount}("");
             if (!success) {
                 revert FailedToCall();
             }
@@ -214,31 +203,31 @@ contract NetworkWithdraw is Initializable, UUPSUpgradeable, INetworkWithdraw {
         }
     }
 
-    function withdraw(uint256[] calldata _withdrawIndexList) external override {
-        if (_withdrawIndexList.length == 0) {
+    function withdraw(uint256[] calldata _withdrawalIndexList) external override {
+        if (_withdrawalIndexList.length == 0) {
             revert WithdrawIndexEmpty();
         }
 
         uint256 totalAmount;
-        for (uint256 i = 0; i < _withdrawIndexList.length; i++) {
-            uint256 withdrawIndex = _withdrawIndexList[i];
-            if (withdrawIndex > maxClaimableWithdrawIndex) {
+        for (uint256 i = 0; i < _withdrawalIndexList.length; i++) {
+            uint256 withdrawalIndex = _withdrawalIndexList[i];
+            if (withdrawalIndex > maxClaimableWithdrawIndex) {
                 revert NotClaimable();
             }
-            if (!unclaimedWithdrawalsOfUser[msg.sender].remove(withdrawIndex)) {
+            if (!unclaimedWithdrawalsOfUser[msg.sender].remove(withdrawalIndex)) {
                 revert AlreadyClaimed();
             }
-            totalAmount = totalAmount - withdrawalAtIndex[withdrawIndex]._amount;
+            totalAmount = totalAmount + withdrawalAtIndex[withdrawalIndex]._amount;
         }
 
         if (totalAmount > 0) {
-            (bool success, ) = msg.sender.call{value: totalAmount}("");
+            (bool success,) = msg.sender.call{value: totalAmount}("");
             if (!success) {
                 revert FailedToCall();
             }
         }
 
-        emit Withdraw(msg.sender, _withdrawIndexList);
+        emit Withdraw(msg.sender, _withdrawalIndexList);
     }
 
     // ----- node claim --------------
@@ -294,7 +283,7 @@ contract NetworkWithdraw is Initializable, UUPSUpgradeable, INetworkWithdraw {
             revert("unknown claimType");
         }
 
-        (bool success, ) = _account.call{value: willClaimAmount}("");
+        (bool success,) = _account.call{value: willClaimAmount}("");
         if (!success) {
             revert FailedToCall();
         }
@@ -311,124 +300,97 @@ contract NetworkWithdraw is Initializable, UUPSUpgradeable, INetworkWithdraw {
         uint256 _nodeAmount,
         uint256 _platformAmount,
         uint256 _maxClaimableWithdrawIndex
-    ) external override {
-        bytes32 proposalId = keccak256(
-            abi.encodePacked(
-                "distribute",
-                _distributeType,
-                _dealedHeight,
-                _userAmount,
-                _nodeAmount,
-                _platformAmount,
-                _maxClaimableWithdrawIndex
-            )
-        );
-        if (INetworkProposal(networkProposalAddress).shouldExecute(proposalId, msg.sender)) {
-            uint256 totalAmount = _userAmount + _nodeAmount + _platformAmount;
-            uint256 latestDistributeHeight;
-            if (_distributeType == DistributeType.DistributePriorityFee) {
-                latestDistributeHeight = latestDistributePriorityFeeHeight;
-                latestDistributePriorityFeeHeight = _dealedHeight;
+    ) external override onlyNetworkProposal {
+        uint256 totalAmount = _userAmount + _nodeAmount + _platformAmount;
+        uint256 latestDistributeHeight;
+        if (_distributeType == DistributeType.DistributePriorityFee) {
+            latestDistributeHeight = latestDistributePriorityFeeHeight;
+            latestDistributePriorityFeeHeight = _dealedHeight;
 
-                if (totalAmount > 0) {
-                    IFeePool(feePoolAddress).withdrawEther(totalAmount);
-                }
-            } else if (_distributeType == DistributeType.DistributeWithdrawals) {
-                latestDistributeHeight = latestDistributeWithdrawalsHeight;
-                latestDistributeWithdrawalsHeight = _dealedHeight;
-            } else {
-                revert("unknown distribute type");
+            if (totalAmount > 0) {
+                IFeePool(feePoolAddress).withdrawEther(totalAmount);
             }
-
-            if (_dealedHeight <= latestDistributeHeight) {
-                revert AlreadyDealedHeight();
-            }
-            if (_maxClaimableWithdrawIndex >= nextWithdrawIndex) {
-                revert WithdrawIndexOver();
-            }
-            if (totalAmount > address(this).balance) {
-                revert BalanceNotEnough();
-            }
-
-            if (_maxClaimableWithdrawIndex > maxClaimableWithdrawIndex) {
-                maxClaimableWithdrawIndex = _maxClaimableWithdrawIndex;
-            }
-
-            uint256 mvAmount = _userAmount;
-            if (totalMissingAmountForWithdraw < _userAmount) {
-                mvAmount = _userAmount - totalMissingAmountForWithdraw;
-                totalMissingAmountForWithdraw = 0;
-            } else {
-                mvAmount = 0;
-                totalMissingAmountForWithdraw = totalMissingAmountForWithdraw - _userAmount;
-            }
-
-            if (mvAmount > 0) {
-                IUserDeposit(userDepositAddress).recycleNetworkWithdrawDeposit{value: mvAmount}();
-            }
-
-            distributeCommission(_platformAmount);
-
-            emit DistributeRewards(
-                _distributeType,
-                _dealedHeight,
-                _userAmount,
-                _nodeAmount,
-                _platformAmount,
-                _maxClaimableWithdrawIndex,
-                mvAmount
-            );
+        } else if (_distributeType == DistributeType.DistributeWithdrawals) {
+            latestDistributeHeight = latestDistributeWithdrawalsHeight;
+            latestDistributeWithdrawalsHeight = _dealedHeight;
+        } else {
+            revert("unknown distribute type");
         }
+
+        if (_dealedHeight <= latestDistributeHeight) {
+            revert AlreadyDealedHeight();
+        }
+        if (_maxClaimableWithdrawIndex >= nextWithdrawIndex) {
+            revert ClaimableWithdrawIndexOverflow();
+        }
+        if (totalAmount > address(this).balance) {
+            revert BalanceNotEnough();
+        }
+
+        if (_maxClaimableWithdrawIndex > maxClaimableWithdrawIndex) {
+            maxClaimableWithdrawIndex = _maxClaimableWithdrawIndex;
+        }
+
+        uint256 mvAmount = _userAmount;
+        if (totalMissingAmountForWithdraw < _userAmount) {
+            mvAmount = _userAmount - totalMissingAmountForWithdraw;
+            totalMissingAmountForWithdraw = 0;
+        } else {
+            mvAmount = 0;
+            totalMissingAmountForWithdraw = totalMissingAmountForWithdraw - _userAmount;
+        }
+
+        if (mvAmount > 0) {
+            IUserDeposit(userDepositAddress).recycleNetworkWithdrawDeposit{value: mvAmount}();
+        }
+
+        distributeCommission(_platformAmount);
+
+        emit DistributeRewards(
+            _distributeType,
+            _dealedHeight,
+            _userAmount,
+            _nodeAmount,
+            _platformAmount,
+            _maxClaimableWithdrawIndex,
+            mvAmount
+        );
     }
 
     function notifyValidatorExit(
         uint256 _withdrawCycle,
         uint256 _ejectedStartCycle,
         uint256[] calldata _validatorIndexList
-    ) external override {
-        bytes32 proposalId = keccak256(
-            abi.encodePacked("notifyValidatorExit", _withdrawCycle, _ejectedStartCycle, _validatorIndexList)
-        );
-
-        // Finalize if Threshold has been reached
-        if (INetworkProposal(networkProposalAddress).shouldExecute(proposalId, msg.sender)) {
-            if (
-                _validatorIndexList.length == 0 ||
-                _validatorIndexList.length > (withdrawLimitAmountPerCycle * 3) / 20 ether
-            ) {
-                revert LengthNotMatch();
-            }
-            if (_ejectedStartCycle >= _withdrawCycle || _withdrawCycle + 1 != currentWithdrawCycle()) {
-                revert CycleNotMatch();
-            }
-            if (ejectedValidatorsAtCycle[_withdrawCycle].length > 0) {
-                revert AlreadyNotifyCycle();
-            }
-
-            ejectedValidatorsAtCycle[_withdrawCycle] = _validatorIndexList;
-            ejectedStartCycle = _ejectedStartCycle;
-
-            emit NotifyValidatorExit(_withdrawCycle, _ejectedStartCycle, _validatorIndexList);
+    ) external override onlyNetworkProposal {
+        if (_validatorIndexList.length == 0) {
+            revert LengthNotMatch();
         }
+        if (_ejectedStartCycle >= _withdrawCycle || _withdrawCycle + 1 != currentWithdrawCycle()) {
+            revert CycleNotMatch();
+        }
+        if (ejectedValidatorsAtCycle[_withdrawCycle].length > 0) {
+            revert AlreadyNotifiedCycle();
+        }
+
+        ejectedValidatorsAtCycle[_withdrawCycle] = _validatorIndexList;
+        ejectedStartCycle = _ejectedStartCycle;
+
+        emit NotifyValidatorExit(_withdrawCycle, _ejectedStartCycle, _validatorIndexList);
     }
 
-    function setMerkleRoot(uint256 _dealedEpoch, bytes32 _merkleRoot, string calldata _nodeRewardsFileCid) external {
-        bytes32 proposalId = keccak256(
-            abi.encodePacked("setMerkleRoot", _dealedEpoch, _merkleRoot, _nodeRewardsFileCid)
-        );
-
-        // Finalize if Threshold has been reached
-        if (INetworkProposal(networkProposalAddress).shouldExecute(proposalId, msg.sender)) {
-            if (_dealedEpoch <= latestMerkleRootEpoch) {
-                revert AlreadyDealedEpoch();
-            }
-
-            merkleRoot = _merkleRoot;
-            latestMerkleRootEpoch = _dealedEpoch;
-            nodeRewardsFileCid = _nodeRewardsFileCid;
-
-            emit SetMerkleRoot(_dealedEpoch, _merkleRoot, _nodeRewardsFileCid);
+    function setMerkleRoot(uint256 _dealedEpoch, bytes32 _merkleRoot, string calldata _nodeRewardsFileCid)
+        external
+        onlyNetworkProposal
+    {
+        if (_dealedEpoch <= latestMerkleRootEpoch) {
+            revert AlreadyDealedEpoch();
         }
+
+        merkleRoot = _merkleRoot;
+        latestMerkleRootEpoch = _dealedEpoch;
+        nodeRewardsFileCid = _nodeRewardsFileCid;
+
+        emit SetMerkleRoot(_dealedEpoch, _merkleRoot, _nodeRewardsFileCid);
     }
 
     // ----- network --------------
@@ -464,18 +426,6 @@ contract NetworkWithdraw is Initializable, UUPSUpgradeable, INetworkWithdraw {
         if (ethAmount == 0) {
             revert EthAmountZero();
         }
-        uint256 currentCycle = currentWithdrawCycle();
-        if (totalWithdrawAmountAtCycle[currentCycle] + ethAmount > withdrawLimitAmountPerCycle) {
-            revert ReachCycleWithdrawLimit();
-        }
-        if (userWithdrawAmountAtCycle[msg.sender][currentCycle] + ethAmount > userWithdrawLimitAmountPerCycle) {
-            revert ReachUserWithdrawLimit();
-        }
-
-        totalWithdrawAmountAtCycle[currentCycle] = totalWithdrawAmountAtCycle[currentCycle] + ethAmount;
-        userWithdrawAmountAtCycle[msg.sender][currentCycle] =
-            userWithdrawAmountAtCycle[msg.sender][currentCycle] +
-            ethAmount;
 
         ERC20Burnable(lsdTokenAddress).burnFrom(msg.sender, _lsdTokenAmount);
 
@@ -486,11 +436,11 @@ contract NetworkWithdraw is Initializable, UUPSUpgradeable, INetworkWithdraw {
         if (_amount == 0) {
             return;
         }
-        uint256 factoryAmount = (_amount * factoryCommissionRate) / 1e18;
-        uint256 platformAmount = _amount - factoryAmount;
+        uint256 stackFee = (_amount * stackCommissionRate) / 1e18;
+        uint256 platformAmount = _amount - stackFee;
         totalPlatformCommission += platformAmount;
 
-        (bool success, ) = factoryAddress.call{value: factoryAmount}("");
+        (bool success,) = factoryAddress.call{value: stackFee}("");
         if (!success) {
             revert FailedToCall();
         }

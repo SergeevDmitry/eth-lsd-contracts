@@ -2,12 +2,23 @@ require("hardhat-contract-sizer")
 require("@nomiclabs/hardhat-ethers");
 require("@nomiclabs/hardhat-web3");
 require("@nomiclabs/hardhat-etherscan");
+require("@nomicfoundation/hardhat-foundry");
+require("@nomicfoundation/hardhat-chai-matchers")
+require('dotenv').config()
 
 // set proxy
-const { ProxyAgent, setGlobalDispatcher } = require("undici");
-const proxyAgent = new ProxyAgent('http://127.0.0.1:7890'); // change to yours
-setGlobalDispatcher(proxyAgent)
-
+if (process.env.HTTP_NETWORK_PROXY) {
+  // set proxy
+  console.log("using http proxy", process.env.HTTP_NETWORK_PROXY);
+  const { ProxyAgent, setGlobalDispatcher } = require("undici");
+  const proxyAgent = new ProxyAgent({
+    uri: process.env.HTTP_NETWORK_PROXY,
+    connect: {
+      timeout: 30_000,
+    }
+  });
+  setGlobalDispatcher(proxyAgent)
+}
 
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
@@ -26,29 +37,32 @@ module.exports = {
     disambiguatePaths: false,
   },
   networks: {
-    local: {
-      url: 'http://127.0.0.1:8545',
-      accounts: [
-        `${process.env.ACCOUNT1}`,
-        `${process.env.ACCOUNT2}`,
-        `${process.env.ACCOUNT3}`
-      ],
-    },
     mainnet: {
       url: `https://eth-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`,
     },
     goerli: {
-      url: `https://goerli.infura.io/v3/${process.env.INFURA_KEY}`,
-      accounts: [
-        `${process.env.ACCOUNT1}`,
-        `${process.env.ACCOUNT2}`,
-        `${process.env.ACCOUNT3}`
-      ],
+      url: `${process.env.GOERLI_RPC_URL}`,
+    },
+    holesky: {
+      url: `${process.env.HOLESKY_RPC_URL}`,
     }
   },
   etherscan: {
     // Your API key for Etherscan
     // Obtain one at https://etherscan.io/
-    apiKey: `${process.env.ETHERSCAN_KEY}`
+    apiKey: {
+      goerli: `${process.env.ETHERSCAN_KEY}`,
+      holesky: `${process.env.ETHERSCAN_KEY}`,
+    },
+    customChains: [
+      {
+        network: "holesky",
+        chainId: 17000,
+        urls: {
+          apiURL: "https://api-holesky.etherscan.io/api",
+          browserURL: "https://holesky.etherscan.io"
+        }
+      }
+    ]
   }
 };

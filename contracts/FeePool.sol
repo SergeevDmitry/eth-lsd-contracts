@@ -1,6 +1,5 @@
+// SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.19;
-
-// SPDX-License-Identifier: GPL-3.0-only
 
 import "./interfaces/IFeePool.sol";
 import "./interfaces/IDepositEth.sol";
@@ -15,7 +14,7 @@ contract FeePool is Initializable, UUPSUpgradeable, IFeePool {
 
     modifier onlyAdmin() {
         if (!INetworkProposal(networkProposalAddress).isAdmin(msg.sender)) {
-            revert NotNetworkAdmin();
+            revert CallerNotAllowed();
         }
         _;
     }
@@ -24,10 +23,12 @@ contract FeePool is Initializable, UUPSUpgradeable, IFeePool {
         _disableInitializers();
     }
 
-    function init(
-        address _networkWithdrawAddress,
-        address _networkProposalAddress
-    ) public virtual override initializer {
+    function init(address _networkWithdrawAddress, address _networkProposalAddress)
+        public
+        virtual
+        override
+        initializer
+    {
         networkWithdrawAddress = _networkWithdrawAddress;
         networkProposalAddress = _networkProposalAddress;
     }

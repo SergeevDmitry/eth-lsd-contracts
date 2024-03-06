@@ -1,32 +1,29 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.8.19;
 
-// SPDX-License-Identifier: GPL-3.0-only
-
 interface Errors {
+    error FailedToCall();
     error AddressNotAllowed();
     error CallerNotAllowed();
-    error AlreadyInitialized();
 
     error AmountUnmatch();
     error AmountZero();
     error AmountNotZero();
 
-    error NotFactoryAdmin();
-    error NotNetworkAdmin();
+    error AlreadyInitialized();
+    error NotAuthorizedLsdToken();
+    error LsdTokenCanOnlyUseOnce();
+    error EmptyEntrustedVoters();
 
-    error FailedToTransfer();
-    error FailedToCall();
-
-    error SubmitBalancesDisable();
+    error SubmitBalancesDisabled();
     error BlockNotMatch();
     error RateChangeOverLimit();
 
     error InvalidThreshold();
-    error VoterNumberOverLimit();
     error VotersNotEnough();
     error VotersDuplicate();
     error VotersNotExist();
-    error ProposalAlreadyExecuted();
+    error ProposalExecFailed();
     error AlreadyVoted();
 
     error WithdrawIndexEmpty();
@@ -37,19 +34,17 @@ interface Errors {
     error ClaimableDepositZero();
     error ClaimableAmountZero();
     error AlreadyDealedHeight();
-    error WithdrawIndexOver();
+    error ClaimableWithdrawIndexOverflow();
     error BalanceNotEnough();
     error LengthNotMatch();
     error CycleNotMatch();
-    error AlreadyNotifyCycle();
+    error AlreadyNotifiedCycle();
     error AlreadyDealedEpoch();
     error LsdTokenAmountZero();
     error EthAmountZero();
-    error ReachCycleWithdrawLimit();
-    error ReachUserWithdrawLimit();
-    error SecondsZero();
+    error TooLow(uint256 min);
     error NodeNotClaimable();
-    error RateValueUnmatch();
+    error CommissionRateInvalid();
 
     error PubkeyNotExist();
     error PubkeyAlreadyExist();
@@ -59,9 +54,11 @@ interface Errors {
     error NodeAlreadyRemoved();
     error TrustNodeDepositDisabled();
     error SoloNodeDepositDisabled();
-    error ReachPubkeyNumberLimit();
+    error SoloNodeDepositAmountZero();
+    error PubkeyNumberOverLimit();
     error NotPubkeyOwner();
 
     error UserDepositDisabled();
     error DepositAmountLTMinAmount();
+    error DepositAmountGTMaxAmount();
 }

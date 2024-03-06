@@ -1,18 +1,16 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.8.19;
 
-// SPDX-License-Identifier: GPL-3.0-only
 import "./Errors.sol";
 import "./IUpgrade.sol";
 
 interface INetworkBalances is Errors, IUpgrade {
-    // Events
-    event BalancesSubmitted(
-        address indexed from,
-        uint256 block,
-        uint256 totalEth,
-        uint256 lsdTokenSupply,
-        uint256 time
-    );
+    struct BalancesSnapshot {
+        uint256 _block;
+        uint256 _totalEth;
+        uint256 _totalLsdToken;
+    }
+
     event BalancesUpdated(uint256 block, uint256 totalEth, uint256 lsdTokenSupply, uint256 time);
 
     function init(address _networkProposalAddress) external;
@@ -23,11 +21,5 @@ interface INetworkBalances is Errors, IUpgrade {
 
     function getExchangeRate() external view returns (uint256);
 
-    function balancesBlock() external view returns (uint256);
-
-    function totalEthBalance() external view returns (uint256);
-
-    function totalLsdTokenSupply() external view returns (uint256);
-
-    function submitBalances(uint256 _block, uint256 _totalEth, uint256 _lsdTokenSupply) external;
+    function submitBalances(uint256 _block, uint256 _totalEth, uint256 _totalLsdToken) external;
 }

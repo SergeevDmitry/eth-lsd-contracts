@@ -1,6 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.8.19;
 
-// SPDX-License-Identifier: GPL-3.0-only
 import "./IDepositEth.sol";
 import "./Errors.sol";
 import "./IUpgrade.sol";
@@ -25,13 +25,11 @@ interface INodeDeposit is IDepositEth, Errors, IUpgrade {
         address _owner;
         uint256 _nodeDepositAmount;
         uint256 _depositBlock;
-        bytes _depositSignature;
     }
 
     struct NodeInfo {
         NodeType _nodeType;
         bool _removed;
-        uint256 _pubkeyNumber;
     }
 
     event EtherDeposited(address indexed from, uint256 amount, uint256 time);
@@ -58,5 +56,5 @@ interface INodeDeposit is IDepositEth, Errors, IUpgrade {
         bytes calldata _withdrawCredentials
     ) external;
 
-    function voteWithdrawCredentials(bytes[] calldata _pubkey, bool[] calldata _match) external;
+    function voteWithdrawCredentials(bytes calldata _pubkey, bool _match) external;
 }

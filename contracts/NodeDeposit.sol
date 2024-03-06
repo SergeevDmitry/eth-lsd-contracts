@@ -1,6 +1,5 @@
+// SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.19;
-
-// SPDX-License-Identifier: GPL-3.0-only
 
 import "./interfaces/INodeDeposit.sol";
 import "./interfaces/IUserDeposit.sol";
@@ -22,13 +21,21 @@ contract NodeDeposit is Initializable, UUPSUpgradeable, INodeDeposit {
 
     bytes public withdrawCredentials;
 
-    bytes[] public pubkeys;
+    address[] public nodes;
     mapping(bytes => PubkeyInfo) public pubkeyInfoOf;
     mapping(address => NodeInfo) public nodeInfoOf; //solo node and trust node are always mutually exclusive and cannot be converted to each other
+    mapping(address => bytes[]) public pubkeysOfNode;
 
     modifier onlyAdmin() {
         if (!INetworkProposal(networkProposalAddress).isAdmin(msg.sender)) {
-            revert NotNetworkAdmin();
+            revert CallerNotAllowed();
+        }
+        _;
+    }
+
+    modifier onlyNetworkProposal() {
+        if (networkProposalAddress != msg.sender) {
+            revert CallerNotAllowed();
         }
         _;
     }
@@ -67,20 +74,20 @@ contract NodeDeposit is Initializable, UUPSUpgradeable, INodeDeposit {
 
     // ------------ getter ------------
 
-    function getPubkeysLength() public view returns (uint256) {
-        return pubkeys.length;
+    function getNodesLength() public view returns (uint256) {
+        return nodes.length;
     }
 
-    function getPubkeys(uint256 _start, uint256 _end) public view returns (bytes[] memory pubkeyList) {
-        pubkeyList = new bytes[](_end - _start);
-        uint256 i = _start;
-        uint256 j;
-        for (; i < _end; ) {
-            pubkeyList[j] = pubkeys[j];
-            i++;
-            j++;
+    function getNodes(uint256 _start, uint256 _end) public view returns (address[] memory nodeList) {
+        nodeList = new address[](_end - _start);
+        for (uint256 i = _start; i < _end; i++) {
+            nodeList[i - _start] = nodes[i];
         }
-        return pubkeyList;
+        return nodeList;
+    }
+
+    function getPubkeysOfNode(address _node) public view returns (bytes[] memory) {
+        return pubkeysOfNode[_node];
     }
 
     // ------------ settings ------------
@@ -102,6 +109,12 @@ contract NodeDeposit is Initializable, UUPSUpgradeable, INodeDeposit {
     }
 
     function setSoloNodeDepositAmount(uint256 _amount) external onlyAdmin {
+        if (_amount < 1 ether) {
+            revert DepositAmountLTMinAmount();
+        }
+        if (_amount > 31 ether) {
+            revert DepositAmountGTMaxAmount();
+        }
         soloNodeDepositAmount = _amount;
     }
 
@@ -114,11 +127,16 @@ contract NodeDeposit is Initializable, UUPSUpgradeable, INodeDeposit {
     }
 
     function addTrustNode(address _trustNodeAddress) external onlyAdmin {
+        if (!trustNodeDepositEnabled) {
+            revert TrustNodeDepositDisabled();
+        }
+
         if (nodeInfoOf[_trustNodeAddress]._nodeType != NodeType.Undefined) {
             revert NodeAlreadyExist();
         }
 
-        nodeInfoOf[_trustNodeAddress] = NodeInfo({_nodeType: NodeType.TrustNode, _removed: false, _pubkeyNumber: 0});
+        nodeInfoOf[_trustNodeAddress] = NodeInfo({_nodeType: NodeType.TrustNode, _removed: false});
+        nodes.push(_trustNodeAddress);
     }
 
     function removeTrustNode(address _trustNodeAddress) external onlyAdmin {
@@ -137,8 +155,8 @@ contract NodeDeposit is Initializable, UUPSUpgradeable, INodeDeposit {
         bytes32[] calldata _depositDataRoots
     ) external payable override {
         if (
-            _validatorPubkeys.length != _validatorSignatures.length ||
-            _validatorPubkeys.length != _depositDataRoots.length
+            _validatorPubkeys.length != _validatorSignatures.length
+                || _validatorPubkeys.length != _depositDataRoots.length
         ) {
             revert LengthNotMatch();
         }
@@ -146,6 +164,8 @@ contract NodeDeposit is Initializable, UUPSUpgradeable, INodeDeposit {
         NodeInfo memory node = nodeInfoOf[msg.sender];
         if (node._nodeType == NodeType.Undefined) {
             node._nodeType = NodeType.SoloNode;
+            nodeInfoOf[msg.sender] = node;
+            nodes.push(msg.sender);
         }
 
         uint256 depositAmount;
@@ -160,8 +180,8 @@ contract NodeDeposit is Initializable, UUPSUpgradeable, INodeDeposit {
             if (msg.value > 0) {
                 revert AmountNotZero();
             }
-            if (node._pubkeyNumber >= trustNodePubkeyNumberLimit) {
-                revert ReachPubkeyNumberLimit();
+            if (pubkeysOfNode[msg.sender].length + _validatorPubkeys.length > trustNodePubkeyNumberLimit) {
+                revert PubkeyNumberOverLimit();
             }
 
             depositAmount = uint256(1 ether);
@@ -171,6 +191,10 @@ contract NodeDeposit is Initializable, UUPSUpgradeable, INodeDeposit {
             if (!soloNodeDepositEnabled) {
                 revert SoloNodeDepositDisabled();
             }
+            if (soloNodeDepositAmount == 0) {
+                revert SoloNodeDepositAmountZero();
+            }
+
             if (msg.value != _validatorPubkeys.length * soloNodeDepositAmount) {
                 revert AmountUnmatch();
             }
@@ -178,11 +202,6 @@ contract NodeDeposit is Initializable, UUPSUpgradeable, INodeDeposit {
             depositAmount = soloNodeDepositAmount;
             nodeDepositAmount = soloNodeDepositAmount;
         }
-
-        node._pubkeyNumber += _validatorPubkeys.length;
-
-        // update node
-        nodeInfoOf[msg.sender] = node;
 
         // deposit
         for (uint256 i = 0; i < _validatorPubkeys.length; i++) {
@@ -203,8 +222,8 @@ contract NodeDeposit is Initializable, UUPSUpgradeable, INodeDeposit {
         bytes32[] calldata _depositDataRoots
     ) external override {
         if (
-            _validatorPubkeys.length != _validatorSignatures.length ||
-            _validatorPubkeys.length != _depositDataRoots.length
+            _validatorPubkeys.length != _validatorSignatures.length
+                || _validatorPubkeys.length != _depositDataRoots.length
         ) {
             revert LengthNotMatch();
         }
@@ -217,14 +236,11 @@ contract NodeDeposit is Initializable, UUPSUpgradeable, INodeDeposit {
     // ------------ voter ------------
 
     // Only accepts calls from trusted (oracle) nodes
-    function voteWithdrawCredentials(bytes[] calldata _pubkeys, bool[] calldata _matchs) external override {
-        if (_pubkeys.length != _matchs.length) {
-            revert LengthNotMatch();
+    function voteWithdrawCredentials(bytes calldata _pubkey, bool _match) external override onlyNetworkProposal {
+        if (pubkeyInfoOf[_pubkey]._status != PubkeyStatus.Deposited) {
+            revert PubkeyStatusUnmatch();
         }
-
-        for (uint256 i = 0; i < _pubkeys.length; i++) {
-            _voteWithdrawCredentials(_pubkeys[i], _matchs[i]);
-        }
+        _setNodePubkeyStatus(_pubkey, _match ? PubkeyStatus.Match : PubkeyStatus.UnMatch);
     }
 
     // ------------ network ------------
@@ -249,32 +265,26 @@ contract NodeDeposit is Initializable, UUPSUpgradeable, INodeDeposit {
             revert PubkeyAlreadyExist();
         }
 
-        pubkeys.push(_validatorPubkey);
+        pubkeysOfNode[msg.sender].push(_validatorPubkey);
 
         // add pubkey
         pubkeyInfoOf[_validatorPubkey] = PubkeyInfo({
             _status: PubkeyStatus.Deposited,
             _owner: msg.sender,
             _nodeDepositAmount: _nodeDepositAmount,
-            _depositBlock: block.number,
-            _depositSignature: _validatorSignature
+            _depositBlock: block.number
         });
 
         IDepositContract(ethDepositAddress).deposit{value: _depositAmount}(
-            _validatorPubkey,
-            withdrawCredentials,
-            _validatorSignature,
-            _depositDataRoot
+            _validatorPubkey, withdrawCredentials, _validatorSignature, _depositDataRoot
         );
 
         emit Deposited(msg.sender, _nodeType, _validatorPubkey, _validatorSignature, _depositAmount);
     }
 
-    function _stake(
-        bytes calldata _validatorPubkey,
-        bytes calldata _validatorSignature,
-        bytes32 _depositDataRoot
-    ) private {
+    function _stake(bytes calldata _validatorPubkey, bytes calldata _validatorSignature, bytes32 _depositDataRoot)
+        private
+    {
         PubkeyInfo memory pubkeyInfo = pubkeyInfoOf[_validatorPubkey];
 
         if (pubkeyInfo._status != PubkeyStatus.Match) {
@@ -299,22 +309,10 @@ contract NodeDeposit is Initializable, UUPSUpgradeable, INodeDeposit {
         IUserDeposit(userDepositAddress).withdrawExcessBalance(willWithdrawAmount);
 
         IDepositContract(ethDepositAddress).deposit{value: willWithdrawAmount}(
-            _validatorPubkey,
-            withdrawCredentials,
-            _validatorSignature,
-            _depositDataRoot
+            _validatorPubkey, withdrawCredentials, _validatorSignature, _depositDataRoot
         );
 
         emit Staked(msg.sender, _validatorPubkey);
-    }
-
-    function _voteWithdrawCredentials(bytes calldata _pubkey, bool _match) private {
-        bytes32 proposalId = keccak256(abi.encodePacked("voteWithdrawCredentials", _pubkey));
-
-        // Finalize if Threshold has been reached
-        if (INetworkProposal(networkProposalAddress).shouldExecute(proposalId, msg.sender)) {
-            _setNodePubkeyStatus(_pubkey, _match ? PubkeyStatus.Match : PubkeyStatus.UnMatch);
-        }
     }
 
     // Set node pubkey status

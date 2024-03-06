@@ -1,6 +1,5 @@
+// SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.19;
-
-// SPDX-License-Identifier: GPL-3.0-only
 
 import "./interfaces/IDepositEth.sol";
 import "./interfaces/ILsdToken.sol";
@@ -22,7 +21,7 @@ contract UserDeposit is Initializable, UUPSUpgradeable, IUserDeposit {
 
     modifier onlyAdmin() {
         if (!INetworkProposal(networkProposalAddress).isAdmin(msg.sender)) {
-            revert NotNetworkAdmin();
+            revert CallerNotAllowed();
         }
         _;
     }
@@ -93,8 +92,7 @@ contract UserDeposit is Initializable, UUPSUpgradeable, IUserDeposit {
         ILsdToken(lsdTokenAddress).mint(msg.sender, lsdTokenAmount);
 
         uint256 poolBalance = getBalance();
-        uint256 totalMissingAmountForWithdraw = INetworkWithdraw(networkWithdrawAddress)
-            .totalMissingAmountForWithdraw();
+        uint256 totalMissingAmountForWithdraw = INetworkWithdraw(networkWithdrawAddress).totalMissingAmountForWithdraw();
 
         if (poolBalance > 0 && totalMissingAmountForWithdraw > 0) {
             uint256 mvAmount = totalMissingAmountForWithdraw;
@@ -128,7 +126,7 @@ contract UserDeposit is Initializable, UUPSUpgradeable, IUserDeposit {
     // Only accepts calls from  networkWithdraw
     function recycleNetworkWithdrawDeposit() external payable override {
         if (msg.sender != networkWithdrawAddress) {
-            revert AddressNotAllowed();
+            revert CallerNotAllowed();
         }
         // Emit deposit recycled event
         emit DepositRecycled(msg.sender, msg.value, block.timestamp);
