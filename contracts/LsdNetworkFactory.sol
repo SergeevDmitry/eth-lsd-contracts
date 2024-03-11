@@ -138,13 +138,12 @@ contract LsdNetworkFactory is Initializable, UUPSUpgradeable, ILsdNetworkFactory
         delete authorizedLsdToken[_lsdToken];
     }
 
-    function factoryClaim(address _recipient) external onlyFactoryAdmin {
-        uint256 _balance = address(this).balance;
-        (bool success,) = _recipient.call{value: _balance}("");
+    function factoryClaim(address _recipient, uint256 _amount) external onlyFactoryAdmin {
+        (bool success,) = _recipient.call{value: _amount}("");
         if (!success) {
             revert FailedToCall();
         }
-        totalClaimedStackFee += _balance;
+        totalClaimedStackFee += _amount;
     }
 
     function getEntrustWithVoters() public view returns (address[] memory) {
