@@ -38,6 +38,7 @@ contract LsdNetworkFactory is Initializable, UUPSUpgradeable, ILsdNetworkFactory
     EnumerableSet.AddressSet private entrustWithVoters;
     uint8 public entrustWithThreshold;
     EnumerableSet.AddressSet private entrustedLsdTokens;
+    uint256 public totalClaimedStackFee;
 
     modifier onlyFactoryAdmin() {
         if (msg.sender != factoryAdmin) {
@@ -138,10 +139,12 @@ contract LsdNetworkFactory is Initializable, UUPSUpgradeable, ILsdNetworkFactory
     }
 
     function factoryClaim(address _recipient) external onlyFactoryAdmin {
-        (bool success,) = _recipient.call{value: address(this).balance}("");
+        uint256 _balance = address(this).balance;
+        (bool success,) = _recipient.call{value: _balance}("");
         if (!success) {
             revert FailedToCall();
         }
+        totalClaimedStackFee += _balance;
     }
 
     function getEntrustWithVoters() public view returns (address[] memory) {
