@@ -16,8 +16,15 @@ async function main() {
     });
     const factory = await Contract.deploy();
     await factory.waitForDeployment()
-    console.log("LsdNetworkFactory logic Address: " + await factory.getAddress())
-    console.log("Run below command to verify the code\n$ npx hardhat verify --network holesky ", await factory.getAddress())
+    const factoryAddr = await factory.getAddress()
+    console.log("LsdNetworkFactory logic Address:", factoryAddr)
+    // console.log("Run below command to verify the code\n$ npx hardhat verify --network holesky ", factoryAddr)
+
+    console.log("Verifying...")
+    await hre.run('verify:verify', {
+      address: factoryAddr,
+    });
+    console.log("verified!")
 }
 
 main()
