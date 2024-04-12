@@ -93,12 +93,7 @@ contract NetworkProposal is Initializable, UUPSUpgradeable, INetworkProposal {
     }
 
     function getVoters() external view returns (address[] memory) {
-        uint256 length = voters.length();
-        address[] memory list = new address[](length);
-        for (uint256 i = 0; i < length; i++) {
-            list[i] = voters.at(i);
-        }
-        return list;
+        return voters.values();
     }
 
     // ------------ settings ------------

@@ -92,12 +92,7 @@ contract LsdNetworkFactory is Initializable, UUPSUpgradeable, ILsdNetworkFactory
     // ------------ getter ------------
 
     function lsdTokensOfCreater(address _creater) public view returns (address[] memory) {
-        uint256 length = lsdTokensOf[_creater].length;
-        address[] memory list = new address[](length);
-        for (uint256 i = 0; i < length; i++) {
-            list[i] = lsdTokensOf[_creater][i];
-        }
-        return list;
+        return lsdTokensOf[_creater];
     }
 
     // ------------ settings ------------
@@ -147,12 +142,7 @@ contract LsdNetworkFactory is Initializable, UUPSUpgradeable, ILsdNetworkFactory
     }
 
     function getEntrustWithVoters() public view returns (address[] memory) {
-        uint256 length = entrustWithVoters.length();
-        address[] memory list = new address[](length);
-        for (uint256 i = 0; i < length; i++) {
-            list[i] = entrustWithVoters.at(i);
-        }
-        return list;
+        return entrustWithVoters.values();
     }
 
     function setEntrustWithVoters(address[] calldata _newVoters, uint256 _threshold) external onlyFactoryAdmin {
@@ -175,12 +165,7 @@ contract LsdNetworkFactory is Initializable, UUPSUpgradeable, ILsdNetworkFactory
     }
 
     function getEntrustedLsdTokens() public view returns (address[] memory) {
-        uint256 length = entrustedLsdTokens.length();
-        address[] memory list = new address[](length);
-        for (uint256 i = 0; i < length; i++) {
-            list[i] = entrustedLsdTokens.at(i);
-        }
-        return list;
+        return entrustedLsdTokens.values();
     }
 
     function addEntrustedLsdToken(address _lsdToken) external onlyFactoryAdmin returns (bool) {
