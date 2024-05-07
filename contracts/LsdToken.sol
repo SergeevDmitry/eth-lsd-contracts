@@ -7,6 +7,7 @@ import "./interfaces/IRateProvider.sol";
 
 contract LsdToken is ILsdToken, ERC20Burnable {
     address public minter;
+    event MinterChanged(address oldMinter, address newMinter);
 
     modifier onlyMinter() {
         if (msg.sender != minter) {
@@ -38,5 +39,11 @@ contract LsdToken is ILsdToken, ERC20Burnable {
         }
         // Update balance & supply
         _mint(_to, _lsdTokenAmount);
+    }
+
+    function updateMinter(address _newMinter) external override onlyMinter {
+        if (_newMinter == address(0)) revert AddressNotAllowed();
+        emit MinterChanged(minter, _newMinter);
+        minter = _newMinter;
     }
 }

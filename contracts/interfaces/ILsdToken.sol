@@ -6,6 +6,6 @@ import "./Errors.sol";
 
 interface ILsdToken is IRateProvider, Errors {
     function initMinter(address) external;
-
     function mint(address, uint256) external;
+    function updateMinter(address _newMinter) external;
 }
