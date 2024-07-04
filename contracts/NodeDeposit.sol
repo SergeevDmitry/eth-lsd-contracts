@@ -109,7 +109,7 @@ contract NodeDeposit is Initializable, UUPSUpgradeable, INodeDeposit {
     }
 
     function setSoloNodeDepositAmount(uint256 _amount) external onlyAdmin {
-        if (_amount < 1 ether) {
+        if (_amount < 2 ether) {
             revert DepositAmountLTMinAmount();
         }
         if (_amount > 31 ether) {
