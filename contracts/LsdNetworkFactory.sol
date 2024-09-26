@@ -138,7 +138,7 @@ contract LsdNetworkFactory is Initializable, UUPSUpgradeable, ILsdNetworkFactory
         if (!success) {
             revert FailedToCall();
         }
-        totalClaimedStackFee += _amount;
+        totalClaimedStackFee = totalClaimedStackFee + _amount;
     }
 
     function getEntrustWithVoters() public view returns (address[] memory) {
@@ -186,6 +186,9 @@ contract LsdNetworkFactory is Initializable, UUPSUpgradeable, ILsdNetworkFactory
         uint256 _threshold
     ) external override {
         address lsdToken = NewContractLib.newLsdToken(_lsdTokenName, _lsdTokenSymbol);
+        if (address(0) == _networkAdmin) {
+            revert AddressNotAllowed();
+        }
 
         _createLsdNetwork(lsdToken, _networkAdmin, _networkAdmin, _voters, _threshold);
     }
@@ -211,6 +214,9 @@ contract LsdNetworkFactory is Initializable, UUPSUpgradeable, ILsdNetworkFactory
     ) external {
         if (0 == entrustWithThreshold) {
             revert EmptyEntrustedVoters();
+        }
+        if (address(0) == _networkAdmin) {
+            revert AddressNotAllowed();
         }
         address lsdToken = NewContractLib.newLsdToken(_lsdTokenName, _lsdTokenSymbol);
         entrustedLsdTokens.add(lsdToken);
