@@ -1,3 +1,3 @@
 module.exports = {
-  "contracts/libraries/NewContractLib.sol:NewContractLib": "0xF41cFAF21e5f55CBFb3712C9F11B8CC0E78e64C8",
+  "contracts/libraries/NewContractLib.sol:NewContractLib": "0x5EcA5FE81c56F324b0C21454D1a2fF4a2EBEAb78",
 };

@@ -37,30 +37,33 @@ module.exports = {
     disambiguatePaths: false,
   },
   networks: {
-    mainnet: {
-      url: `https://eth-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`,
+    stratis: {
+      url: 'https://rpc.stratisevm.com',
     },
-    goerli: {
-      url: `${process.env.GOERLI_RPC_URL}`,
+    auroria: {
+      url: 'https://auroria.rpc.stratisevm.com',
     },
-    holesky: {
-      url: `${process.env.HOLESKY_RPC_URL}`,
-    }
   },
   etherscan: {
-    // Your API key for Etherscan
-    // Obtain one at https://etherscan.io/
     apiKey: {
-      goerli: `${process.env.ETHERSCAN_KEY}`,
-      holesky: `${process.env.ETHERSCAN_KEY}`,
+      stratis: 'test',
+      auroria: 'test',
     },
     customChains: [
       {
-        network: "holesky",
-        chainId: 17000,
+        network: "stratis",
+        chainId: 105105,
         urls: {
-          apiURL: "https://api-holesky.etherscan.io/api",
-          browserURL: "https://holesky.etherscan.io"
+          apiURL: "https://explorer.stratisevm.com/api",
+          browserURL: "https://explorer.stratisevm.com"
+        }
+      },
+      {
+        network: "auroria",
+        chainId: 205205,
+        urls: {
+          apiURL: "https://auroria.explorer.stratisevm.com/api",
+          browserURL: "https://auroria.explorer.stratisevm.com"
         }
       }
     ]

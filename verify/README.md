@@ -1,18 +1,18 @@
 ## Verify NewContractLib
 ```bash
 $ npx hardhat verify \
-  --network holesky \
+  --network auroria \
   --contract 'contracts/libraries/NewContractLib.sol:NewContractLib' \
-  0xF41cFAF21e5f55CBFb3712C9F11B8CC0E78e64C8
+  0x5EcA5FE81c56F324b0C21454D1a2fF4a2EBEAb78
 ```
 
 ## Verify LsdNetworkFactory
 ```bash
 $ npx hardhat verify \
-  --network holesky \
+  --network auroria \
   --contract contracts/LsdNetworkFactory.sol:LsdNetworkFactory \
   --libraries ./verify/libraries.js \
-  0xcd6b39180d669c889287dc654ed1a80484f77f54
+  0xF6cd674Ffe4F52644B07413A877338a12666EFE1
 ```
 
 ## Verify contract related to LsdNetwork
@@ -21,32 +21,32 @@ verify logic contracts
 
 ```bash
 $ npx hardhat verify \
-  --network holesky \
+  --network auroria \
   --contract 'contracts/UserDeposit.sol:UserDeposit' \
-  0xb9F68498237Cc0ebD655fD9E9D7Dd6D78aB27FE4
+  0x77D5353616C51e590e3c2EDb662935B2F73C262D
 
 $ npx hardhat verify \
-  --network holesky \
+  --network auroria \
   --contract 'contracts/NodeDeposit.sol:NodeDeposit' \
-  0x97813c834c4a601CF13Cf969401E91fDAb917c44
+  0xb21968fD1A92Ba65D01F22Ded2B2cf491871B40E
 
 $ npx hardhat verify \
-  --network holesky \
+  --network auroria \
   --contract 'contracts/NetworkWithdraw.sol:NetworkWithdraw' \
-  0x4bf4df49F8Bc72a4e484443a14B827cb8c47c716
+  0x894BbBa1e824F4619FE4c3a3c99f1dE31E5bD368
 
 $ npx hardhat verify \
-  --network holesky \
+  --network auroria \
   --contract 'contracts/FeePool.sol:FeePool' \
-  0x3C5EA15f6e702FcC0351605b867E9ff33E1fd6BF
+  0xD722d17BD5a50a3Ae8752bb7B7cba8D362321bA4
 
 $ npx hardhat verify \
-  --network holesky \
+  --network auroria \
   --contract 'contracts/NetworkBalances.sol:NetworkBalances' \
-  0xE27Df917b7557f0B427c768e90819D1e6Db70F1E
+  0x90FC93B0ec8a8E9cD06d64Fd20Ade58Fd949cC2e
 
 $ npx hardhat verify \
-  --network holesky \
+  --network auroria \
   --contract 'contracts/NetworkProposal.sol:NetworkProposal' \
-  0x5e44EFdb2F1D7b1bcaA34d622F8945786cBAdE43
+  0xcFe315344093029b6Ac8253B90De46e353613076
 ```

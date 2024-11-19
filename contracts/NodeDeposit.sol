@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.19;
 
-import "./interfaces/INodeDeposit.sol";
-import "./interfaces/IUserDeposit.sol";
-import "./interfaces/IDepositContract.sol";
-import "./interfaces/INetworkProposal.sol";
-import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
-import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
+import './interfaces/INodeDeposit.sol';
+import './interfaces/IUserDeposit.sol';
+import './interfaces/IDepositContract.sol';
+import './interfaces/INetworkProposal.sol';
+import '@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol';
+import '@openzeppelin/contracts/proxy/utils/Initializable.sol';
 
 contract NodeDeposit is Initializable, UUPSUpgradeable, INodeDeposit {
     bool public soloNodeDepositEnabled;
@@ -112,7 +112,7 @@ contract NodeDeposit is Initializable, UUPSUpgradeable, INodeDeposit {
         if (_amount < 2 ether) {
             revert DepositAmountLTMinAmount();
         }
-        if (_amount > 31 ether) {
+        if (_amount > 19999 ether) {
             revert DepositAmountGTMaxAmount();
         }
         soloNodeDepositAmount = _amount;
@@ -155,8 +155,8 @@ contract NodeDeposit is Initializable, UUPSUpgradeable, INodeDeposit {
         bytes32[] calldata _depositDataRoots
     ) external payable override {
         if (
-            _validatorPubkeys.length != _validatorSignatures.length
-                || _validatorPubkeys.length != _depositDataRoots.length
+            _validatorPubkeys.length != _validatorSignatures.length ||
+            _validatorPubkeys.length != _depositDataRoots.length
         ) {
             revert LengthNotMatch();
         }
@@ -222,8 +222,8 @@ contract NodeDeposit is Initializable, UUPSUpgradeable, INodeDeposit {
         bytes32[] calldata _depositDataRoots
     ) external override {
         if (
-            _validatorPubkeys.length != _validatorSignatures.length
-                || _validatorPubkeys.length != _depositDataRoots.length
+            _validatorPubkeys.length != _validatorSignatures.length ||
+            _validatorPubkeys.length != _depositDataRoots.length
         ) {
             revert LengthNotMatch();
         }
@@ -275,15 +275,20 @@ contract NodeDeposit is Initializable, UUPSUpgradeable, INodeDeposit {
         });
 
         IDepositContract(ethDepositAddress).deposit{value: _depositAmount}(
-            _validatorPubkey, withdrawCredentials, _validatorSignature, _depositDataRoot
+            _validatorPubkey,
+            withdrawCredentials,
+            _validatorSignature,
+            _depositDataRoot
         );
 
         emit Deposited(msg.sender, _nodeType, _validatorPubkey, _validatorSignature, _depositAmount);
     }
 
-    function _stake(bytes calldata _validatorPubkey, bytes calldata _validatorSignature, bytes32 _depositDataRoot)
-        private
-    {
+    function _stake(
+        bytes calldata _validatorPubkey,
+        bytes calldata _validatorSignature,
+        bytes32 _depositDataRoot
+    ) private {
         PubkeyInfo memory pubkeyInfo = pubkeyInfoOf[_validatorPubkey];
 
         if (pubkeyInfo._status != PubkeyStatus.Match) {
@@ -298,9 +303,9 @@ contract NodeDeposit is Initializable, UUPSUpgradeable, INodeDeposit {
         uint256 willWithdrawAmount;
         NodeType nodeType = nodeInfoOf[pubkeyInfo._owner]._nodeType;
         if (nodeType == NodeType.SoloNode) {
-            willWithdrawAmount = uint256(32 ether) - pubkeyInfo._nodeDepositAmount;
+            willWithdrawAmount = uint256(20000 ether) - pubkeyInfo._nodeDepositAmount;
         } else if (nodeType == NodeType.TrustNode) {
-            willWithdrawAmount = uint256(31 ether);
+            willWithdrawAmount = uint256(19999 ether);
         } else {
             revert UnknownNodeType();
         }
@@ -308,7 +313,10 @@ contract NodeDeposit is Initializable, UUPSUpgradeable, INodeDeposit {
         IUserDeposit(userDepositAddress).withdrawExcessBalance(willWithdrawAmount);
 
         IDepositContract(ethDepositAddress).deposit{value: willWithdrawAmount}(
-            _validatorPubkey, withdrawCredentials, _validatorSignature, _depositDataRoot
+            _validatorPubkey,
+            withdrawCredentials,
+            _validatorSignature,
+            _depositDataRoot
         );
 
         emit Staked(msg.sender, _validatorPubkey);

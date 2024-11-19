@@ -12,12 +12,12 @@ async function main() {
     this.AccountFactoryAdmin = networkAdmin
 
     // // Library deployment: uncomment below to deploy a new lib instance
-    // const NewContractLib = await ethers.getContractFactory("NewContractLib", this.AccountDeployer);
-    // const newContractLib = await NewContractLib.deploy();
-    // console.log(newContractLib)
-    // await newContractLib.deployed()
-    // const newContractLibAddr = newContractLib.address
-    const newContractLibAddr = "0xF41cFAF21e5f55CBFb3712C9F11B8CC0E78e64C8"
+    const NewContractLib = await ethers.getContractFactory("NewContractLib", this.AccountDeployer);
+    const newContractLib = await NewContractLib.deploy();
+    console.log(newContractLib)
+    await newContractLib.deploymentTransaction()?.wait()
+    const newContractLibAddr = await newContractLib.getAddress()
+    // const newContractLibAddr = "0xF41cFAF21e5f55CBFb3712C9F11B8CC0E78e64C8"
     console.log("NewContractLib Address ---> " + newContractLibAddr)
 
     this.FactoryLsdNetworkFactory = await ethers.getContractFactory("LsdNetworkFactory", {
@@ -36,49 +36,64 @@ async function main() {
 
     // deploy logic contract
     this.ContractFeePoolLogic = await this.FactoryFeePool.deploy()
-    await this.ContractFeePoolLogic.deployed()
-    console.log("ContractFeePoolLogic address: ", this.ContractFeePoolLogic.address)
+    await this.ContractFeePoolLogic.deploymentTransaction()?.wait()
+    const feePoolLogicAddress = await this.ContractFeePoolLogic.getAddress()
+    console.log("ContractFeePoolLogic address: ", feePoolLogicAddress)
 
 
     this.ContractNetworkBalancesLogic = await this.FactoryNetworkBalances.deploy()
-    await this.ContractNetworkBalancesLogic.deployed()
-    console.log("ContractNetworkBalancesLogic address: ", this.ContractNetworkBalancesLogic.address)
+    await this.ContractNetworkBalancesLogic.deploymentTransaction()?.wait()
+    const networkBalancesLogicAddress = await this.ContractNetworkBalancesLogic.getAddress()
+    console.log("ContractNetworkBalancesLogic address: ", networkBalancesLogicAddress)
 
     this.ContractNetworkProposalLogic = await this.FactoryNetworkProposal.deploy()
-    await this.ContractNetworkProposalLogic.deployed()
-    console.log("ContractNetworkProposalLogic address: ", this.ContractNetworkProposalLogic.address)
+    await this.ContractNetworkProposalLogic.deploymentTransaction()?.wait()
+    const networkProposalLogicAddress = await this.ContractNetworkProposalLogic.getAddress()
+    console.log("ContractNetworkProposalLogic address: ", networkProposalLogicAddress)
 
 
     this.ContractNodeDepositLogic = await this.FactoryNodeDeposit.deploy()
-    await this.ContractNodeDepositLogic.deployed()
-    console.log("ContractNodeDepositLogic address: ", this.ContractNodeDepositLogic.address)
+    await this.ContractNodeDepositLogic.deploymentTransaction()?.wait()
+    const nodeDepositLogicAddress = await this.ContractNodeDepositLogic.getAddress()
+    console.log("ContractNodeDepositLogic address: ", nodeDepositLogicAddress)
 
     this.ContractUserDepositLogic = await this.FactoryUserDeposit.deploy()
-    await this.ContractUserDepositLogic.deployed()
-    console.log("ContractUserDepositLogic address: ", this.ContractUserDepositLogic.address)
+    await this.ContractUserDepositLogic.deploymentTransaction()?.wait()
+    const userDepositLogicAddress = await this.ContractUserDepositLogic.getAddress()
+    console.log("ContractUserDepositLogic address: ", userDepositLogicAddress)
 
     this.ContractNetworkWithdrawLogic = await this.FactoryNetworkWithdraw.deploy()
-    await this.ContractNetworkWithdrawLogic.deployed()
-    console.log("ContractNetworkWithdrawLogic address: ", this.ContractNetworkWithdrawLogic.address)
+    await this.ContractNetworkWithdrawLogic.deploymentTransaction()?.wait()
+    const networkWithdrawLogicAddress = await this.ContractNetworkWithdrawLogic.getAddress()
+    console.log("ContractNetworkWithdrawLogic address: ", networkWithdrawLogicAddress)
 
     // deploy factory logic contract
     this.ContractLsdNetworkFactoryLogic = await this.FactoryLsdNetworkFactory.deploy()
-    await this.ContractLsdNetworkFactoryLogic.deployed()
-    console.log("ContractLsdNetworkFactoryLogic address: ", this.ContractLsdNetworkFactoryLogic.address)
+    await this.ContractLsdNetworkFactoryLogic.deploymentTransaction()?.wait()
+    const lsdNetworkFactoryLogicAddress = await this.ContractLsdNetworkFactoryLogic.getAddress()
+    console.log("ContractLsdNetworkFactoryLogic address: ", lsdNetworkFactoryLogicAddress)
 
     // deploy factory proxy contract
-    this.ContractERC1967Proxy = await this.FactoryERC1967Proxy.deploy(this.ContractLsdNetworkFactoryLogic.address, "0x")
-    await this.ContractERC1967Proxy.deployed()
-    console.log("LsdNetworkFactory address: ", this.ContractERC1967Proxy.address)
+    this.ContractERC1967Proxy = await this.FactoryERC1967Proxy.deploy(lsdNetworkFactoryLogicAddress, "0x")
+    await this.ContractERC1967Proxy.deploymentTransaction()?.wait()
+    const ERC1967ProxyAddress = await this.ContractERC1967Proxy.getAddress()
+    console.log("LsdNetworkFactory address: ", ERC1967ProxyAddress)
 
-    this.ContractLsdNetworkFactory = await ethers.getContractAt("LsdNetworkFactory", this.ContractERC1967Proxy.address, this.AccountDeployer)
+    this.ContractLsdNetworkFactory = await ethers.getContractAt("LsdNetworkFactory", ERC1967ProxyAddress, this.AccountDeployer)
 
-    await this.ContractLsdNetworkFactory.init(this.AccountFactoryAdmin.address,
-        this.ContractDepositContractAddress, this.ContractFeePoolLogic.address, this.ContractNetworkBalancesLogic.address,
-        this.ContractNetworkProposalLogic.address, this.ContractNodeDepositLogic.address,
-        this.ContractUserDepositLogic.address, this.ContractNetworkWithdrawLogic.address)
+    await this.ContractLsdNetworkFactory.init(
+      this.AccountFactoryAdmin.address,
+      this.ContractDepositContractAddress,
+      feePoolLogicAddress,
+      networkBalancesLogicAddress,
+      networkProposalLogicAddress,
+      nodeDepositLogicAddress,
+      userDepositLogicAddress,
+      networkWithdrawLogicAddress,
+    )
+    const lsdNetworkFactoryAddress = await this.ContractLsdNetworkFactory.getAddress()
 
-    console.log("ContractLsdNetworkFactory address: ", this.ContractLsdNetworkFactory.address)
+    console.log("ContractLsdNetworkFactory address: ", lsdNetworkFactoryAddress)
 }
 
 main()

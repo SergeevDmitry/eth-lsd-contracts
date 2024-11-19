@@ -21,7 +21,7 @@ async function main() {
     const ContractLsdNetworkFactory = await ethers.getContractAt("LsdNetworkFactory", lsdNetworkFactoryAddress, networkAdmin)
 
     await ContractLsdNetworkFactory
-        .createLsdNetwork('rETH Test', 'rTETH', networkAdmin.address, voters, 2)
+        .createLsdNetwork('rSTRAX', 'rSTRAX', networkAdmin.address, voters, 2).then(tx => tx.wait())
     
     const lsdTokens = await ContractLsdNetworkFactory.lsdTokensOfCreater(networkAdmin.address)
     const lsdTokenAddress = lsdTokens[lsdTokens.length - 1]
@@ -30,17 +30,20 @@ async function main() {
     const contracts = await ContractLsdNetworkFactory.networkContractsOfLsdToken(lsdTokenAddress)
     // console.log(contracts);
     const ContractFeePool = await ethers.getContractAt("LsdNetworkFactory", contracts._feePool, networkAdmin)
-    console.log("FeePoolAddress address:\t\t", ContractFeePool.address)
+    console.log("FeePoolAddress address:\t\t", await ContractFeePool.getAddress())
     const ContractNetworkBalances = await ethers.getContractAt("INetworkBalances", contracts._networkBalances, networkAdmin)
-    console.log("NetworkBalancesAddress address:\t", ContractNetworkBalances.address)
+    console.log("NetworkBalancesAddress address:\t", await ContractNetworkBalances.getAddress())
     const ContractNetworkProposal = await ethers.getContractAt("INetworkProposal", contracts._networkProposal, networkAdmin)
-    console.log("NetworkProposalAddress address:\t", ContractNetworkProposal.address)
-    const ContractNodeDeposit = await ethers.getContractAt("INodeDeposit", contracts._nodeDeposit, networkAdmin)
-    console.log("NodeDepositAddress address:\t", ContractNodeDeposit.address)
+    console.log("NetworkProposalAddress address:\t", await ContractNetworkProposal.getAddress())
+    const ContractNodeDeposit = await ethers.getContractAt("NodeDeposit", contracts._nodeDeposit, networkAdmin)
+    console.log("NodeDepositAddress address:\t", await ContractNodeDeposit.getAddress())
     const ContractUserDeposit = await ethers.getContractAt("IUserDeposit", contracts._userDeposit, networkAdmin)
-    console.log("UserDepositAddress address:\t", ContractUserDeposit.address)
+    console.log("UserDepositAddress address:\t", await ContractUserDeposit.getAddress())
     const ContractNetworkWithdraw = await ethers.getContractAt("INetworkWithdraw", contracts._networkWithdraw, networkAdmin)
-    console.log("NetworkWithdrawAddress address:\t", ContractNetworkWithdraw.address)
+    console.log("NetworkWithdrawAddress address:\t", await ContractNetworkWithdraw.getAddress())
+
+    await ContractNodeDeposit.setSoloNodeDepositEnabled(false).then(tx => tx.wait())
+    await ContractNodeDeposit.setTrustNodeDepositEnabled(true).then(tx => tx.wait())
 }
 
 main()
