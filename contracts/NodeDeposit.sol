@@ -50,7 +50,7 @@ contract NodeDeposit is Initializable, UUPSUpgradeable, INodeDeposit {
         address _networkProposalAddress,
         bytes calldata _withdrawCredentials
     ) public virtual override initializer {
-        soloNodeDepositEnabled = true;
+        soloNodeDepositEnabled = false;
         trustNodeDepositEnabled = true;
         trustNodePubkeyNumberLimit = 100;
 

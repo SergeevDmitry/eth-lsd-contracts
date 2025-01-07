@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.19;
 
-import "./interfaces/INetworkBalances.sol";
-import "./interfaces/INetworkProposal.sol";
-import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
-import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
+import './interfaces/INetworkBalances.sol';
+import './interfaces/INetworkProposal.sol';
+import '@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol';
+import '@openzeppelin/contracts/proxy/utils/Initializable.sol';
 
 // Network balances
 contract NetworkBalances is Initializable, UUPSUpgradeable, INetworkBalances {
@@ -36,8 +36,8 @@ contract NetworkBalances is Initializable, UUPSUpgradeable, INetworkBalances {
     function init(address _networkProposalAddress) public virtual override initializer {
         networkProposalAddress = _networkProposalAddress;
         submitBalancesEnabled = true;
-        rateChangeLimit = 11e14; //0.0011
-        updateBalancesEpochs = 225;
+        rateChangeLimit = 5e17; //0.5
+        updateBalancesEpochs = 60;
     }
 
     function reinit() public virtual override reinitializer(1) {
@@ -90,8 +90,9 @@ contract NetworkBalances is Initializable, UUPSUpgradeable, INetworkBalances {
     }
 
     function setUpdateBalancesEpochs(uint256 _value) external onlyAdmin {
-        if (_value < 75) { // equivalent to 8 hours
-            revert TooLow(75);
+        if (_value < 60) {
+            // equivalent to 8 hours
+            revert TooLow(60);
         }
         updateBalancesEpochs = _value;
     }
@@ -104,11 +105,11 @@ contract NetworkBalances is Initializable, UUPSUpgradeable, INetworkBalances {
 
     // Submit network balances for a block
     // Only accepts calls from trusted (oracle) nodes
-    function submitBalances(uint256 _block, uint256 _totalEth, uint256 _totalLsdToken)
-        external
-        override
-        onlyNetworkProposal
-    {
+    function submitBalances(
+        uint256 _block,
+        uint256 _totalEth,
+        uint256 _totalLsdToken
+    ) external override onlyNetworkProposal {
         if (!submitBalancesEnabled) {
             revert SubmitBalancesDisabled();
         }

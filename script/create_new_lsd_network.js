@@ -41,9 +41,6 @@ async function main() {
     console.log("UserDepositAddress address:\t", await ContractUserDeposit.getAddress())
     const ContractNetworkWithdraw = await ethers.getContractAt("INetworkWithdraw", contracts._networkWithdraw, networkAdmin)
     console.log("NetworkWithdrawAddress address:\t", await ContractNetworkWithdraw.getAddress())
-
-    await ContractNodeDeposit.setSoloNodeDepositEnabled(false).then(tx => tx.wait())
-    await ContractNodeDeposit.setTrustNodeDepositEnabled(true).then(tx => tx.wait())
 }
 
 main()

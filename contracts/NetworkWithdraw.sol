@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.19;
 
-import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
-import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
-import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
-import "./interfaces/INetworkWithdraw.sol";
-import "./interfaces/ILsdToken.sol";
-import "./interfaces/INetworkProposal.sol";
-import "./interfaces/INetworkBalances.sol";
-import "./interfaces/IUserDeposit.sol";
-import "./interfaces/IFeePool.sol";
-import "@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol";
-import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
+import '@openzeppelin/contracts/utils/structs/EnumerableSet.sol';
+import '@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol';
+import '@openzeppelin/contracts/utils/cryptography/MerkleProof.sol';
+import './interfaces/INetworkWithdraw.sol';
+import './interfaces/ILsdToken.sol';
+import './interfaces/INetworkProposal.sol';
+import './interfaces/INetworkBalances.sol';
+import './interfaces/IUserDeposit.sol';
+import './interfaces/IFeePool.sol';
+import '@openzeppelin/contracts/proxy/utils/UUPSUpgradeable.sol';
+import '@openzeppelin/contracts/proxy/utils/Initializable.sol';
 
 contract NetworkWithdraw is Initializable, UUPSUpgradeable, INetworkWithdraw {
     using EnumerableSet for EnumerableSet.UintSet;
@@ -72,7 +72,7 @@ contract NetworkWithdraw is Initializable, UUPSUpgradeable, INetworkWithdraw {
         address _feePoolAddress,
         address _factoryAddress
     ) public virtual override initializer {
-        withdrawCycleSeconds = 86400; // 1 day
+        withdrawCycleSeconds = 28800; // 8 hours
         stackCommissionRate = 10e16; // 10%
         platformCommissionRate = 5e16; // 5%
         nodeCommissionRate = 5e16; // 5%
@@ -124,7 +124,8 @@ contract NetworkWithdraw is Initializable, UUPSUpgradeable, INetworkWithdraw {
     // ------------ settings ------------
 
     function setWithdrawCycleSeconds(uint256 _withdrawCycleSeconds) external onlyAdmin {
-        if (_withdrawCycleSeconds < 28800) { // 8 hours
+        if (_withdrawCycleSeconds < 28800) {
+            // 8 hours
             revert TooLow(28800);
         }
         withdrawCycleSeconds = _withdrawCycleSeconds;
@@ -140,7 +141,7 @@ contract NetworkWithdraw is Initializable, UUPSUpgradeable, INetworkWithdraw {
         uint256 shouldClaimAmount = totalPlatformCommission - totalPlatformClaimedAmount;
         totalPlatformClaimedAmount = totalPlatformCommission;
 
-        (bool success,) = _recipient.call{value: shouldClaimAmount}("");
+        (bool success, ) = _recipient.call{value: shouldClaimAmount}('');
         if (!success) {
             revert FailedToCall();
         }
@@ -153,10 +154,10 @@ contract NetworkWithdraw is Initializable, UUPSUpgradeable, INetworkWithdraw {
         stackCommissionRate = _stackCommissionRate;
     }
 
-    function setPlatformAndNodeCommissionRate(uint256 _platformCommissionRate, uint256 _nodeCommissionRate)
-        external
-        onlyAdmin
-    {
+    function setPlatformAndNodeCommissionRate(
+        uint256 _platformCommissionRate,
+        uint256 _nodeCommissionRate
+    ) external onlyAdmin {
         if (_platformCommissionRate + _nodeCommissionRate > 1e18) {
             revert CommissionRateInvalid();
         }
@@ -194,7 +195,7 @@ contract NetworkWithdraw is Initializable, UUPSUpgradeable, INetworkWithdraw {
         if (unstakeInstantly) {
             maxClaimableWithdrawIndex = willUseWithdrawalIndex;
 
-            (bool success,) = msg.sender.call{value: ethAmount}("");
+            (bool success, ) = msg.sender.call{value: ethAmount}('');
             if (!success) {
                 revert FailedToCall();
             }
@@ -221,7 +222,7 @@ contract NetworkWithdraw is Initializable, UUPSUpgradeable, INetworkWithdraw {
         }
 
         if (totalAmount != 0) {
-            (bool success,) = msg.sender.call{value: totalAmount}("");
+            (bool success, ) = msg.sender.call{value: totalAmount}('');
             if (!success) {
                 revert FailedToCall();
             }
@@ -283,7 +284,7 @@ contract NetworkWithdraw is Initializable, UUPSUpgradeable, INetworkWithdraw {
             revert UnknownClaimType();
         }
 
-        (bool success,) = _account.call{value: willClaimAmount}("");
+        (bool success, ) = _account.call{value: willClaimAmount}('');
         if (!success) {
             revert FailedToCall();
         }
@@ -378,10 +379,11 @@ contract NetworkWithdraw is Initializable, UUPSUpgradeable, INetworkWithdraw {
         emit NotifyValidatorExit(_withdrawCycle, _ejectedStartCycle, _validatorIndexList);
     }
 
-    function setMerkleRoot(uint256 _dealedEpoch, bytes32 _merkleRoot, string calldata _nodeRewardsFileCid)
-        external
-        onlyNetworkProposal
-    {
+    function setMerkleRoot(
+        uint256 _dealedEpoch,
+        bytes32 _merkleRoot,
+        string calldata _nodeRewardsFileCid
+    ) external onlyNetworkProposal {
         if (_dealedEpoch <= latestMerkleRootEpoch) {
             revert AlreadyDealedEpoch();
         }
@@ -438,7 +440,7 @@ contract NetworkWithdraw is Initializable, UUPSUpgradeable, INetworkWithdraw {
         uint256 platformAmount = _amount - stackFee;
         totalPlatformCommission = totalPlatformCommission + platformAmount;
 
-        (bool success,) = factoryAddress.call{value: stackFee}("");
+        (bool success, ) = factoryAddress.call{value: stackFee}('');
         if (!success) {
             revert FailedToCall();
         }
