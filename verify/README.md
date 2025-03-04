@@ -3,7 +3,7 @@
 $ npx hardhat verify \
   --network auroria \
   --contract 'contracts/libraries/NewContractLib.sol:NewContractLib' \
-  0x5EcA5FE81c56F324b0C21454D1a2fF4a2EBEAb78
+  0xf7c74241c02E649E206838cCE6d16B9bA4509021
 ```
 
 ## Verify LsdNetworkFactory
@@ -12,7 +12,7 @@ $ npx hardhat verify \
   --network auroria \
   --contract contracts/LsdNetworkFactory.sol:LsdNetworkFactory \
   --libraries ./verify/libraries.js \
-  0xF6cd674Ffe4F52644B07413A877338a12666EFE1
+  0x77c1aD583dbd80b29e7A97F002303aa559664739
 ```
 
 ## Verify contract related to LsdNetwork
@@ -23,30 +23,30 @@ verify logic contracts
 $ npx hardhat verify \
   --network auroria \
   --contract 'contracts/UserDeposit.sol:UserDeposit' \
-  0x77D5353616C51e590e3c2EDb662935B2F73C262D
+  0xEf0fD41574bCD95F0163e03D77df658c940f9149
 
 $ npx hardhat verify \
   --network auroria \
   --contract 'contracts/NodeDeposit.sol:NodeDeposit' \
-  0xb21968fD1A92Ba65D01F22Ded2B2cf491871B40E
+  0x2B3E6121a22DEf591D1B1FfE7B01EEF45ECaCEDA
 
 $ npx hardhat verify \
   --network auroria \
   --contract 'contracts/NetworkWithdraw.sol:NetworkWithdraw' \
-  0x894BbBa1e824F4619FE4c3a3c99f1dE31E5bD368
+  0xEDf0f8d602C44D52BC5c7d53439542493Ec60C2F
 
 $ npx hardhat verify \
   --network auroria \
   --contract 'contracts/FeePool.sol:FeePool' \
-  0xD722d17BD5a50a3Ae8752bb7B7cba8D362321bA4
+  0x0126B3D7dc5b8A2870C964fDa8868202689a3699
 
 $ npx hardhat verify \
   --network auroria \
   --contract 'contracts/NetworkBalances.sol:NetworkBalances' \
-  0x90FC93B0ec8a8E9cD06d64Fd20Ade58Fd949cC2e
+  0x3378932e90Dbf0724EDfd470F5b2eAD2333D89eb
 
 $ npx hardhat verify \
   --network auroria \
   --contract 'contracts/NetworkProposal.sol:NetworkProposal' \
-  0xcFe315344093029b6Ac8253B90De46e353613076
+  0x62f063bc8c0F51f94CD2DD2d1eaCcEF10DA97416
 ```
